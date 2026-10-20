@@ -1,0 +1,120 @@
+{
+  "id": "direct-zink-hybris-game-trial-1",
+  "libraries": [
+    {
+      "packagedName": "librea_hybris_common.so",
+      "aliases": [
+        "libhybris-common.so.1"
+      ],
+      "bytes": 634288,
+      "sha256": "b2dc714be744024728f900a42b321f8129b0000d90c5e04ad64123002ffaa7d6"
+    },
+    {
+      "packagedName": "librea_hybris_q.so",
+      "aliases": [
+        "linker/q.so"
+      ],
+      "bytes": 5367784,
+      "sha256": "65ea85da48354b23738bea3f5a3682b4635a663bfdf362891a2186308f890643"
+    },
+    {
+      "packagedName": "librea_gnu_tls.so",
+      "aliases": [
+        "librea_gnu_tls.so"
+      ],
+      "bytes": 17424,
+      "sha256": "fcfa4236c7175818a5cf272b6f81480b0f79ce94ea6c6330310012728e7da4e6"
+    },
+    {
+      "packagedName": "librea_direct_mesa_gallium.so",
+      "aliases": [
+        "libgallium-26.3.0-devel.so"
+      ],
+      "bytes": 22907536,
+      "sha256": "7191f9b66182935c557a96a8b3895be1a15fad7a9b17f1947d9e313de41ce88f"
+    },
+    {
+      "packagedName": "librea_direct_mesa_egl.so",
+      "aliases": [
+        "libEGL_mesa.so.0"
+      ],
+      "bytes": 475568,
+      "sha256": "c172a3a59bc76026bcf4b481062bb33a6fd63543a90db7220d720935a8a84e80"
+    },
+    {
+      "packagedName": "librea_direct_mesa_gbm.so",
+      "aliases": [
+        "libgbm.so.1"
+      ],
+      "bytes": 75640,
+      "sha256": "ad37b04c81a031f723fbb73de00225c417ba4fc653c14c287c4ed546de95f13c"
+    },
+    {
+      "packagedName": "librea_direct_mesa_dril.so",
+      "aliases": [
+        "dri/zink_dri.so"
+      ],
+      "bytes": 144416,
+      "sha256": "10b5a54647c91007889ef231a5c002accb05ee24a3530abcafe94785f18d036e"
+    },
+    {
+      "packagedName": "librea_direct_mesa_gbm_dri.so",
+      "aliases": [
+        "gbm/dri_gbm.so"
+      ],
+      "bytes": 150240,
+      "sha256": "d909c027a6127713dcc2a195b1192a4a4f5804b6db34fd44dba31f704c9f98f1"
+    },
+    {
+      "packagedName": "librea_direct_hardware.so",
+      "aliases": [
+        "libhardware.so.2"
+      ],
+      "bytes": 74120,
+      "sha256": "09b42df2779710c02e0ffec4894bd315809319448acb925a13e3f8759b310244"
+    },
+    {
+      "packagedName": "librea_direct_gralloc.so",
+      "aliases": [
+        "libgralloc.so.1"
+      ],
+      "bytes": 114632,
+      "sha256": "1bfbeed2b9ac05c2c3688cba168d1e96880e3fa5426a1a177300ddf82a8205c7"
+    },
+    {
+      "packagedName": "librea_direct_ui.so",
+      "aliases": [
+        "libui.so.1"
+      ],
+      "bytes": 85264,
+      "sha256": "8f5c96ea6671661d8825602b852b02698f3aeafa2477596be42339d2857b8408"
+    },
+    {
+      "packagedName": "librea_vulkan_loader.so",
+      "aliases": [
+        "libvulkan.so.1",
+        "libvulkan.so"
+      ],
+      "bytes": 695400,
+      "sha256": "60079bc90956c55ae10b9bd18ab60f42f92bcf0c8e22768b7ae3be7518f4549f"
+    },
+    {
+      "packagedName": "librea_direct_icd.so",
+      "aliases": [
+        "librea_direct_icd.so"
+      ],
+      "bytes": 359992,
+      "sha256": "d1171a4d85c96a2ebd35dc0dd0ab66f9e11cc578b4c604898409f682a2c8fa0f"
+    },
+    {
+      "packagedName": "librea_direct_mesa_glx.so",
+      "aliases": [
+        "libGLX_mesa.so.0"
+      ],
+      "bytes": 495536,
+      "sha256": "b1b01cdb8cedeaf45d16e7dd3938c0500ebdf9f7e9fa8e2d0393797e8aef4b65"
+    }
+  ],
+  "scope": "Sole supported game renderer: GNU Zink, native GPU AHB Android Surface; no legacy renderer service",
+  "desktopMesa": "26.3.0-devel (pinned upstream component)"
+}

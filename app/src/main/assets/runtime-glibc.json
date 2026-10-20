@@ -1,0 +1,37 @@
+{
+  "id": "termux-glibc-2.44",
+  "vendor": "Termux glibc-packages",
+  "version": "2.44",
+  "packageSha256": "5392d254e84c436e96783bcb6ffffe429d6b24c7ad00490f23f06f66c4769fb6",
+  "source": "https://packages.termux.dev/apt/termux-glibc/pool/stable/g/glibc/glibc_2.44_aarch64.deb",
+  "libraries": [
+    {
+      "name": "ld-linux-aarch64.so.1",
+      "path": "./data/data/com.termux/files/usr/glibc/lib/ld-linux-aarch64.so.1",
+      "packagedName": "librea_loader.so",
+      "sha256": "ca4af7c4022222bb405b0b601d818506ea608a2242f3cce43bd0b56b71f94530",
+      "bytes": 242560
+    },
+    {
+      "name": "libc.so.6",
+      "path": "./data/data/com.termux/files/usr/glibc/lib/libc.so.6",
+      "packagedName": "librea_glibc.so",
+      "sha256": "cb7b001c0d4030119eb9010ae2d747fcbc51108cfb1e0940fa78618d78dc9ae9",
+      "bytes": 2368240
+    },
+    {
+      "name": "libm.so.6",
+      "path": "./data/data/com.termux/files/usr/glibc/lib/libm.so.6",
+      "packagedName": "librea_glibm.so",
+      "sha256": "6e070086457ddc46e8fbbd2ed11a63bb0a394e9eeb41bbfbe1825aa286f9cbb1",
+      "bytes": 1209792
+    },
+    {
+      "name": "libresolv.so.2",
+      "path": "./data/data/com.termux/files/usr/glibc/lib/libresolv.so.2",
+      "packagedName": "librea_resolv.so",
+      "sha256": "490093f15e8f6a5966e89f61c01887657ababeb154b755c48d91a6e2ab9888f2",
+      "bytes": 80320
+    }
+  ]
+}

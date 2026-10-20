@@ -1,0 +1,11 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/icon_background" />
+    <foreground>
+        <!-- The 128px source includes a rightward shadow. Its gear hub is at
+             (56,64), so a 64dp image starts at x=26dp to center the hub at
+             (54,54). The complete source, including shadow, fits a 72dp mask. -->
+        <inset android:drawable="@drawable/factorio_icon"
+            android:insetLeft="26dp" android:insetTop="22dp"
+            android:insetRight="18dp" android:insetBottom="22dp" />
+    </foreground>
+</adaptive-icon>

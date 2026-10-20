@@ -1,0 +1,434 @@
+{
+  "id": "direct-zink-dependencies-1",
+  "libraries": [
+    {
+      "packagedName": "librea_egl_4c65c1ff98.so",
+      "aliases": [
+        "libwayland-client.so.0"
+      ],
+      "bytes": 133856,
+      "sha256": "8a6f8fad77f495d7a0947ae613d93100968e1e088c07d0b35d87201f692fc626",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libwayland-client.so.0",
+        "needed": [
+          "libffi.so.8",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_egl_eb05ef4a77.so",
+      "aliases": [
+        "libEGL.so.1",
+        "libEGL.so"
+      ],
+      "bytes": 133064,
+      "sha256": "c68dd781b527acde96d3e23229bfca024826639f7d07705f25a2198b1480fda1",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libEGL.so.1",
+        "needed": [
+          "libGLdispatch.so.0",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_07d6e1e661.so",
+      "aliases": [
+        "libgcc_s.so.1"
+      ],
+      "bytes": 729184,
+      "sha256": "22d5db25fece632754f7a0fb1c6586eb6e93eab6a5866da487b86f115d4e389d",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libgcc_s.so.1",
+        "needed": [
+          "libc.so.6"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_0acf5ebfd0.so",
+      "aliases": [
+        "libGLdispatch.so.0"
+      ],
+      "bytes": 1574952,
+      "sha256": "892feaa3f76bccd236db5dde79b175a74212296f12eed003eb80b432cf6fb949",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libGLdispatch.so.0",
+        "needed": [
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_16263672d4.so",
+      "aliases": [
+        "libz.so.1"
+      ],
+      "bytes": 144368,
+      "sha256": "fd9dd63116647e60e57ac1bd874625858bf0b0d05fab015e0c2db1c9c04f3a99",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libz.so.1",
+        "needed": [
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_162daaa727.so",
+      "aliases": [
+        "libxcb-dri3.so.0"
+      ],
+      "bytes": 73992,
+      "sha256": "8039415811aa6c775e59457436b02cd302d7973d9fbd69468fcc4177882614df",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-dri3.so.0",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_29b7a1b389.so",
+      "aliases": [
+        "libdrm.so.2"
+      ],
+      "bytes": 133240,
+      "sha256": "50f3234f9e375d26e77539165370c233feb3c18612365f6c3ca2b06cc9661970",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libdrm.so.2",
+        "needed": [
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_4aad5a3b17.so",
+      "aliases": [
+        "libstdc++.so.6"
+      ],
+      "bytes": 22487888,
+      "sha256": "4205855cce5501831acbcb88b024f705ec0f355ca8ea0ad62228848081e9520d",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libstdc++.so.6",
+        "needed": [
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1",
+          "libgcc_s.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_5494eea9c1.so",
+      "aliases": [
+        "libxcb-present.so.0"
+      ],
+      "bytes": 71992,
+      "sha256": "1969de5b3ffa90af342e15748c10eed14bd9c40d901ce4ade0275fd16457a981",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-present.so.0",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_551cc1b271.so",
+      "aliases": [
+        "libXxf86vm.so.1"
+      ],
+      "bytes": 71640,
+      "sha256": "86d25b68b25deda79d5b9b6d070665170ee522bf905b63a0b88edd469003e969",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libXxf86vm.so.1",
+        "needed": [
+          "libX11.so.6",
+          "libxcb.so.1",
+          "libXext.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_5a8cfeda9f.so",
+      "aliases": [
+        "libGL.so.1"
+      ],
+      "bytes": 985048,
+      "sha256": "4e2135680cdd006b7b5ca37e6930eafcdc56ad15357769841d2394fac23b9a83",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libGL.so.1",
+        "needed": [
+          "libGLdispatch.so.0",
+          "libGLX.so.0",
+          "libc.so.6"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_5c267abe4d.so",
+      "aliases": [
+        "libxcb-xfixes.so.0"
+      ],
+      "bytes": 79456,
+      "sha256": "db5ce18da1b567a27ecd1a9e0550661dd196318448203bcf29a816d1193e9130",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-xfixes.so.0",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_63a8695dc3.so",
+      "aliases": [
+        "libffi.so.8"
+      ],
+      "bytes": 82352,
+      "sha256": "8a8cfcbe243dbca0e642c6bd427241f8ff6b26b4a0d89b130679aa7b1c846abd",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libffi.so.8",
+        "needed": [
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_65ff900111.so",
+      "aliases": [
+        "libxcb-shm.so.0"
+      ],
+      "bytes": 71616,
+      "sha256": "e4e455da0829126d0fc2a4c2554bce4d9b122bc26ff2b43ecb0bdec07c8d2c30",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-shm.so.0",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_76b9555ce2.so",
+      "aliases": [
+        "libexpat.so.1"
+      ],
+      "bytes": 219712,
+      "sha256": "7b563b60fc16499a45b471c0006c105c1e706cc5215f6ec499b317d9a2c8dd8e",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libexpat.so.1",
+        "needed": [
+          "libm.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_afa6811ef2.so",
+      "aliases": [
+        "libxshmfence.so.1"
+      ],
+      "bytes": 73312,
+      "sha256": "5a0652d801ce63a2e33ccb1ba035a91f3212a89570083239ff6ee66e2effb9cb",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxshmfence.so.1",
+        "needed": [
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_b92f3f7ad2.so",
+      "aliases": [
+        "libX11-xcb.so.1"
+      ],
+      "bytes": 69528,
+      "sha256": "7ab88f66a4c53d8841cbfa3afa29e50eeff70678434c58c7171961b6da78cca5",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libX11-xcb.so.1",
+        "needed": [
+          "libc.so.6"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_c6b18cfa37.so",
+      "aliases": [
+        "libxcb-randr.so.0"
+      ],
+      "bytes": 92392,
+      "sha256": "ef12d668682ac99dba386b017fc24609dfa81ad948accf5b3894d91850bf0679",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-randr.so.0",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_c9421090be.so",
+      "aliases": [
+        "libxcb-glx.so.0"
+      ],
+      "bytes": 174760,
+      "sha256": "793d94c410bad7152a202e3d38831b63f18b96bd64687d030ac55f7099f4952d",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-glx.so.0",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    },
+    {
+      "packagedName": "librea_gl_e279577654.so",
+      "aliases": [
+        "libGLX.so.0"
+      ],
+      "bytes": 198544,
+      "sha256": "1e8e5721049f2ae5fc076f25b908b92ad57277380f1b29c3543f5f53cb9d2328",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libGLX.so.0",
+        "needed": [
+          "libGLdispatch.so.0",
+          "libX11.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": []
+      }
+    },
+    {
+      "packagedName": "librea_gl_e37a1c7ced.so",
+      "aliases": [
+        "libxcb-sync.so.1"
+      ],
+      "bytes": 76312,
+      "sha256": "2dc864a8050acf3ab0eb896dae57a7991fdc4a76f7d583568b931137a0749e22",
+      "elf": {
+        "machine": "AArch64",
+        "soname": "libxcb-sync.so.1",
+        "needed": [
+          "libxcb.so.1",
+          "libXau.so.6",
+          "libXdmcp.so.6",
+          "libc.so.6",
+          "ld-linux-aarch64.so.1"
+        ],
+        "searchPaths": [
+          {
+            "tag": 15,
+            "path": "/data/data/com.termux/files/usr/glibc/lib"
+          }
+        ]
+      }
+    }
+  ],
+  "scope": "Necessary GNU GLVND/window/DRM C++ dependency closure for sole direct Zink Surface route"
+}

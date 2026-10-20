@@ -1,0 +1,22 @@
+{
+  "id": "native-sdl-relay-1-engine-2.1.22",
+  "engineSha256": "7091e6d320e78210416c5e60492a316ad80b11d37917f66e6e72e088952b9562",
+  "sdlVersion": "3.4.14",
+  "library": {
+    "packagedName": "librea_gamepad_bridge.so",
+    "bytes": 28968,
+    "sha256": "c5f7624ccdaf635dd487a51c1c3093ddb2e4e3a257c8545d1477c4f387ba56c1"
+  },
+  "sourceSha256": "892a1bc201c0177365ef61aa0b7f1deac03b66e024837d5723b88c33e3dc0948",
+  "headerSha256": "471d65385a1a0ae9360332b32d37a352302d111e20d9b8a2c781fbd5714bcb0a",
+  "elf": {
+    "machine": "AArch64",
+    "soname": null,
+    "needed": [
+      "libc.so.6"
+    ],
+    "searchPaths": []
+  },
+  "deviceExecuted": false,
+  "scope": "Own compatibility relay, fixed-hash local SDL interfaces and private same-UID socket only"
+}

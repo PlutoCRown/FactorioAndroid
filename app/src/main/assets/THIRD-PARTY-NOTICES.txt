@@ -1,0 +1,51 @@
+CURRENT BUILD: direct GNU Zink / libhybris Vulkan ICD / GPU AHardwareBuffer / Android Surface. No VirGL, ANGLE, Venus or software game-renderer entry remains. See THIRD-PARTY-NOTICES.md in the source repository for the current component map. The retained historical notice collection below includes notices for some components no longer packaged. Runtime manifests direct-zink.json, direct-dependencies.json, window-clients.json, window-runtime.json and runtime-glibc.json identify actual payloads.
+
+XZ for Java 1.12
+
+Android GPU service candidate: virglrenderer-android 1.3.0-1 and libepoxy.
+MIT notices (including gl4es contributions): VIRGL-COPYRIGHT.txt.
+Exact unchanged ELF hashes and package URL: virgl-runtime.json.
+Separate Bionic process with system EGL/GLES, no Termux app or ANGLE bundle.
+
+Desktop GL software diagnostic: libglvnd / Mesa24.2.6 and scoped runtime
+dependencies including LLVM19.1, GCC runtimes, Debian libxml2 and ICU72.
+Per-package copyright and license notices: GL-COPYRIGHT.txt.
+Exact library filenames and SHA-256: gl-runtime.json.
+Separate glibc process only; no hardware acceleration claim.
+Project: https://tukaani.org/xz/java.html
+Source: https://github.com/tukaani-project/xz-java
+License: BSD Zero Clause (0BSD)
+
+Authors: Lasse Collin and contributors.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+No game engine, game assets or graphics-driver binaries are bundled.
+
+GNU C Library 2.44, Android-adapted Termux glibc-packages ARM64
+Source: https://github.com/termux/glibc-packages/tree/main/gpkg/glibc
+Package repository: https://packages.termux.dev/apt/termux-glibc
+Package license declarations: GPL-3.0 and LGPL-3.0.
+Four unchanged library files, renamed as librea_*.so, are included.
+Full copyright and license notices are in GLIBC-COPYRIGHT.txt in this APK.
+
+Termux:X11: embedded libXlorie.so and adapted Java JNI/Surface bridge.
+Source commit: fa3a8b430e2896a19f44c99a9cb056254615ae06
+Source: https://github.com/termux/termux-x11
+Upstream license: GPL-3.0-or-later.
+xkeyboard-config 2.43: XKB data, package copyright/permissions retained.
+Full upstream and data notices are in WINDOW-COPYRIGHT.txt in this APK.
+Library and resource SHA-256 metadata are in window-runtime.json.
+
+Ten Linux X11 client libraries are bundled for a separate glibc process only.
+Package copyright and license notices: WINDOW-CLIENT-COPYRIGHT.txt.
+Individual library hashes and filenames: window-clients.json.

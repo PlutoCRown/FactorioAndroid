@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.factorio.local.launcher"
+    android:versionCode="2" android:versionName="0.2.0-runtime-probe">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
+    <uses-feature android:glEsVersion="0x00030000" android:required="false" />
+    <application android:label="Factorio" android:theme="@style/AppTheme"
+        android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
+        android:resizeableActivity="true"
+        android:allowBackup="false" android:supportsRtl="true"
+        android:debuggable="true" android:usesCleartextTraffic="false" android:extractNativeLibs="true">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:screenOrientation="sensorLandscape" android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name="com.termux.x11.MainActivity" android:exported="true"
+            android:resizeableActivity="true" android:process=":window" android:launchMode="singleTask" android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden" />
+
+    </application>
+</manifest>

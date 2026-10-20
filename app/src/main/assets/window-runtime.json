@@ -1,0 +1,11 @@
+{
+  "id": "xlorie-fa3a8b430e28",
+  "sourceCommit": "fa3a8b430e2896a19f44c99a9cb056254615ae06",
+  "upstreamApkSha256": "64995746d1887a0e70bc8977d4a9c5ea56e3e00eadd4a6eeab32ae6048ba733a",
+  "librarySha256": "8ad76408710c21b9a61d3db07900e5bb4e3f88efb1670ac0ff3a2166f403567d",
+  "libraryBytes": 3552072,
+  "xkbArchiveSha256": "84c41ea4e4b4e029615251c41a78059550fba6e0de8b06d40827183caf36bc2e",
+  "xkbFiles": 295,
+  "xkbUnpackedBytes": 3610768,
+  "scope": "Embedded X server/Surface diagnostic; no game/GL acceleration claim"
+}

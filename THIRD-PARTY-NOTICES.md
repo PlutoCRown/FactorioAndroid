@@ -1,0 +1,23 @@
+# Third-party components
+
+This private source repository is an Android compatibility launcher for a user-supplied game. It contains no Factorio engine, installation archive, save, account credential, proprietary GPU driver, or precompiled runtime library. Game names and local UI artwork remain their respective owners' property. No license is granted here for redistribution of Wube artwork.
+
+The local build restores the following separately pinned runtime components. Their original licenses apply; this project does not relicense third-party code. Full retained copyright/license texts are in `app/src/main/assets/*COPYRIGHT.txt`. Some collected notice bundles also cover historical components that are no longer packaged. Their presence does not mean those renderers remain in the application.
+
+## Direct graphics and platform bridge
+
+- GNU Mesa 26.3.0-devel from the pinned taowen/mesa component; Vulkan Loader 1.3.301; libhybris arlinux. Exact payload hashes are in `app/src/main/assets/direct-zink.json`. The direct route does not use VirGL, ANGLE or a software game renderer. Shared GNU dependencies, including libglvnd and discovery libraries, are listed in `direct-dependencies.json`.
+- The public Vulkan ICD core comes from [taowen/libhybris](https://github.com/taowen/libhybris), commit `2375acd0b5d278a0a2f745c645680545e8f80539`. Apache-2.0 notices remain in the selected sources. `native-input/direct-wsi/sources.json` identifies inputs and modifications. Component metadata does not prove that a prebuilt library corresponds to a separately inspected source revision.
+- Project-owned `native-window-surface.c` replaces the upstream TAWC-DRI transport with a private AHardwareBuffer socket. `direct-present-server.c` samples that GPU image into the Android Surface. Release fences and consumer completion acknowledgement remain.
+- Selected [Khronos Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) at commit `952f776f6573aafbb62ea717d871cd1d6816c387` and Android Open Source Project ABI headers retain their source notices. These are build headers, not proprietary driver binaries.
+
+## GNU runtime, windows and Java dependency
+
+- GNU C Library 2.44, Android-adapted [Termux glibc-packages](https://github.com/termux/glibc-packages/tree/main/gpkg/glibc), four unchanged libraries renamed to private packaged filenames. Hashes: `runtime-glibc.json`. Retained notices: `GLIBC-COPYRIGHT.txt`. These GNU libraries are used in a separate engine child, never loaded into ART with `System.loadLibrary`.
+- [Termux:X11](https://github.com/termux/termux-x11), commit `fa3a8b430e2896a19f44c99a9cb056254615ae06`: pinned upstream ARM64 `libXlorie.so`, with the minimal Java JNI/window/input bridge adapted in this project. Upstream project GPL-3.0-or-later; retained texts: `WINDOW-COPYRIGHT.txt`. No Termux application, shared UID or Termux app IPC is required. X11 provides window/input protocols; it no longer carries the game's full-frame pixels.
+- xkeyboard-config 2.43 provides XKB data; package permissions remain in `WINDOW-COPYRIGHT.txt`. GNU X11 client libraries and related dependencies are pinned by `window-clients.json` and `direct-dependencies.json`; retained notices include `WINDOW-CLIENT-COPYRIGHT.txt`, `GL-COPYRIGHT.txt` and `EGL-COPYRIGHT.txt`.
+- [XZ for Java 1.12](https://tukaani.org/xz/java.html), Lasse Collin and contributors, BSD Zero Clause (0BSD). Sources: [xz-java](https://github.com/tukaani-project/xz-java), Maven artifact `org.tukaani:xz:1.12:sources`. The Windows build verifies its checksum and compiles unchanged Java 8 source with the existing JDK.
+
+## Local interface assets
+
+`factorio_icon.png` was extracted from the user's own game. `factory_background.jpg` is the user-requested Factorio website background. Both remain Wube artwork, kept here for the owner's private project; public redistribution permission has not been established. `ic_expand_more.xml` is a project-owned vector chevron.

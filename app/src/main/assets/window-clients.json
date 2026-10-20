@@ -1,0 +1,76 @@
+{
+  "id": "termux-x11-clients-1",
+  "libraries": [
+    {
+      "name": "libX11.so.6",
+      "packagedName": "librea_x11.so",
+      "sha256": "1d28ce6412b7919e6ad7592d327e7ee5fdf72551868657b8d8eecc3f8ac69e04",
+      "bytes": 1536264,
+      "package": "libx11-glibc"
+    },
+    {
+      "name": "libXau.so.6",
+      "packagedName": "librea_xau.so",
+      "sha256": "1a8bc733979360f2e3327d805efe64f9306247bacb90cac9efdc0cf1e033bb89",
+      "bytes": 72048,
+      "package": "libxau-glibc"
+    },
+    {
+      "name": "libxcb.so.1",
+      "packagedName": "librea_xcb.so",
+      "sha256": "b57cfc342b0efd864caa86773b33e4af882c3863e99441468a76849cedf0b2e2",
+      "bytes": 249712,
+      "package": "libxcb-glibc"
+    },
+    {
+      "name": "libXcursor.so.1",
+      "packagedName": "librea_xcursor.so",
+      "sha256": "86e70b94186edb4c16cf00f2bcea4a03ea09bb486ee6a079dd11d3ef6fffe722",
+      "bytes": 77288,
+      "package": "libxcursor-glibc"
+    },
+    {
+      "name": "libXdmcp.so.6",
+      "packagedName": "librea_xdmcp.so",
+      "sha256": "0245743bb594ee1ac2c1325873d70407c790f890477d8a0fe8323bda8803f705",
+      "bytes": 72536,
+      "package": "libxdmcp-glibc"
+    },
+    {
+      "name": "libXext.so.6",
+      "packagedName": "librea_xext.so",
+      "sha256": "a93ba9939545c2ea11ebba52a720abb1e35223b2f3ee2a8a86ab93426ad5845c",
+      "bytes": 150064,
+      "package": "libxext-glibc"
+    },
+    {
+      "name": "libXfixes.so.3",
+      "packagedName": "librea_xfixes.so",
+      "sha256": "271e82cbc4aa3db8ff36ad44735552153b6fbaa787bf59b6ec0b20f63d0f386d",
+      "bytes": 72968,
+      "package": "libxfixes-glibc"
+    },
+    {
+      "name": "libXi.so.6",
+      "packagedName": "librea_xi.so",
+      "sha256": "6f50cad56bb44c7900e692697bb5afcdd68c889be0c95eeda3775c8a2ac4de00",
+      "bytes": 146048,
+      "package": "libxi-glibc"
+    },
+    {
+      "name": "libXrandr.so.2",
+      "packagedName": "librea_xrandr.so",
+      "sha256": "c1b8c73864685b43eeead0ae3b3b49207b9b1db537326cb536a53479fd6a808b",
+      "bytes": 75224,
+      "package": "libxrandr-glibc"
+    },
+    {
+      "name": "libXrender.so.1",
+      "packagedName": "librea_xrender.so",
+      "sha256": "d05d09c2acfd577d27b7cc02f59497841a8c38fec5634cfb8eab0eaa76cc2dce",
+      "bytes": 74928,
+      "package": "libxrender-glibc"
+    }
+  ],
+  "scope": "Separate glibc child process only"
+}

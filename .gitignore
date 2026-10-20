@@ -1,0 +1,23 @@
+# Project-local tools and temporary transfer files
+tools/
+inputs/
+.cache/
+.local/
+.incoming-*
+
+# Build products, logs and private signing material
+build/
+artifacts/
+logs/
+*.jks
+*.keystore
+*.apk
+*.zip
+*.class
+*.dex
+
+# Verified runtime payloads are restored from pinned manifests/caches
+app/src/main/jniLibs/
+app/src/main/assets/window-xkb.zip
+app/src/main/assets/diagnostic-glxinfo.aarch64
+app/src/main/assets/diagnostic-eglinfo.aarch64

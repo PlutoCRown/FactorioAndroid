@@ -1,0 +1,252 @@
+{
+  "hybrisCommit": "2375acd0b5d278a0a2f745c645680545e8f80539",
+  "upstream": [
+    {
+      "path": "hybris/vulkan/icd/device.h",
+      "sha256": "ba0f5dff06dc9c01b375373dcd3c806ed1ab847e504698a5f4a558387ba58e56"
+    },
+    {
+      "path": "hybris/vulkan/icd/native_window.h",
+      "sha256": "c4aaf4a20fcf80923da9298c5274441a8ae8fedb673f89ae823bd73cefcd0566"
+    },
+    {
+      "path": "hybris/vulkan/icd/swapchain.h",
+      "sha256": "c9ac8ef5a5570a4cc9d50797da09b6c0c1fe48588cfabed690361c45abdc68e0"
+    },
+    {
+      "path": "hybris/vulkan/icd/instance.c",
+      "sha256": "098679ffa8254c2dd1575d619aef1f3ac0917b91f40b34c8593fc53386c707f8"
+    },
+    {
+      "path": "hybris/vulkan/icd/wsi.h",
+      "sha256": "6c6f3284d2df162e7984b59b0718bdb5db02c35328dffe9f606b1ee13210a854"
+    },
+    {
+      "path": "hybris/vulkan/icd/hwvulkan.h",
+      "sha256": "5f16023c9edb816f2387b5c890c17dca3df768a8bc0cb74bc3ed263418aa005a"
+    },
+    {
+      "path": "hybris/vulkan/icd/vk_android_native_buffer.h",
+      "sha256": "7ff1ad79514946da9214085a38d3d02f87c791e87c13e778312e2d8cb00856d6"
+    },
+    {
+      "path": "hybris/vulkan/icd/device.c",
+      "sha256": "29ef01fe586cbe8e4b2c08cff9d445a5523ab8108328cceb67443ca53ca006fb"
+    },
+    {
+      "path": "hybris/vulkan/icd/instance.h",
+      "sha256": "f1c8f53a1f1d3722a1128baf455cec8e3a0494b80873f9b6129a08aca5c26350"
+    },
+    {
+      "path": "hybris/vulkan/icd/swapchain.c",
+      "sha256": "978136f096d3f125a5b2353ec0c89512ca8879e338c83dc418e4fd7a297b9a41"
+    },
+    {
+      "path": "hybris/vulkan/icd/physical_commands.inc",
+      "sha256": "d8a514bfb8d92df72950ea84910ccd50cf315436511ef2af7f89248639e87717"
+    },
+    {
+      "path": "hybris/vulkan/icd/wsi.c",
+      "sha256": "e21bbb9167a5ef42f3af9a17fb302362c76d1ed5e4dbd19b8b6d00c0ada9d04c"
+    },
+    {
+      "path": "hybris/vulkan/icd/icd.c",
+      "sha256": "a851dcfdc49e7e79179089f5ff71231a660b6189e1b4997b465b68cd779efa02"
+    }
+  ],
+  "hardwareHeader": "https://android.googlesource.com/platform/hardware/libhardware/+/refs/heads/main/include_all/hardware/hardware.h",
+  "hardwareSha256": "05cc2f0108d6c87e36384380559943d34acd104e3c2ade9aeba4415cfb23aee8",
+  "scope": "Rebuild public ICD core with own AHB window provider. No game changes.",
+  "headerSources": {
+    "vulkan": "https://github.com/KhronosGroup/Vulkan-Headers/tree/952f776f6573aafbb62ea717d871cd1d6816c387/include",
+    "nativeBuffer": "Cached AOSP nativebase.h; ABI sizeof=168, handle=96 checked at compile time",
+    "ownDeclarationScope": "GNU-side ABI declarations for native_handle, XCB geometry and Xlib types; no system header installation"
+  },
+  "patches": [
+    "wsi.c: remove Wayland from advertised extensions; this app provides only XCB/Xlib native Surface transport",
+    "native-window-surface.c: replace TAWC-DRI native-window transport with private AHB socket, retained release fence + receiver completion acknowledgement"
+  ],
+  "compiledInputs": [
+    {
+      "path": "include/X11/Xlib-xcb.h",
+      "sha256": "0924ad07ed8bcf7c2cdce751837225412667ece7301d7edb8d688f113fb23a5a"
+    },
+    {
+      "path": "include/X11/Xlib.h",
+      "sha256": "faad564781bf4aca2012035c5fa2ece466b1a78810c59367b38c1e1b6d197304"
+    },
+    {
+      "path": "include/android-config.h",
+      "sha256": "41f12243076f9d767271e555b8f1283696d4c0f292d42c08acc253557358631a"
+    },
+    {
+      "path": "include/config.h",
+      "sha256": "7783990f7b63eccd1af7aae3fe2d891d8bed4098bce2f07e7ad3e7dfe5a6800d"
+    },
+    {
+      "path": "include/cutils/native_handle.h",
+      "sha256": "00c77062d3eceaa96757e4e6c3616495d4f5cb2265c213900a812e4bff13e49e"
+    },
+    {
+      "path": "include/hardware/hardware.h",
+      "sha256": "05cc2f0108d6c87e36384380559943d34acd104e3c2ade9aeba4415cfb23aee8"
+    },
+    {
+      "path": "include/hybris/common/dlfcn.h",
+      "sha256": "2224e16a178273ea56972c22785acc9b3f9bfd01a78c00fcd11fb03326c18491"
+    },
+    {
+      "path": "include/hybris/gralloc/gralloc.h",
+      "sha256": "dc305ca15063d814d771667ed252ab71a4ba2e40809da2f9a97dadcb2c6fed0a"
+    },
+    {
+      "path": "include/hybris/grallocusage/GrallocUsageConversion.h",
+      "sha256": "9de1e5f08e5c42b2ddc02fd38155415935f4158a482f031b33159946c0a0ae88"
+    },
+    {
+      "path": "include/nativebase/nativebase.h",
+      "sha256": "5fa086053493b18e057d513f8d5cde6fe144988874ad1f3b9d504f9b017c419f"
+    },
+    {
+      "path": "include/system/graphics-base.h",
+      "sha256": "e80bf3232c3359de9a09b9a2dacb7d6a39e37c17a301afb30c8f1e478d95b02f"
+    },
+    {
+      "path": "include/system/graphics.h",
+      "sha256": "7741f2812e8eb49af8beb9ea9190fa43b4869159cb8d87d9fcb844e4bdbcd0bd"
+    },
+    {
+      "path": "include/system/window.h",
+      "sha256": "542e03f5ad93009404d4763ae6907f67fe2373d0e07a25707a3ab73dc20fc0ad"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_av1std.h",
+      "sha256": "76c408eb8dce6e1f068594eb3239e75a05e3395f2ce10fef512599bd916fe879"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_av1std_decode.h",
+      "sha256": "2b912389d39d6627ee8af01e052e9557d213b27c0b79a0e25f5366cfe1942f1a"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_av1std_encode.h",
+      "sha256": "93ad363de123988cd7b27acc7930f7f93497bc2e5d74f8420ee8ba18e8746e0a"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_h264std.h",
+      "sha256": "05859b58e094a8dcc88cb3766a1fcbfd62bcaab20c93d2c3e5cec853628f277c"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_h264std_decode.h",
+      "sha256": "d2be01f84f773644a24b7634f49e63ff8c6f0e807119b1bf609176585031f93a"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_h264std_encode.h",
+      "sha256": "c68a1fa4ebadd1b50992a61fb93310a6686d5ea932b91b850d3ad9bc8dec488e"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_h265std.h",
+      "sha256": "a5d0b2e7b47843db610d2769c7b0202c90cd7db82108b60fb2631d1c7976a395"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_h265std_decode.h",
+      "sha256": "944646ced5bf9f49b79144c18369f0b932900c375fd81c262a3c30e9c60de8c6"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codec_h265std_encode.h",
+      "sha256": "aa8c75beac0962abf752a5ec741a42b1a108ee28fb6b3abcdc995e57e20c6c14"
+    },
+    {
+      "path": "include/vk_video/vulkan_video_codecs_common.h",
+      "sha256": "7afc98e84d3bea72e40a65161463abbd4be2ff1e1853eca3f8c331afb7329a8b"
+    },
+    {
+      "path": "include/vulkan/vk_platform.h",
+      "sha256": "2fa47dd60cd94eb6fd8d7615953878f5664eb57fdff3b1b9b856c1d8f1496737"
+    },
+    {
+      "path": "include/vulkan/vulkan.h",
+      "sha256": "c3c0635de74ae3dd38268d6a4cb767b36e07135e68fa6f64b777e2d4d2db7d1a"
+    },
+    {
+      "path": "include/vulkan/vulkan_core.h",
+      "sha256": "39f358bb99f7be5206524d119de4a5b5ab5c515c329c2857ff395d37e6387b4c"
+    },
+    {
+      "path": "include/vulkan/vulkan_wayland.h",
+      "sha256": "7b28a129b92c86aec3b59dd0a095f6bcefb2ee343bcd88a16387af896d0d569d"
+    },
+    {
+      "path": "include/vulkan/vulkan_xcb.h",
+      "sha256": "5068dcfe130f2c83e8e9aae94c1df17ad29c538b7e4e7c9dbb25b9714ef1c65c"
+    },
+    {
+      "path": "include/vulkan/vulkan_xlib.h",
+      "sha256": "e65c2e3f27fe9a35f4367eb90bafff93acada40693f3b427e93c1ae0058bdff6"
+    },
+    {
+      "path": "include/xcb/xcb.h",
+      "sha256": "a4e3b2772631bfec4585fbd283e8fceb200c6215892f554b3889b08750e40ab6"
+    },
+    {
+      "path": "native-window-surface.c",
+      "sha256": "59c505021c460fcb22822276e61ae247880166426b6db5a1fee235365e8ebb0f"
+    },
+    {
+      "path": "upstream/device.c",
+      "sha256": "29ef01fe586cbe8e4b2c08cff9d445a5523ab8108328cceb67443ca53ca006fb"
+    },
+    {
+      "path": "upstream/device.h",
+      "sha256": "ba0f5dff06dc9c01b375373dcd3c806ed1ab847e504698a5f4a558387ba58e56"
+    },
+    {
+      "path": "upstream/hwvulkan.h",
+      "sha256": "5f16023c9edb816f2387b5c890c17dca3df768a8bc0cb74bc3ed263418aa005a"
+    },
+    {
+      "path": "upstream/icd.c",
+      "sha256": "a851dcfdc49e7e79179089f5ff71231a660b6189e1b4997b465b68cd779efa02"
+    },
+    {
+      "path": "upstream/instance.c",
+      "sha256": "098679ffa8254c2dd1575d619aef1f3ac0917b91f40b34c8593fc53386c707f8"
+    },
+    {
+      "path": "upstream/instance.h",
+      "sha256": "f1c8f53a1f1d3722a1128baf455cec8e3a0494b80873f9b6129a08aca5c26350"
+    },
+    {
+      "path": "upstream/native_window.h",
+      "sha256": "c4aaf4a20fcf80923da9298c5274441a8ae8fedb673f89ae823bd73cefcd0566"
+    },
+    {
+      "path": "upstream/physical_commands.inc",
+      "sha256": "d8a514bfb8d92df72950ea84910ccd50cf315436511ef2af7f89248639e87717"
+    },
+    {
+      "path": "upstream/swapchain.c",
+      "sha256": "978136f096d3f125a5b2353ec0c89512ca8879e338c83dc418e4fd7a297b9a41"
+    },
+    {
+      "path": "upstream/swapchain.h",
+      "sha256": "c9ac8ef5a5570a4cc9d50797da09b6c0c1fe48588cfabed690361c45abdc68e0"
+    },
+    {
+      "path": "upstream/vk_android_native_buffer.h",
+      "sha256": "7ff1ad79514946da9214085a38d3d02f87c791e87c13e778312e2d8cb00856d6"
+    },
+    {
+      "path": "upstream/wsi.c",
+      "sha256": "fb5d1e5f6d8a7e9aae69421c8b71103964ef07153d60cd407751cd49605b8b03"
+    },
+    {
+      "path": "upstream/wsi.h",
+      "sha256": "6c6f3284d2df162e7984b59b0718bdb5db02c35328dffe9f606b1ee13210a854"
+    }
+  ],
+  "notes": [
+    "No Vulkan HAL/instance/device dispatch header patches. Standard GNU loader owns its own dispatch.",
+    "Private AHB delivery replaces upstream TAWC-DRI provider; release fences and consumer completion wait retained.",
+    "Lazy socket connect on actual present; temporary format-query surfaces allocate no transport connection."
+  ]
+}
