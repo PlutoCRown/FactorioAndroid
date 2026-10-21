@@ -44,7 +44,7 @@ public final class GameProfileConfigTests {
         String compat=GameProfileConfig.applyGraphicsPreset(saved,"compat");
         check(compat.contains("graphics-quality=medium\n")&&compat.contains("max-texture-size=4096\n")&&!compat.contains("max-texture-size=16384"),"compat limits texture size without duplicate active value");
         check(compat.contains("gpu-accelerated-compression=false\n")&&compat.contains("gpu-accelerated-mipmap-compression=false\n"),"failed asset compression paths disabled");
-        check(compat.contains("texture-compression-level=none\n"),"compressed sampling path disabled independently of asset generation");
+        check(compat.contains("texture-compression-level=high-quality\n"),"compat sprites use the direct renderer compressed texture path");
         check(compat.contains("locale=zh-CN\n")&&compat.contains("[controls]\nmove-up=W\n")&&compat.contains("show-clouds=false\n"),"locale controls and unrelated graphics retained");
         check(compat.contains("[path]\nread-data=/game/data\nwrite-data=/profile/userdata\n"),"preset retains game and save paths");
         check(compat.equals(GameProfileConfig.applyGraphicsPreset(compat,"compat")),"preset restart is idempotent");
@@ -54,8 +54,23 @@ public final class GameProfileConfigTests {
         String quality=GameProfileConfig.applyGraphicsPreset(balanced,"quality");
         check(quality.contains("graphics-quality=high\n")&&!quality.contains("max-texture-size=16384"),"high quality avoids known problematic 16K atlas");
         check(quality.contains("texture-compression-level=high-quality\n")&&!quality.contains("texture-compression-level=none\n"),"high-resolution sprites use compression instead of the memory-exhausting uncompressed atlas");
+        check(!quality.contains("max-sprite-loading-threads="),"graphics preset leaves loading concurrency independent");
         check(quality.equals(GameProfileConfig.applyGraphicsPreset(quality,"game")),"game settings retain the proven high-quality compressed configuration");
-        check(GameProfileConfig.applyGraphicsPreset(quality,"balanced").contains("texture-compression-level=none\n"),"switching back preserves the validated balanced preset");
+        check(GameProfileConfig.applyGraphicsPreset(quality,"balanced").contains("texture-compression-level=high-quality\n"),"balanced sprites retain memory-saving compression");
+        String loading="; version=13\n[graphics]\n; max-sprite-loading-threads=32\nmax-sprite-loading-threads=8\ntexture-compression-level=high-quality\n[controls]\ncustom=retained\n";
+        check(GameProfileConfig.applySpriteLoadingLimit(loading,0).equals(loading),"follow game leaves current limit and bytes unchanged");
+        String limited=GameProfileConfig.applySpriteLoadingLimit(loading,1);
+        check(limited.contains("max-sprite-loading-threads=1\n")&&!limited.contains("\nmax-sprite-loading-threads=8\n"),"explicit limit replaces existing setting");
+        check(limited.contains("; max-sprite-loading-threads=32\n")&&limited.contains("texture-compression-level=high-quality\n")&&limited.contains("[controls]\ncustom=retained\n"),"limit preserves comments graphics and controls");
+        check(limited.equals(GameProfileConfig.applySpriteLoadingLimit(limited,1)),"loading setting is idempotent");
+        check(GameProfileConfig.applySpriteLoadingLimit(GameProfileConfig.applyGraphicsPreset(loading,"game"),4).contains("max-sprite-loading-threads=4\n"),"loading setting independent of game graphics preset");
+        check(GameProfileConfig.applySpriteLoadingLimit(chinese,2).contains("[graphics]\nmax-sprite-loading-threads=2\n"),"missing graphics section accepts loading setting");
+        for(int bad:new int[]{-1,3,33,Integer.MAX_VALUE}) {
+            try {GameProfileConfig.applySpriteLoadingLimit(loading,bad);throw new AssertionError("invalid limit accepted");}catch(IOException expected){checks++;}
+        }
+        for(String bad:new String[]{"; version=13\n[graphics]\nmax-sprite-loading-threads=1\nmax-sprite-loading-threads=2\n","; version=13\n[graphics]\n[graphics]\n"}) {
+            try {GameProfileConfig.applySpriteLoadingLimit(bad,2);throw new AssertionError("ambiguous loading setting accepted");}catch(IOException expected){checks++;}
+        }
         String absent=GameProfileConfig.applyGraphicsPreset(chinese,"compat");
         check(absent.contains("[graphics]\n")&&"zh-CN".equals(GameProfileConfig.readLocale(absent)),"new graphics section preserves locale");
         for(String bad:new String[]{"unknown","compat\n[path]"}) {

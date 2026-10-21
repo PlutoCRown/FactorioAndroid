@@ -57,7 +57,7 @@ files/profiles/default-2.1.22/userdata/saves/
 
 `jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据、Compose新增AndroidX库及软键盘请求程序。安卓输入法的触发、文字回传和原生程序编译步骤见 [安卓软键盘接入](docs/ANDROID-KEYBOARD.md)。
 
-2026-10-21 Windows 本地0.3.2标准APK为31,387,089字节（31.39 MB），比0.3.1增加552字节。201项主机检查、签名、对齐和载荷校验通过。
+2026-10-21 Windows 本地0.3.3标准APK为31,392,361字节（31.39 MB），比0.3.2增加5,272字节。214项主机检查、签名、对齐和载荷校验通过。新增独立的贴图加载线程上限；受管理画质预设均启用高质量贴图压缩。
 
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
 
@@ -99,3 +99,5 @@ java scripts/RestoreRuntime.java
 ## GitHub Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PlutoCRown/FactorioAndroid&type=Date)](https://www.star-history.com/#PlutoCRown/FactorioAndroid&Date)
+
+贴图加载线程上限可在启动设置中独立选择，详见[加载速度与内存](docs/LOADING-MEMORY.md)。

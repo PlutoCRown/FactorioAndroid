@@ -55,6 +55,7 @@ private data class LauncherState(
     val touchMouse: Boolean = true,
     val scale: Int = 100,
     val preset: String = "compat",
+    val spriteLoadingLimit: Int = 1,
     val gpu: String? = null,
     val api: String? = null,
     val graphicsPassed: Boolean? = null,
@@ -86,6 +87,7 @@ class LauncherUi(private val host: MainActivity) {
             preferences.getBoolean("touchMouseSimulation", true),
             preferences.getInt("renderScalePercent", 100),
             preferences.getString("graphicsPreset", "compat") ?: "compat",
+            preferences.getInt("spriteLoadingLimit", 1),
             gl?.optString("glRenderer"),
             gl?.optString("glVersion")?.let { Regex("OpenGL ES\\s+\\d+\\.\\d+").find(it)?.value },
             gl?.optBoolean("clearReadbackPassed"),
@@ -217,6 +219,14 @@ class LauncherUi(private val host: MainActivity) {
             val presets = listOf("compat", "balanced", "quality", "game")
             Choice(listOf(R.string.preset_compat, R.string.preset_balanced, R.string.preset_quality, R.string.preset_game),
                 presets.indexOf(s.preset).coerceAtLeast(0), R.string.graphics_preset, !s.busy) { host.setGraphicsPreset(presets[it]) }
+            HorizontalDivider()
+            Field(R.string.sprite_loading_limit, R.string.sprite_loading_limit_hint)
+            val loadingLimits = listOf(1, 2, 4, 8, 16, 32, 0)
+            Choice(listOf(R.string.loading_limit_1, R.string.loading_limit_2, R.string.loading_limit_4,
+                R.string.loading_limit_8, R.string.loading_limit_16, R.string.loading_limit_32, R.string.loading_limit_game),
+                loadingLimits.indexOf(s.spriteLoadingLimit).coerceAtLeast(0), R.string.sprite_loading_limit, !s.busy) {
+                host.setSpriteLoadingLimit(loadingLimits[it])
+            }
             HorizontalDivider()
             Text(stringResource(R.string.graphics_renderer), style = MaterialTheme.typography.titleMedium)
             Text("Zink · Android Surface", color = Copper)

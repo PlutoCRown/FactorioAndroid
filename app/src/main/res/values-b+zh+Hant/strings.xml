@@ -124,4 +124,13 @@
     <string name="folder_sidebar_hint">请在系统文件管理器侧边栏打开 %1$s</string>
     <string name="save_imported_name">已导入：%1$s</string>
     <string name="game_exit_code">游戏异常退出（退出码 %1$d）。</string>
+    <string name="sprite_loading_limit" formatted="false">贴图加载线程上限</string>
+    <string name="sprite_loading_limit_hint" formatted="false">较低数值可减少加载时的内存占用，较高数值可能加快加载。不影响进入游戏后的运行线程。</string>
+    <string name="loading_limit_1" formatted="false">1（省内存）</string>
+    <string name="loading_limit_game" formatted="false">跟随游戏设置</string>
+    <string name="loading_limit_2" formatted="false">2</string>
+    <string name="loading_limit_4" formatted="false">4</string>
+    <string name="loading_limit_8" formatted="false">8</string>
+    <string name="loading_limit_16" formatted="false">16</string>
+    <string name="loading_limit_32" formatted="false">32</string>
 </resources>

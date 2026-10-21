@@ -91,12 +91,13 @@ public final class MainActivity extends Activity {
             return insets;
         });
         setContentView(layout);applyImmersiveMode();
-        if(manualSession){gameSession=new GameSession(getIntent().getStringExtra("graphicsPreset"));updateBackgroundPause();}
+        if(manualSession){gameSession=new GameSession(getIntent().getStringExtra("graphicsPreset"),getIntent().getIntExtra("spriteLoadingLimit",1));updateBackgroundPause();}
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         try {
             report=new JSONObject().put("schema",1).put("uid",android.os.Process.myUid()).put("pid",android.os.Process.myPid())
                 .put("factorioLaunched",false).put("linuxX11ClientConnected",false).put("hardwareOpenGLPassed",false)
                 .put("collectedAtEpochMillis",System.currentTimeMillis()).put("userStarted",manualSession).put("unlimitedSession",manualSession)
+                .put("spriteLoadingLimit",getIntent().getIntExtra("spriteLoadingLimit",1))
                 .put("graphicsPreset",manualSession?(getIntent().getStringExtra("graphicsPreset")==null?"compat":getIntent().getStringExtra("graphicsPreset")):"diagnostic");
             if(manualSession) {
                 controllerRelay=new ControllerRelay(this,false);

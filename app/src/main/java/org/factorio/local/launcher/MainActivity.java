@@ -78,6 +78,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     public void setTouchMouseEnabled(boolean enabled) {if(!busy){getPreferences(0).edit().putBoolean("touchMouseSimulation",enabled).apply();renderPage();}}
     public void setRenderScale(int percent) {if(!busy&&(percent==50||percent==75||percent==100)){getPreferences(0).edit().putInt("renderScalePercent",percent).apply();renderPage();}}
+    public void setSpriteLoadingLimit(int limit) {
+        if(!busy&&GameProfileConfig.validSpriteLoadingLimit(limit)){
+            getPreferences(0).edit().putInt("spriteLoadingLimit",limit).apply();renderPage();
+        }
+    }
     public void setGraphicsPreset(String preset) {
         if(!busy&&java.util.Arrays.asList("compat","balanced","quality","game").contains(preset)){
             getPreferences(0).edit().putString("graphicsPreset",preset).apply();renderPage();
@@ -142,6 +147,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         Intent game=new Intent(this,com.termux.x11.MainActivity.class).putExtra("playGame",true)
             .putExtra("touchMouseSimulation",getPreferences(0).getBoolean("touchMouseSimulation",true))
             .putExtra("renderScalePercent",getPreferences(0).getInt("renderScalePercent",100))
+            .putExtra("spriteLoadingLimit",getPreferences(0).getInt("spriteLoadingLimit",1))
             .putExtra("graphicsPreset",getPreferences(0).getString("graphicsPreset","compat"));startActivity(game);
     }
     private void probe() {

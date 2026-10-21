@@ -245,8 +245,8 @@ public final class RuntimeProbe {
             result.put("engineHelp",usage).put("passed",usage.optBoolean("passed"));
         }
         if(passed&&graphical) {
-            File session=manual?GameSession.prepareProfile(context,gameDirectory,control.graphicsPreset()):new File(context.getFilesDir(),"graphics-probe/session-"+UUID.randomUUID());
-            if(manual)result.put("graphicsPreset",control.graphicsPreset());
+            File session=manual?GameSession.prepareProfile(context,gameDirectory,control.graphicsPreset(),control.spriteLoadingLimit()):new File(context.getFilesDir(),"graphics-probe/session-"+UUID.randomUUID());
+            if(manual)result.put("graphicsPreset",control.graphicsPreset()).put("spriteLoadingLimit",control.spriteLoadingLimit());
             File user=new File(session,"userdata");
             if(!user.isDirectory()&&!user.mkdirs()) throw new IOException("无法创建图形验证数据目录");
             File config=new File(session,"config.ini");

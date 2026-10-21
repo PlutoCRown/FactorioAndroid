@@ -125,4 +125,13 @@
     <string name="save_imported_name">Imported: %1$s</string>
     <string name="game_exit_code">Game exited unexpectedly (exit code %1$d).</string>
     <string name="show_keyboard">Show keyboard</string>
+    <string name="sprite_loading_limit" formatted="false">Sprite loading thread limit</string>
+    <string name="sprite_loading_limit_hint" formatted="false">Lower limits reduce memory use during loading; higher limits may load faster. This does not limit threads during gameplay.</string>
+    <string name="loading_limit_1" formatted="false">1 (lower memory use)</string>
+    <string name="loading_limit_game" formatted="false">Follow game settings</string>
+    <string name="loading_limit_2" formatted="false">2</string>
+    <string name="loading_limit_4" formatted="false">4</string>
+    <string name="loading_limit_8" formatted="false">8</string>
+    <string name="loading_limit_16" formatted="false">16</string>
+    <string name="loading_limit_32" formatted="false">32</string>
 </resources>

@@ -95,10 +95,24 @@ final class GameProfileConfig {
         // texture assets does not change the GPU used to render game frames.
         options.put("gpu-accelerated-compression","false");
         options.put("gpu-accelerated-mipmap-compression","false");
-        // Direct Zink high-resolution sprites exceeded memory with no DXT.
-        // High-quality texture compression passed the full-size game test;
-        // keep the previously validated medium presets unchanged.
-        options.put("texture-compression-level","quality".equals(preset)?"high-quality":"none");
+        // Space Age also exceeded memory with uncompressed medium sprites.
+        // Compressed medium sprites passed initialization and map creation.
+        options.put("texture-compression-level","high-quality");
+        return applyGraphicsOptions(original,options);
+    }
+    static boolean validSpriteLoadingLimit(int limit) {
+        return limit==0||limit==1||limit==2||limit==4||limit==8||limit==16||limit==32;
+    }
+    /** Zero follows the existing game configuration, including its commented default. */
+    static String applySpriteLoadingLimit(String original,int limit) throws IOException {
+        validateVersion(original);
+        if(!validSpriteLoadingLimit(limit))throw new IOException("未知贴图加载线程上限，配置未修改");
+        if(limit==0)return original;
+        Map<String,String> options=new LinkedHashMap<>();
+        options.put("max-sprite-loading-threads",Integer.toString(limit));
+        return applyGraphicsOptions(original,options);
+    }
+    private static String applyGraphicsOptions(String original,Map<String,String> options) throws IOException {
         StringBuilder out=new StringBuilder();boolean graphics=false,found=false;
         HashSet<String> seen=new HashSet<>();
         String[] lines=original.split("\\r?\\n",-1);int count=lines.length;

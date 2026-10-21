@@ -52,8 +52,13 @@ public final class GameSession implements AutoCloseable {
     public synchronized void setKeyboardEnvironment(java.util.Map<String,String> environment) {keyboardEnvironment=new java.util.HashMap<>(environment);}
     synchronized java.util.Map<String,String> keyboardEnvironment(){return new java.util.HashMap<>(keyboardEnvironment);}
     private final String graphicsPreset;
-    public GameSession(String preset) {graphicsPreset=preset==null?"compat":preset;}
+    private final int spriteLoadingLimit;
+    public GameSession(String preset,int loadingLimit) {
+        graphicsPreset=preset==null?"compat":preset;
+        spriteLoadingLimit=GameProfileConfig.validSpriteLoadingLimit(loadingLimit)?loadingLimit:1;
+    }
     String graphicsPreset() {return graphicsPreset;}
+    int spriteLoadingLimit() {return spriteLoadingLimit;}
     public boolean stopping() {return stopRequested;}
     @Override public synchronized void close() {
         stopRequested=true;
@@ -82,7 +87,7 @@ public final class GameSession implements AutoCloseable {
         if(!root.isDirectory()&&!root.mkdirs())throw new IOException("无法创建游戏档案目录");
         return root;
     }
-    static File prepareProfile(Context context,File gameDirectory,String preset) throws Exception {
+    static File prepareProfile(Context context,File gameDirectory,String preset,int loadingLimit) throws Exception {
         File profile=profileDirectory(context),userdata=new File(profile,"userdata");
         if(!userdata.isDirectory()&&!userdata.mkdirs())throw new IOException("无法创建持久游戏数据目录");
         File config=new File(profile,"config.ini");
@@ -92,14 +97,15 @@ public final class GameSession implements AutoCloseable {
         String updated=GameProfileConfig.mapPaths(original,read,write);
         updated=GameProfileConfig.initializeLocale(updated,AppLanguage.gameLocale(context));
         updated=GameProfileConfig.applyGraphicsPreset(updated,preset);
+        updated=GameProfileConfig.applySpriteLoadingLimit(updated,loadingLimit);
         File graphicsBackup=new File(profile,"config.before-graphics-presets.ini");
-        if(!"game".equals(preset)&&config.isFile()&&!graphicsBackup.exists()&&!updated.equals(original))
+        if((!"game".equals(preset)||loadingLimit!=0)&&config.isFile()&&!graphicsBackup.exists()&&!updated.equals(original))
             Files.copy(config.toPath(),graphicsBackup.toPath());
         Path pending=new File(profile,"config.ini.pending").toPath();
         Files.write(pending,updated.getBytes(StandardCharsets.UTF_8));
         Files.move(pending,config.toPath(),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
         JSONObject metadata=new JSONObject().put("schema",1).put("id","default-2.1.22")
-            .put("graphicsPreset",preset).put("graphicsBackup",graphicsBackup.isFile()?graphicsBackup.getAbsolutePath():JSONObject.NULL)
+            .put("graphicsPreset",preset).put("spriteLoadingLimit",loadingLimit).put("graphicsBackup",graphicsBackup.isFile()?graphicsBackup.getAbsolutePath():JSONObject.NULL)
             .put("locale",GameProfileConfig.readLocale(updated)).put("initialLocaleFallback",AppLanguage.gameLocale(context))
             .put("readData",read).put("writeData",write).put("configuration",config.getAbsolutePath())
             .put("saves",new File(userdata,"saves").getAbsolutePath()).put("mods",new File(userdata,"mods").getAbsolutePath());
