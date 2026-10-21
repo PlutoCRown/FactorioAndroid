@@ -53,8 +53,7 @@ public final class MainActivity extends Activity {
         status.setTextColor(android.graphics.Color.WHITE);status.setBackgroundColor(0xc0202630);
         FrameLayout.LayoutParams statusPosition=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.START);
         statusPosition.setMargins(dp(12),dp(12),dp(76),0);status.setMaxWidth(dp(560));layout.addView(status,statusPosition);
-        Button menu=new Button(this);menu.setText(getString(R.string.session));menu.setAllCaps(false);menu.setContentDescription(getString(R.string.session_menu));
-        menu.setMinWidth(0);menu.setMinimumWidth(0);menu.setTextSize(12);menu.setAlpha(0.72f);
+        ImageButton menu=new org.factorio.local.launcher.SessionMenuButton(this);
         FrameLayout.LayoutParams menuPosition=new FrameLayout.LayoutParams(dp(64),dp(48),Gravity.BOTTOM|Gravity.END);
         menuPosition.setMargins(0,0,dp(8),dp(8));layout.addView(menu,menuPosition);
         menu.setOnClickListener(anchor-> {

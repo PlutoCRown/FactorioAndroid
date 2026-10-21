@@ -16,8 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -112,8 +110,9 @@ class LauncherUi(private val host: MainActivity) {
                         val deviceScroll = rememberScrollState()
                         val scroll = when (s.page) { 1 -> settingsScroll; 2 -> deviceScroll; else -> homeScroll }
                         Column(
-                            Modifier.fillMaxSize().verticalScroll(scroll).padding(if (wide) 32.dp else 20.dp),
-                            verticalArrangement = Arrangement.spacedBy(18.dp),
+                            Modifier.widthIn(max = 600.dp).fillMaxWidth().fillMaxHeight()
+                                .verticalScroll(scroll).padding(if (wide) 24.dp else 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             when (s.page) {
                                 1 -> Settings(s)
@@ -165,12 +164,12 @@ class LauncherUi(private val host: MainActivity) {
     private fun Home(s: LauncherState) {
         Eyebrow()
         Text(stringResource(if (s.version == null) R.string.home_welcome else R.string.home_continue),
-            style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
+            style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
         Hint(if (s.version == null) R.string.home_import_hint else R.string.home_ready)
         Status(s)
         FactoryPanel {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Image(painterResource(R.drawable.factorio_icon), null, Modifier.size(44.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Image(painterResource(R.drawable.factorio_icon), null, Modifier.size(36.dp))
                 Column {
                     Text(if (s.version == null) stringResource(R.string.add_game) else "Factorio", style = MaterialTheme.typography.titleLarge)
                     Text(s.version?.let { "$it · ${if (s.spaceAge) "Space Age" else stringResource(R.string.base_game)}" }
@@ -200,7 +199,7 @@ class LauncherUi(private val host: MainActivity) {
     @Composable
     private fun Settings(s: LauncherState) {
         Eyebrow()
-        Text(stringResource(R.string.launch_settings), style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(R.string.launch_settings), style = MaterialTheme.typography.headlineMedium)
         Hint(R.string.settings_hint)
         FactoryPanel {
             Row(
@@ -241,7 +240,7 @@ class LauncherUi(private val host: MainActivity) {
     @Composable
     private fun Device(s: LauncherState) {
         Eyebrow()
-        Text(stringResource(R.string.device_info), style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(R.string.device_info), style = MaterialTheme.typography.headlineMedium)
         Hint(R.string.device_hint)
         FactoryPanel {
             Datum(R.string.device_label, "${Build.MANUFACTURER} ${Build.MODEL}")
@@ -259,9 +258,9 @@ class LauncherUi(private val host: MainActivity) {
         Box(modifier) {
             Image(painterResource(R.drawable.factory_background), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Coal, Color.Transparent))))
-            Column(Modifier.align(Alignment.BottomStart).padding(36.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.align(Alignment.BottomStart).padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("THE FACTORY MUST GROW", fontSize = 11.sp, letterSpacing = 2.sp, color = Ink)
-                Text(stringResource(R.string.artwork_caption), style = MaterialTheme.typography.headlineMedium, color = Ink)
+                Text(stringResource(R.string.artwork_caption), style = MaterialTheme.typography.titleLarge, color = Ink)
             }
         }
     }
@@ -300,20 +299,10 @@ private fun Datum(title: Int, value: String) {
     }
 }
 
-private fun Modifier.factoryBorder() = drawWithContent {
-    drawContent()
-    val edge = 2.dp.toPx()
-    drawLine(Color(0xff797674), Offset.Zero, Offset(size.width, 0f), edge)
-    drawLine(Color(0xff797674), Offset.Zero, Offset(0f, size.height), edge)
-    drawLine(Color(0xff100e0c), Offset(0f, size.height), Offset(size.width, size.height), edge)
-    drawLine(Color(0xff100e0c), Offset(size.width, 0f), Offset(size.width, size.height), edge)
-}
-
 @Composable
 private fun FactoryPanel(content: @Composable ColumnScope.() -> Unit) {
-    Surface(color = Panel, modifier = Modifier.fillMaxWidth().factoryBorder()) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
-    }
+    Column(Modifier.fillMaxWidth().factoryWebPanelSurface().padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
 }
 
 @Composable
@@ -328,7 +317,7 @@ private fun Choice(labels: List<Int>, selected: Int, field: Int, enabled: Boolea
     var expanded by remember { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val width = maxWidth
-        FactoryWebButton(enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), onClick = { expanded = true }) {
+        FactoryWebButton(enabled, modifier = Modifier.fillMaxWidth(), onClick = { expanded = true }) {
             Text(stringResource(field) + " · " + stringResource(labels[selected]), Modifier.weight(1f))
             Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.size(24.dp))
         }
