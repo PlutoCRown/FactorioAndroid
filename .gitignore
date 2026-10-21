@@ -25,3 +25,8 @@ app/src/main/jniLibs/
 app/src/main/assets/window-xkb.zip
 app/src/main/assets/diagnostic-glxinfo.aarch64
 app/src/main/assets/diagnostic-eglinfo.aarch64
+
+# Gradle state and machine-specific SDK paths
+.gradle/
+**/build/
+local.properties

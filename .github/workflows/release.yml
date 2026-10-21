@@ -45,7 +45,7 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install "platforms;android-34" "build-tools;35.0.0"
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
 
       - name: Build launcher packages
         env:
