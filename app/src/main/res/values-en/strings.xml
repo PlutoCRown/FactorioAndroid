@@ -27,10 +27,10 @@
     <string name="scale_balanced" formatted="false">75% · Balanced</string>
     <string name="scale_smooth" formatted="false">50% · Performance</string>
     <string name="graphics_preset" formatted="false">Graphics preset</string>
-    <string name="graphics_preset_hint" formatted="false">High quality keeps high-resolution sprites with high-quality texture compression. Compression is also recommended when using in-game settings.</string>
-    <string name="preset_compat" formatted="false">Compatibility · Recommended</string>
-    <string name="preset_balanced" formatted="false">Balanced</string>
-    <string name="preset_quality" formatted="false">High quality</string>
+    <string name="graphics_preset_hint" formatted="false">Sets the maximum size of each texture atlas, independently of screen rendering resolution. Higher levels may use more memory. All levels use high-quality texture compression.</string>
+    <string name="preset_compat" formatted="false">4K textures</string>
+    <string name="preset_balanced" formatted="false">8K textures</string>
+    <string name="preset_quality" formatted="false">16K textures</string>
     <string name="preset_game" formatted="false">Use in-game settings</string>
     <string name="graphics_renderer" formatted="false">Graphics renderer</string>
     <string name="renderer_hint" formatted="false">Renders directly on the GPU. No backend selection is needed.</string>
@@ -125,7 +125,7 @@
     <string name="save_imported_name">Imported: %1$s</string>
     <string name="game_exit_code">Game exited unexpectedly (exit code %1$d).</string>
     <string name="sprite_loading_limit" formatted="false">Sprite loading thread limit</string>
-    <string name="sprite_loading_limit_hint" formatted="false">Lower limits reduce memory use during loading; higher limits may load faster. This does not limit threads during gameplay.</string>
+    <string name="sprite_loading_limit_hint" formatted="false">Higher limits may load faster but use more resources. Insufficient device memory can cause a crash with exit code 137. This only affects texture loading, not gameplay threads.</string>
     <string name="loading_limit_1" formatted="false">1 (lower memory use)</string>
     <string name="loading_limit_game" formatted="false">Follow game settings</string>
     <string name="loading_limit_2" formatted="false">2</string>
@@ -142,7 +142,7 @@
     <string name="import_read_unknown">Package read: %1$.1f MiB · Total size unavailable</string>
     <string name="import_extracted">Extracted: %1$.1f MiB · %2$d files</string>
     <string name="import_elapsed">Elapsed: %1$d min %2$02d sec</string>
-    <string name="import_duration_hint">On this test device, the base game took about 2 minutes; Space Age took about 5 minutes and may take longer. Keep the app open. Reading 100% is followed by verification and cleanup.</string>
+    <string name="import_duration_hint">Estimated import time: about 2 minutes for the base game and 5 minutes for Space Age. Actual time depends on device performance and file size. Keep the app open during import; verification and file cleanup follow reading.</string>
     <string name="save_import_invalid">This ZIP is not a complete, supported Factorio save. Select the original save ZIP without extracting it.</string>
     <string name="save_import_copy_failed">Could not copy the save. Check free storage and whether the selected file is still accessible, then try again.</string>
 </resources>

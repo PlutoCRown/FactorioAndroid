@@ -61,7 +61,7 @@ files/profiles/default-2.1.22/userdata/saves/
 
 `jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据、Compose新增AndroidX库及软键盘请求程序。安卓输入法的触发、文字回传和原生程序编译步骤见 [安卓软键盘接入](docs/ANDROID-KEYBOARD.md)。
 
-2026-10-22 Windows 本地0.3.7标准APK为31,410,827字节（31.41 MB），比0.3.5增加10,332字节。229项主机检查、签名、对齐和载荷校验通过。贴图加载线程上限可独立设置，受管理画质预设均启用高质量贴图压缩；本版同时包含导入进度、存档ZIP导入及安卓键盘状态同步修复。
+2026-10-22 Windows 本地0.3.8标准APK为31,415,155字节（31.42 MB），比0.3.7增加4,328字节。229项主机检查、签名、对齐和载荷校验通过。首页保留游戏与文件入口，触屏鼠标模拟移至启动设置；贴图级别为4K、8K、16K，加载线程上限独立设置并说明内存不足时可能出现退出码137。左侧导航使用本地Lucide矢量图标。本版保留导入进度、存档ZIP导入和安卓键盘状态同步修复。
 
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
 

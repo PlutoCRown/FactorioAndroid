@@ -52,7 +52,7 @@ public final class GameProfileConfigTests {
         String balanced=GameProfileConfig.applyGraphicsPreset(compat,"balanced");
         check(balanced.contains("max-texture-size=8192\n")&&balanced.contains("graphics-quality=medium\n"),"balanced switches existing preset");
         String quality=GameProfileConfig.applyGraphicsPreset(balanced,"quality");
-        check(quality.contains("graphics-quality=high\n")&&!quality.contains("max-texture-size=16384"),"high quality avoids known problematic 16K atlas");
+        check(quality.contains("graphics-quality=high\n")&&quality.contains("max-texture-size=16384\n"),"16K texture preset applies the requested atlas limit");
         check(quality.contains("texture-compression-level=high-quality\n")&&!quality.contains("texture-compression-level=none\n"),"high-resolution sprites use compression instead of the memory-exhausting uncompressed atlas");
         check(!quality.contains("max-sprite-loading-threads="),"graphics preset leaves loading concurrency independent");
         check(quality.equals(GameProfileConfig.applyGraphicsPreset(quality,"game")),"game settings retain the proven high-quality compressed configuration");

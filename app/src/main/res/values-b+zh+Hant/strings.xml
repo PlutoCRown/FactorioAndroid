@@ -27,10 +27,10 @@
     <string name="scale_balanced" formatted="false">75% · 均衡</string>
     <string name="scale_smooth" formatted="false">50% · 流畅</string>
     <string name="graphics_preset" formatted="false">画质预设</string>
-    <string name="graphics_preset_hint" formatted="false">高画质使用高质量贴图压缩，保留高清素材。使用游戏内设置时，也建议启用贴图压缩。</string>
-    <string name="preset_compat" formatted="false">兼容起步 · 推荐</string>
-    <string name="preset_balanced" formatted="false">均衡画质</string>
-    <string name="preset_quality" formatted="false">高画质</string>
+    <string name="graphics_preset_hint" formatted="false">控制單張貼圖圖集的最大尺寸，不改變螢幕渲染解析度。級別越高，記憶體用量可能越大；各級皆啟用高品質貼圖壓縮。</string>
+    <string name="preset_compat" formatted="false">4K 貼圖級</string>
+    <string name="preset_balanced" formatted="false">8K 貼圖級</string>
+    <string name="preset_quality" formatted="false">16K 貼圖級</string>
     <string name="preset_game" formatted="false">使用游戏内设置</string>
     <string name="graphics_renderer" formatted="false">图形渲染</string>
     <string name="renderer_hint" formatted="false">直接使用 GPU 渲染，无需选择图形后端。</string>
@@ -125,7 +125,7 @@
     <string name="save_imported_name">已导入：%1$s</string>
     <string name="game_exit_code">游戏异常退出（退出码 %1$d）。</string>
     <string name="sprite_loading_limit" formatted="false">贴图加载线程上限</string>
-    <string name="sprite_loading_limit_hint" formatted="false">较低数值可减少加载时的内存占用，较高数值可能加快加载。不影响进入游戏后的运行线程。</string>
+    <string name="sprite_loading_limit_hint" formatted="false">調高可能加快載入，也會增加資源用量。裝置記憶體不足時可能閃退，結束代碼為 137。僅影響貼圖載入，不限制遊戲執行緒。</string>
     <string name="loading_limit_1" formatted="false">1（省内存）</string>
     <string name="loading_limit_game" formatted="false">跟随游戏设置</string>
     <string name="loading_limit_2" formatted="false">2</string>
@@ -142,7 +142,7 @@
     <string name="import_read_unknown">安装包已读取：%1$.1f MiB · 无法获取总大小</string>
     <string name="import_extracted">已展开：%1$.1f MiB · %2$d 个文件</string>
     <string name="import_elapsed">已用时：%1$d 分 %2$02d 秒</string>
-    <string name="import_duration_hint">在本测试设备上，原版约需 2 分钟，太空时代约需 5 分钟，也可能更久。请保持应用打开；读取完毕后仍需核验与清理。</string>
+    <string name="import_duration_hint">預計匯入時間：原版約 2 分鐘，太空時代約 5 分鐘，實際耗時取決於裝置效能和檔案大小。匯入期間請保持應用程式開啟；讀取完成後仍需驗證與整理檔案。</string>
     <string name="save_import_invalid">此 ZIP 不是完整的、可识别的 Factorio 存档。请选择原始存档 ZIP，无需解压。</string>
     <string name="save_import_copy_failed">无法复制存档。请检查剩余空间及所选文件是否仍可访问，然后重试。</string>
 </resources>

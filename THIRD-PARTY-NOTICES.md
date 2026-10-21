@@ -24,9 +24,11 @@ The local build restores the following separately pinned runtime components. The
 
 `factorio_icon.png` was extracted from the user's own game. `factory_background.jpg` is the user-requested Factorio website background. Both remain Wube artwork, kept here for the owner's private project; public redistribution permission has not been established. `ic_expand_more.xml` is a project-owned vector chevron.
 
+The sidebar uses official [Lucide](https://lucide.dev/) `house`, `sliders-horizontal` and `tablet` icons. Original SVGs, pinned download URLs and the complete ISC / inherited Feather MIT license are retained in `app/src/main/assets/lucide/`. `scripts/ConvertLucideIcons.java` converts those SVG paths into Android vector drawables without changing their geometry or stroke style; no icon library or online request is needed at runtime. Reproduce with `java scripts/ConvertLucideIcons.java` from the project directory. The original icon licenses apply to the generated vectors.
+
 ## Kotlin / Jetpack Compose / Gradle
 
-AndroidX Activity, Compose UI/Foundation/Material 3 and their AndroidX dependencies are from Google/AOSP under Apache-2.0. Kotlin standard library is from JetBrains under Apache-2.0. The Gradle wrapper is the verified official Gradle 9.1.0 wrapper, Apache-2.0. Apache-2.0 text is retained in `app/src/main/assets/APACHE-2.0.txt`. These components do not replace or modify the game's renderer. Project-owned navigation vectors and Compose theme code remain GPL-3.0-or-later.
+AndroidX Activity, Compose UI/Foundation/Material 3 and their AndroidX dependencies are from Google/AOSP under Apache-2.0. Kotlin standard library is from JetBrains under Apache-2.0. The Gradle wrapper is the verified official Gradle 9.1.0 wrapper, Apache-2.0. Apache-2.0 text is retained in `app/src/main/assets/APACHE-2.0.txt`. These components do not replace or modify the game's renderer. Project-owned Compose theme code remains GPL-3.0-or-later; the Lucide navigation vectors retain the licenses above.
 
 Compose also bundles `androidx.graphics:graphics-path:1.0.1` (Apache-2.0). Its ARM64 `libandroidx.graphics.path.so` is pinned separately in `scripts/compose-native-files.tsv`; it is not part of the 52-library game runtime.
 

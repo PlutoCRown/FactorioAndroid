@@ -1,0 +1,27 @@
+{
+  "project": "Lucide",
+  "revision": "20aef31db93fe4d9f398dbb15b120d99c48eef95",
+  "license": "ISC; upstream LICENSE includes inherited Feather MIT terms",
+  "files": [
+    {
+      "name": "house.svg",
+      "url": "https://raw.githubusercontent.com/lucide-icons/lucide/20aef31db93fe4d9f398dbb15b120d99c48eef95/icons/house.svg",
+      "sha256": "28216c479005731ef5e382e7d8627eda2b129b019eb1f3d9de9f5915576d448e"
+    },
+    {
+      "name": "sliders-horizontal.svg",
+      "url": "https://raw.githubusercontent.com/lucide-icons/lucide/20aef31db93fe4d9f398dbb15b120d99c48eef95/icons/sliders-horizontal.svg",
+      "sha256": "e43a00e5eb684e6cbb61083bed2528d7a3fa5f265693eb2b5f314cd432aa65f4"
+    },
+    {
+      "name": "tablet.svg",
+      "url": "https://raw.githubusercontent.com/lucide-icons/lucide/20aef31db93fe4d9f398dbb15b120d99c48eef95/icons/tablet.svg",
+      "sha256": "cf58f791bd83c5340362fc0694d3f766aa82b9abfe291ef72e15a3ac3da54125"
+    },
+    {
+      "name": "LICENSE",
+      "url": "https://raw.githubusercontent.com/lucide-icons/lucide/20aef31db93fe4d9f398dbb15b120d99c48eef95/LICENSE",
+      "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+    }
+  ]
+}

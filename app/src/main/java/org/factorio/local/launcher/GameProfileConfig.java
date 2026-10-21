@@ -89,7 +89,7 @@ final class GameProfileConfig {
         } else if("balanced".equals(preset)) {
             options.put("graphics-quality","medium");options.put("max-texture-size","8192");options.put("video-memory-usage","high");
         } else if("quality".equals(preset)) {
-            options.put("graphics-quality","high");options.put("max-texture-size","8192");options.put("video-memory-usage","all");
+            options.put("graphics-quality","high");options.put("max-texture-size","16384");options.put("video-memory-usage","all");
         } else throw new IOException("未知画质预设，配置未修改");
         // Observed Mali/Zink compression self-test failed. CPU preparation of
         // texture assets does not change the GPU used to render game frames.

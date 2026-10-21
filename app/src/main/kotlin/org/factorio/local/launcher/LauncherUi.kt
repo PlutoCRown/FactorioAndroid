@@ -177,22 +177,12 @@ class LauncherUi(private val host: MainActivity) {
                         ?: stringResource(R.string.game_package_hint), color = Muted, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Row(
-                Modifier.fillMaxWidth().toggleable(s.touchMouse, enabled = !s.busy, role = Role.Switch,
-                    onValueChange = host::setTouchMouseEnabled).padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(R.string.touch_mouse), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = s.touchMouse, onCheckedChange = null, enabled = !s.busy)
-            }
-            Hint(R.string.touch_mouse_hint)
             FactoryButton(if (s.version == null) R.string.choose_game else R.string.launch_game, !s.busy, true) { action("play") }
             if (s.version == null) {
                 TextButton(onClick = { action("help") }, enabled = !s.busy, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.download_help_link))
                 }
             } else {
-                FactoryButton(R.string.launch_settings, !s.busy) { action("settings") }
                 HorizontalDivider(color = Color(0xff201815))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     FactoryButton(R.string.open_saves, !s.busy, modifier = Modifier.weight(1f)) { action("saves") }
@@ -213,6 +203,16 @@ class LauncherUi(private val host: MainActivity) {
         Text(stringResource(R.string.launch_settings), style = MaterialTheme.typography.headlineLarge)
         Hint(R.string.settings_hint)
         FactoryPanel {
+            Row(
+                Modifier.fillMaxWidth().toggleable(s.touchMouse, enabled = !s.busy, role = Role.Switch,
+                    onValueChange = host::setTouchMouseEnabled).padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.touch_mouse), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Switch(checked = s.touchMouse, onCheckedChange = null, enabled = !s.busy)
+            }
+            Hint(R.string.touch_mouse_hint)
+            HorizontalDivider()
             Field(R.string.render_resolution, R.string.render_resolution_hint)
             val scales = listOf(100, 75, 50)
             Choice(listOf(R.string.scale_native, R.string.scale_balanced, R.string.scale_smooth),
