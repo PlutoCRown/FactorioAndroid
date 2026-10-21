@@ -40,6 +40,8 @@ files/profiles/default-2.1.22/userdata/saves/
 
 Installing a newer APK over the old one keeps the imported game, settings, and saves. Uninstalling the app or clearing its data deletes those files.
 
+Import and launch do not use a game-version or engine-hash allowlist. Use a full Linux ARM64 graphical client. Engine digests serve diagnostics and optional adapter selection. The native gamepad adapter activates only for an engine with matching interfaces; other versions still launch with touch or keyboard/mouse input.
+
 ## Requirements and tested devices
 
 A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
@@ -55,7 +57,7 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library. See [Android keyboard integration (Chinese)](docs/ANDROID-KEYBOARD.md) for request routing, Unicode commits and helper build instructions.
 
-The 2026-10-21 Windows local keyboard integration standard APK is 31,386,537 bytes (31.39 MB), 13,665 bytes above the earlier Compose standard build. All 198 host checks, signature, alignment and payload verification pass. A data-preserving tablet upgrade and native helper execution/socket tests pass; automatic game text-field activation and Unicode input still await device verification.
+The 2026-10-21 Windows local 0.3.2 standard APK is 31,387,089 bytes (31.39 MB), 552 bytes above 0.3.1. All 201 host checks, signature, alignment and payload verification pass.
 
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 

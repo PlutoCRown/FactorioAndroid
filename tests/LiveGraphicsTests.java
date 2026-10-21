@@ -18,6 +18,9 @@ public final class LiveGraphicsTests {
         check(live.snapshot().get("fatalLine").contains("Received SIGSEGV"),"crash line kept");
         live.accept("FPS 60 refresh rate 120\n");
         check(live.snapshot().size()==5,"refresh rate is not stored as a frame rate");
+        check(GamepadRuntime.supportsEngine("7091e6d320e78210416c5e60492a316ad80b11d37917f66e6e72e088952b9562"),"existing engine retains its native gamepad adapter");
+        check(!GamepadRuntime.supportsEngine("ebe1914b13c3ff45766d75001dda1ae87ae1a6f170feaf86973d782aa2e69de0"),"new engine does not use old SDL addresses");
+        check(!GamepadRuntime.supportsEngine(null),"missing identity has no optional adapter");
         System.out.println("LiveGraphicsTests: "+count+" passed");
     }
 }

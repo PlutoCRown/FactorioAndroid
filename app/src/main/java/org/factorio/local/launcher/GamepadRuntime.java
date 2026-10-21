@@ -12,6 +12,9 @@ public final class GamepadRuntime {
     private static final String LIBRARY_SHA256="c5f7624ccdaf635dd487a51c1c3093ddb2e4e3a257c8545d1477c4f387ba56c1";
     private GamepadRuntime() {}
 
+    /** Optional adapter capability, never an engine launch allowlist. */
+    static boolean supportsEngine(String engineHash) {return ENGINE_SHA256.equals(engineHash);}
+
     /** Returns library and gamepadSocket paths; the GNU child owns socket creation/cleanup. */
     public static JSONObject prepare(Context context) throws Exception {
         JSONObject manifest;

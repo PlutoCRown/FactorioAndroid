@@ -13,7 +13,6 @@ import java.util.concurrent.*;
 /** Bounded engine diagnostics using an APK-installed, hash-pinned loader. */
 public final class RuntimeProbe {
     public interface Progress {void update(String phase,JSONObject detail) throws Exception;}
-    private static final String ENGINE_SHA="7091e6d320e78210416c5e60492a316ad80b11d37917f66e6e72e088952b9562";
     private static String digest(File file) throws Exception {
         MessageDigest sha=MessageDigest.getInstance("SHA-256");
         try(InputStream input=new FileInputStream(file)) {
@@ -177,7 +176,10 @@ public final class RuntimeProbe {
         if(progress!=null)progress.update("verifyEngine",result);
         String engineHash=digest(engine);
         result.put("engineSha256",engineHash).put("gameVersion",game.optString("version"));
-        if(!ENGINE_SHA.equals(engineHash)) return result.put("passed",false).put("error","此轮执行验证只覆盖已核对的官方2.1.22引擎");
+        // Engine identity is diagnostic data. Optional native adapters select their
+        // own compatible engine; they must never prevent another version launching.
+        controller=manual&&GamepadRuntime.supportsEngine(engineHash);
+        result.put("nativeGamepadAdapterAvailable",controller);
         File nativeDirectory=new File(context.getApplicationInfo().nativeLibraryDir);
         result.put("nativeLibraryDirectory",nativeDirectory.getAbsolutePath());
         JSONObject manifest;
@@ -234,8 +236,9 @@ public final class RuntimeProbe {
         if(!resolved.optBoolean("passed")) return result.put("passed",false).put("error","应用内加载器或依赖解析未通过，见诊断输出");
         List<String> version=new ArrayList<>(base); version.add(engine.getAbsolutePath()); version.add("--version");
         JSONObject executed=command(version,gameDirectory,context.getCacheDir()); result.put("engineVersion",executed);
-        boolean passed=executed.optBoolean("passed")&&executed.optString("output").contains("Version: 2.1.22 (build 87719, linux-arm64, full)");
+        boolean passed=executed.optBoolean("passed");
         result.put("passed",passed).put("ordinaryAppEngineVersionPassed",passed);
+        if(!passed)return result.put("error","引擎版本命令执行失败，见诊断输出");
         if(passed&&mode.equals("help")) {
             List<String> help=new ArrayList<>(base); help.add(engine.getAbsolutePath()); help.add("--help");
             JSONObject usage=command(help,gameDirectory,context.getCacheDir());
@@ -247,7 +250,7 @@ public final class RuntimeProbe {
             File user=new File(session,"userdata");
             if(!user.isDirectory()&&!user.mkdirs()) throw new IOException("无法创建图形验证数据目录");
             File config=new File(session,"config.ini");
-            // Fixed engine2.1.22 configuration format; the version marker is required.
+            // Existing persistent configuration format; this marker is not a game version gate.
             String settings="; version=13\n[path]\nread-data="+new File(gameDirectory,"data").getAbsolutePath()+
                 "\nwrite-data="+user.getAbsolutePath()+"\n";
             if(!manual) {
@@ -272,7 +275,6 @@ public final class RuntimeProbe {
             List<String> graphics=new ArrayList<>(base); graphics.add(engine.getAbsolutePath());
             graphics.addAll(Arrays.asList("--config",config.getAbsolutePath(),"--executable-path",engine.getParent(),
                 "--window-size",renderWidth+"x"+renderHeight));
-            if(!controller)graphics.add("--nogamepad");
             if(!manual)graphics.addAll(Arrays.asList("--force-graphics-preset","very-low"));
             graphics.addAll(Arrays.asList("--no-log-rotation","--verbose"));
             result.put("graphicalStartupAttempted",true).put("graphicsReady",false)
