@@ -47,6 +47,14 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/gradle/caches
+            .cache/gradle/wrapper
+          key: ${{ runner.os }}-gradle9-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+
       - name: Build launcher packages
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -63,6 +71,7 @@ jobs:
           path: |
             artifacts/*.apk
             artifacts/build-result.json
+            artifacts/host-tests.xml
           if-no-files-found: error
 
       - name: Publish release

@@ -1,4 +1,5 @@
 # Project-local JDK/SDK only. No installer, registry, PATH or system SDK changes.
+param([string]$Proxy='')
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $taskRoot=Split-Path $PSScriptRoot -Parent
@@ -11,7 +12,8 @@ function Get-TaskArchive($item,[string]$name) {
     if((Test-Path $dest)-and ((Get-FileHash $dest -Algorithm $algorithm).Hash.ToLowerInvariant() -eq $item.checksum)){return $dest}
     $partial=$dest+'.part'
     Write-Host ('Downloading project-local '+$name)
-    & curl.exe --silent --show-error --fail --location --retry 3 --connect-timeout 30 --max-time 1800 --continue-at - --output $partial $item.url
+    $proxyArgs=@();if($Proxy){$proxyArgs=@('--proxy',$Proxy)}
+    & curl.exe @proxyArgs --silent --show-error --fail --location --retry 3 --connect-timeout 30 --max-time 1800 --continue-at - --output $partial $item.url
     if($LASTEXITCODE){throw ('Download failed: '+$name)}
     if((Get-Item $partial).Length -ne $item.bytes -or (Get-FileHash $partial -Algorithm $algorithm).Hash.ToLowerInvariant() -ne $item.checksum){throw ('Tool archive verification failed: '+$name)}
     Move-Item $partial $dest -Force;return $dest
@@ -38,6 +40,7 @@ if(-not (Test-Path $taskSdkManager)) {
     Remove-Item $taskExtract -Recurse -Force
 }
 $env:JAVA_HOME=$taskJdk;$env:PATH=(Join-Path $taskJdk 'bin')+';'+$env:PATH
+if($Proxy){$taskProxyUri=[uri]$Proxy;$env:JAVA_TOOL_OPTIONS='-Dhttps.proxyHost='+$taskProxyUri.Host+' -Dhttps.proxyPort='+$taskProxyUri.Port+' -Dhttp.proxyHost='+$taskProxyUri.Host+' -Dhttp.proxyPort='+$taskProxyUri.Port}
 $taskSaved=$ErrorActionPreference;$ErrorActionPreference='Continue'
 # Licenses only affect the project-local SDK, as in the existing CI setup.
 1..100|ForEach-Object {'y'}|& $taskSdkManager ('--sdk_root='+$taskSdk) --licenses|Out-Host

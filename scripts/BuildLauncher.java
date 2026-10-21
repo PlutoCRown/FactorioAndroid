@@ -75,9 +75,14 @@ class BuildLauncher {
         if(!sha(Files.readAllBytes(wrapper)).equals(gradleSha))throw new IOException("Gradle wrapper checksum mismatch");
         List<String> command=new ArrayList<>(List.of(java.toString(),"-classpath",wrapper.toString(),"org.gradle.wrapper.GradleWrapperMain","--no-daemon","--console=plain",":app:testStandardDebugUnitTest",":app:assembleStandardRelease"));
         if(performance)command.add(":app:assemblePerformanceRelease");run(command);
+        Path testXml=root.resolve("app/build/test-results/testStandardDebugUnitTest/TEST-HostRegressionTest.xml");
+        javax.xml.parsers.DocumentBuilderFactory parser=javax.xml.parsers.DocumentBuilderFactory.newInstance();
+        parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
+        org.w3c.dom.Element suite=parser.newDocumentBuilder().parse(testXml.toFile()).getDocumentElement();
+        if(!suite.getAttribute("tests").equals("7")||!suite.getAttribute("failures").equals("0")||!suite.getAttribute("errors").equals("0"))throw new IOException("Host regression suite did not pass all 7 groups");
         Properties version=new Properties();try(InputStream in=Files.newInputStream(root.resolve("gradle.properties"))){version.load(in);}
         String versionName=version.getProperty("factorioVersionName"),versionFile=versionName.split("-",2)[0];
-        Path artifacts=root.resolve("artifacts");Files.createDirectories(artifacts);List<String> packages=new ArrayList<>();
+        Path artifacts=root.resolve("artifacts");Files.createDirectories(artifacts);Files.copy(testXml,artifacts.resolve("host-tests.xml"),StandardCopyOption.REPLACE_EXISTING);List<String> packages=new ArrayList<>();
         for(String flavor:performance?List.of("standard","performance"):List.of("standard")) {
             boolean perf=flavor.equals("performance");String id=perf?"com.miHoYo.Yuanshen":"dev.plutocrown.factorio";
             String filename="FactorioLauncher-"+versionFile+(perf?"-YuanShen-sign":"")+".apk";

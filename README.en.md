@@ -53,37 +53,36 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 ## Development
 
-macOS and Linux use `scripts/build.sh`. Windows uses `scripts/build-windows.ps1`. The build does not use Gradle.
+The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 
-```bash
-./scripts/build.sh
-./scripts/build.sh --performance-package
-```
+Build requirements: JDK 17+, SDK platform 36 and Build Tools 36.0.0. AGP 9.0.1 supplies Kotlin 2.2.10; Gradle 9.1.0 and Compose BOM 2026.01.00 are pinned. The wrapper JAR and Gradle distribution have fixed SHA-256 checksums. Android minSdk 26 and targetSdk 33 stay unchanged for this UI migration.
+
+On Windows, prepare a project-local toolchain if the existing JDK/SDK is too old:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 `
-  -Sdk 'D:\Android\Sdk' -Jdk 'D:\Java\jdk-15.0.2'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\prepare-windows-toolchain.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -PerformancePackage
 ```
 
-The normal application id is `dev.plutocrown.factorio`, and the APK is written to `artifacts/`. `--performance-package` links a second APK with the application id `com.miHoYo.Yuanshen` so some phones apply that game's performance profile. The visible name remains Factorio.
+JDK/SDK tools go under `tools/`, and downloads/Gradle state under `.cache/`. No system installation or persistent environment changes. To reuse compatible existing tools, pass `-Jdk` and `-Sdk` to the build script instead.
 
-Restore the pinned runtime from the project root using the JDK already required by the build (JDK 11+):
+On Linux/macOS with an existing JDK/SDK:
+
+```bash
+JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
+```
+
+This project does not install Android tools on the author's Mac; development builds use Windows or GitHub Actions. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (the existing 171 checks) and verify signatures, alignment, package identities, all 52 native library hashes and the XKB asset inside each APK. The compile-only JNI annotation stub is not packaged. Native libraries are neither rebuilt nor stripped by Gradle.
+
+Both entry points restore the pinned runtime automatically. To restore separately (JDK 11+):
 
 ```bash
 java scripts/RestoreRuntime.java
 ```
 
-On Windows, an explicit existing JDK path also works:
+For a private repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Contents: read access. No token belongs in source or logs. Offline: `java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`. Use `--check` to verify existing files, `--force` to explicitly replace changed files. Binaries stay outside Git; the restorer checks the archive and all 53 files. This restores prebuilt dependencies rather than rebuilding all upstream components.
 
-```powershell
-& 'D:\Java\jdk-15.0.2\bin\java.exe' .\scripts\RestoreRuntime.java
-```
-
-This restores 52 ARM64 libraries and `window-xkb.zip` from a versioned Release asset, checking both the archive and every file against pinned SHA-256 hashes. Binaries remain outside Git. For a private repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Contents: read access; never commit or share a token. A public repository needs no token. Already valid files skip the download. Nothing downloaded is executed and no system tools are installed.
-
-For offline use, download the asset in your browser and run `java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`. Use `--check` for verification only. Changed files are preserved unless you explicitly pass `--force`. This recovers pinned prebuilt dependencies; it does not rebuild every upstream component from source.
-
-Both build entry points invoke the restorer automatically and fail if runtime dependencies cannot be restored. The cache is project-local under `.cache/runtime/`. Android SDK and JDK must still be available. Signing keys are local or provided via CI secrets; otherwise a project-local key is generated. Application tags run `.github/workflows/release.yml`; `runtime-` tags host dependency assets and skip application publishing. To publish manually, open Actions → Release → Run workflow, select the source branch, and enter an application tag such as `v0.2.0` in `release_tag`. Both APKs and the build report are uploaded directly to that Release after a successful build. Leave the field empty for build-only Actions artifacts. Existing tags are not moved; a new tag targets the build commit.
+Signing uses the existing project-local key or CI secrets; a key is generated if none is configured. Keep the same signing key for future upgrades. Application tags build and publish APKs to Releases; `runtime-` tags are reserved for pinned dependencies. To publish manually, use Actions → Release → Run workflow and fill `release_tag` with the new application version. Leave it empty to only build Actions artifacts. Existing tags are not moved.
 
 ## License
 

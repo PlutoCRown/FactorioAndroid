@@ -6,7 +6,7 @@
         android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:resizeableActivity="true"
         android:allowBackup="false" android:supportsRtl="true"
-        android:usesCleartextTraffic="false" android:extractNativeLibs="true">
+        android:usesCleartextTraffic="false">
         <provider android:name="org.factorio.local.launcher.GameDocumentsProvider"
             android:authorities="org.factorio.local.launcher.documents"
             android:exported="true" android:grantUriPermissions="true"

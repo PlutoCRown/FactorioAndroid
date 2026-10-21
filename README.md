@@ -53,37 +53,36 @@ files/profiles/default-2.1.22/userdata/saves/
 
 ## 开发指南
 
-macOS 和 Linux 用 `scripts/build.sh`，Windows 用 `scripts/build-windows.ps1`。构建不使用 Gradle。
+启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
 
-先在项目根目录恢复固定版本的运行库和 XKB（需要 JDK11+，使用构建已有的 JDK 即可）：
+构建需要 JDK 17+、SDK platform 36、Build Tools 36.0.0。固定 AGP 9.0.1（内置 Kotlin 2.2.10）、Gradle 9.1.0、Compose BOM 2026.01.00；Wrapper JAR 与 Gradle 发行包均有固定 SHA-256。此次 UI 迁移保持 minSdk 26、targetSdk 33，避免同时改变运行环境行为。
+
+Windows 现有工具过旧时，可只在工程内准备工具链：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\prepare-windows-toolchain.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -PerformancePackage
+```
+
+JDK/SDK 放在 `tools/`，下载与 Gradle 缓存放在 `.cache/`；不安装到系统、不永久修改环境。复用现有兼容工具时，直接给构建脚本传 `-Jdk`、`-Sdk`。
+
+Linux/macOS 已有兼容工具时：
+
+```bash
+JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
+```
+
+本项目开发仍遵守 Mac 不安装安卓工具链：本机编辑源码，Windows 或 GitHub Actions 构建。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（现有171项检查），再检查签名、对齐、包名，以及 APK 内52个库和XKB的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验原生库。
+
+两个入口均自动恢复固定运行库；也可单独执行（此恢复命令只需JDK11+）：
 
 ```bash
 java scripts/RestoreRuntime.java
 ```
 
-Windows 若 Java 不在 PATH，可使用已有 JDK 的完整路径：
+私有仓库需设置有 Contents: read 权限的 `GITHUB_TOKEN` 或 `GH_TOKEN`，不要把令牌写入源码或日志。离线恢复：`java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`；`--check` 仅验证；`--force` 明确替换已改动文件。依赖二进制不进Git，ZIP与53文件逐项校验。这是恢复预编译依赖，不等于从源码重建所有第三方组件。
 
-```powershell
-& 'D:\Java\jdk-15.0.2\bin\java.exe' .\scripts\RestoreRuntime.java
-```
-
-该命令下载 Release 中的固定依赖包，校验 ZIP 及每个文件的 SHA-256，恢复52个原生库和 `window-xkb.zip`。已完整恢复时直接校验并跳过下载；不会执行下载的原生程序或改系统环境。依赖二进制不进入 Git。当前仓库为私有时，需要先在本地设置有本仓库 Contents: read 权限的 `GITHUB_TOKEN`（或 `GH_TOKEN`）；不要把令牌写入脚本、提交或发给他人。公开仓库无需令牌。
-
-也可在浏览器下载依赖包后离线恢复：`java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`。`--check` 仅验证现有文件；现有文件被改动时默认拒绝覆盖，需要明确使用 `--force` 才恢复为固定版本。这是恢复经过验证的预编译依赖，不等于从源码重新编译所有第三方组件。
-
-```bash
-./scripts/build.sh
-./scripts/build.sh --performance-package
-```
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 `
-  -Sdk 'D:\Android\Sdk' -Jdk 'D:\Java\jdk-15.0.2'
-```
-
-普通包的应用 ID 是 `dev.plutocrown.factorio`，输出在 `artifacts/`。`--performance-package` 会再用应用 ID `com.miHoYo.Yuanshen` 打一份包，让部分手机套用该游戏的性能调度；界面名称仍是 Factorio。
-
-两个构建入口都会先运行上述恢复工具，缺少依赖且无法下载时会直接失败，避免生成没有运行环境的 APK。下载缓存在项目的 `.cache/runtime/`。仍需自行准备 Android SDK 和 JDK；签名密钥从本地或 CI secrets 读取，未提供时使用项目内生成的密钥。推送应用 Git 标签会由 `.github/workflows/release.yml` 构建并上传 APK；`runtime-` 前缀标签仅用于固定依赖附件，不运行应用发布任务。 手动发布可进入 Actions → Release → Run workflow，选择源码分支，并在 `release_tag` 填写应用版本标签（例如 `v0.2.0`）；构建成功后，两个 APK 和构建报告会直接出现在该版本 Releases 附件中。留空则只构建并保存 Actions 附件。已有标签不会被移动，新标签指向本次构建提交。
+签名复用工程内密钥或CI secrets；未配置则生成项目密钥，后续升级需保留同一签名。推送应用版本标签自动构建并上传Releases，`runtime-`标签保留给依赖附件。手动发布：Actions → Release → Run workflow，`release_tag`填新应用版本；留空仅构建并保存Actions附件。已有标签不移动。
 
 ## 许可证
 

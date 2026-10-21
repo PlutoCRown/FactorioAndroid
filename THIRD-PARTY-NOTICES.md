@@ -16,8 +16,12 @@ The local build restores the following separately pinned runtime components. The
 - GNU C Library 2.44, Android-adapted [Termux glibc-packages](https://github.com/termux/glibc-packages/tree/main/gpkg/glibc), four unchanged libraries renamed to private packaged filenames. Hashes: `runtime-glibc.json`. Retained notices: `GLIBC-COPYRIGHT.txt`. These GNU libraries are used in a separate engine child, never loaded into ART with `System.loadLibrary`.
 - [Termux:X11](https://github.com/termux/termux-x11), commit `fa3a8b430e2896a19f44c99a9cb056254615ae06`: pinned upstream ARM64 `libXlorie.so`, with the minimal Java JNI/window/input bridge adapted in this project. Upstream project GPL-3.0-or-later; retained texts: `WINDOW-COPYRIGHT.txt`. No Termux application, shared UID or Termux app IPC is required. X11 provides window/input protocols; it no longer carries the game's full-frame pixels.
 - xkeyboard-config 2.43 provides XKB data; package permissions remain in `WINDOW-COPYRIGHT.txt`. GNU X11 client libraries and related dependencies are pinned by `window-clients.json` and `direct-dependencies.json`; retained notices include `WINDOW-CLIENT-COPYRIGHT.txt`, `GL-COPYRIGHT.txt` and `EGL-COPYRIGHT.txt`.
-- [XZ for Java 1.12](https://tukaani.org/xz/java.html), Lasse Collin and contributors, BSD Zero Clause (0BSD). Sources: [xz-java](https://github.com/tukaani-project/xz-java), Maven artifact `org.tukaani:xz:1.12:sources`. The Windows build verifies its checksum and compiles unchanged Java 8 source with the existing JDK.
+- [XZ for Java 1.12](https://tukaani.org/xz/java.html), Lasse Collin and contributors, BSD Zero Clause (0BSD). Sources: [xz-java](https://github.com/tukaani-project/xz-java), Maven artifact `org.tukaani:xz:1.12`. Resolved as an Android dependency by Gradle.
 
 ## Local interface assets
 
 `factorio_icon.png` was extracted from the user's own game. `factory_background.jpg` is the user-requested Factorio website background. Both remain Wube artwork, kept here for the owner's private project; public redistribution permission has not been established. `ic_expand_more.xml` is a project-owned vector chevron.
+
+## Kotlin / Jetpack Compose / Gradle
+
+AndroidX Activity, Compose UI/Foundation/Material 3 and their AndroidX dependencies are from Google/AOSP under Apache-2.0. Kotlin standard library is from JetBrains under Apache-2.0. The Gradle wrapper is the verified official Gradle 9.1.0 wrapper, Apache-2.0. Apache-2.0 text is retained in `app/src/main/assets/APACHE-2.0.txt`. These components do not replace or modify the game's renderer. Project-owned navigation vectors and Compose theme code remain GPL-3.0-or-later.

@@ -11,6 +11,7 @@ android {
     defaultConfig {
         applicationId = "dev.plutocrown.factorio"
         minSdk = 26
+        ndk { abiFilters += "arm64-v8a" }
         // Keep runtime/storage/lifecycle behavior unchanged during the UI migration.
         targetSdk = 33
         versionCode = providers.gradleProperty("factorioVersionCode").get().toInt()
@@ -19,7 +20,7 @@ android {
     signingConfigs {
         create("localRelease") {
             storeFile = rootProject.file(".local/release.keystore")
-            storePassword = System.getenv("FACTORIO_KEYSTORE_PASSWORD")
+            storePassword = System.getenv("FACTORIO_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
                 ?: rootProject.file(".local/release-keystore.pass").takeIf { it.isFile }?.readText()?.trim()
             keyAlias = System.getenv("FACTORIO_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "factoriorelease"
             keyPassword = System.getenv("FACTORIO_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: storePassword
