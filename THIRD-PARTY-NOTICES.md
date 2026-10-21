@@ -22,7 +22,7 @@ The local build restores the following separately pinned runtime components. The
 
 ## Local interface assets
 
-`factorio_icon.png` was extracted from the user's own game. `factory_background.jpg` is the user-requested Factorio website background. Both remain Wube artwork, kept here for the owner's private project; public redistribution permission has not been established. `ic_expand_more.xml` is a project-owned vector chevron.
+`factorio_icon.png` was extracted from the user's own game. `factory_background.jpg` is the user-requested Factorio website background. Both remain Wube artwork, kept here for the owner's private project; public redistribution permission has not been established. `ic_expand_more.xml` is a project-owned vector chevron. Button colors and bevel/shadow parameters follow the user-provided Factorio website `normal.css` selectors `.button` and `.button-green`, including hover/focus, pressed and disabled states. `FactoryWebButton.kt` implements those appearances with a cached Android Canvas drawing and Compose interactions; touch targets retain an Android-appropriate minimum height. This does not grant any rights to Wube website assets.
 
 The sidebar uses official [Lucide](https://lucide.dev/) `house`, `sliders-horizontal` and `tablet` icons. Original SVGs, pinned download URLs and the complete ISC / inherited Feather MIT license are retained in `app/src/main/assets/lucide/`. `scripts/ConvertLucideIcons.java` converts those SVG paths into Android vector drawables without changing their geometry or stroke style; no icon library or online request is needed at runtime. Reproduce with `java scripts/ConvertLucideIcons.java` from the project directory. The original icon licenses apply to the generated vectors.
 

@@ -318,10 +318,8 @@ private fun FactoryPanel(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun FactoryButton(label: Int, enabled: Boolean, primary: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Button(onClick, enabled = enabled, modifier = modifier.fillMaxWidth().heightIn(min = 54.dp),
-        shape = MaterialTheme.shapes.small,
-        colors = ButtonDefaults.buttonColors(containerColor = if (primary) Copper else Color(0xff898582), contentColor = Coal)) {
-        Text(stringResource(label), fontWeight = FontWeight.SemiBold)
+    FactoryWebButton(enabled, primary, modifier.fillMaxWidth(), onClick) {
+        Text(stringResource(label))
     }
 }
 
@@ -330,9 +328,8 @@ private fun Choice(labels: List<Int>, selected: Int, field: Int, enabled: Boolea
     var expanded by remember { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val width = maxWidth
-        OutlinedButton(onClick = { expanded = true }, enabled = enabled,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = MaterialTheme.shapes.small) {
-            Text(stringResource(field) + " · " + stringResource(labels[selected]), Modifier.weight(1f), color = Ink)
+        FactoryWebButton(enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), onClick = { expanded = true }) {
+            Text(stringResource(field) + " · " + stringResource(labels[selected]), Modifier.weight(1f))
             Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.size(24.dp))
         }
         DropdownMenu(expanded && enabled, onDismissRequest = { expanded = false }, modifier = Modifier.width(width)) {
