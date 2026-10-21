@@ -89,22 +89,26 @@ final class GameFiles {
     }
     private static void validateSave(File file) throws IOException {
         try(ZipFile zip=new ZipFile(file)) {
-            int count=0,levels=0;long expanded=0;
+            int count=0;long expanded=0;Set<String> mapRoots=new HashSet<>(),names=new HashSet<>();
             Enumeration<? extends ZipEntry> entries=zip.entries();
             while(entries.hasMoreElements()) {
                 ZipEntry entry=entries.nextElement();String name=entry.getName();
+                if(!names.add(name))throw new IOException("存档 ZIP 有重复文件。");
                 if(++count>100000||name.startsWith("/")||name.contains("\\"))throw new IOException("存档 ZIP 内容无效。");
                 String[] parts=name.split("/");
                 for(String part:parts)if(part.equals("..")||part.equals("."))throw new IOException("存档 ZIP 路径无效。");
                 if(entry.getSize()<0||entry.getSize()>4L*1024*1024*1024-expanded)throw new IOException("存档展开大小无效或过大。");
                 expanded+=entry.getSize();
-                if(!entry.isDirectory()&&(name.equals("level.dat")||(parts.length==2&&parts[1].equals("level.dat")))) {
-                    if(entry.getSize()==0)throw new IOException("存档 level.dat 为空。");
+                String leaf=parts.length==0?"":parts[parts.length-1];
+                // Chunked saves use level.dat0, level.dat1, ... . Requiring
+                // only the old level.dat would reject normal Factorio saves.
+                if(!entry.isDirectory()&&parts.length<=2&&(leaf.equals("level.dat")||leaf.equals("level.dat0"))) {
+                    if(entry.getSize()==0)throw new IOException("存档地图数据为空。");
                     try(InputStream level=zip.getInputStream(entry)){if(level.read()<0)throw new IOException("无法读取存档。");}
-                    levels++;
+                    mapRoots.add(parts.length==1?"":parts[0]);
                 }
             }
-            if(levels!=1)throw new IOException("这个 ZIP 不是可识别的 Factorio 存档（缺少唯一的 level.dat）。");
+            if(mapRoots.size()!=1)throw new IOException("这个 ZIP 不是可识别的单个 Factorio 存档（缺少 level.dat 或 level.dat0）。");
         }catch(ZipException e){throw new IOException("ZIP 已损坏或不是 Factorio 存档。",e);}
     }
 }

@@ -33,6 +33,10 @@ public final class GameFilesTests {
             check(storage.importSave(new ByteArrayInputStream(valid),"地图.zip").equals("地图 (1).zip"),"collision numbered");
             check(Arrays.equals(valid,Files.readAllBytes(storage.resolve("saves:地图.zip").toPath())),"original never overwritten");
             check(storage.importSave(new ByteArrayInputStream(valid),"UPPER.ZIP").equals("UPPER.ZIP"),"case insensitive zip suffix");
+            check(storage.importSave(new ByteArrayInputStream(zip("modern/level-init.dat","modern/level.dat0","modern/level.dat1")),"modern.zip").equals("modern.zip"),"modern chunked map");
+            check(storage.importSave(new ByteArrayInputStream(zip("level.dat0","level.dat1")),"flat.zip").equals("flat.zip"),"flat chunked map");
+            rejected(()->storage.importSave(new ByteArrayInputStream(zip("a/level.dat0","b/level.dat0")),"two-maps.zip"),"multiple chunked maps");
+            rejected(()->storage.importSave(new ByteArrayInputStream(zip("map/level.dat1")),"missing-first.zip"),"missing initial chunk");
             rejected(()->storage.importSave(new ByteArrayInputStream(valid),"map.tar"),"reject wrong extension");
             rejected(()->storage.importSave(new ByteArrayInputStream(zip("random.txt")),"not-save.zip"),"missing level");
             rejected(()->storage.importSave(new ByteArrayInputStream(zip("a/level.dat","b/level.dat")),"ambiguous.zip"),"multiple levels");

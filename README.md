@@ -67,7 +67,7 @@ files/profiles/default-2.1.22/userdata/saves/
 files/profiles/default-2.1.22/userdata/mods/
 ```
 
-主页“导入存档”选择单个 Factorio `.zip` 存档，无需解压。导入检查 ZIP 结构和唯一的 `level.dat`，完整复制后才发布到实际 `userdata/saves/`；同名自动编号（例如 `地图 (1).zip`），不覆盖旧存档。存档压缩文件限2 GB、声明展开大小限4 GB；格式检查不保证其他版本或缺失模组的存档一定可加载。
+主页“导入存档”选择单个 Factorio `.zip` 存档，无需解压。导入检查 ZIP 结构和单个地图的数据入口，兼容 `level.dat` 及 `level.dat0` 开头的分片存档；完整复制后才发布到实际 `userdata/saves/`。同名自动编号（例如 `地图 (1).zip`），不覆盖旧存档。存档压缩文件限2 GB、声明展开大小限4 GB；格式检查不保证其他版本、缺失分片或模组的存档一定可加载。
 
 两个“打开文件夹”入口通过 Android DocumentsProvider 暴露上面的真实目录，可在系统文件管理器复制、导出、重命名、删除或添加文件，无需存储权限。只暴露存档和模组，不暴露游戏本体、设置、日志或其他私有文件。若厂商没有目录浏览入口，则使用系统目录选择器定位该目录；也可从系统文件管理器侧边栏进入。修改文件需先保存并结束游戏；写文件期间会持有同一会话锁。模组可以从文件管理器复制 ZIP 进来，再由游戏内界面管理；本轮没有实现下载模组或自动补齐存档依赖。
 
@@ -89,7 +89,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build-windows.ps1 `
 
 **源码检出暂不等于一键可构建**：预编译 JNI 运行库、XKB 归档、诊断工具、SDK、项目内编译器和签名密钥不在 Git 中。构建前必须按 `app/src/main/assets/*runtime*.json`、`direct-zink.json`、`direct-dependencies.json` 等清单恢复哈希匹配的载荷到 `app/src/main/jniLibs/arm64-v8a/` 与指定 assets。已有工程另有本地工作区标记 `.factorio-migration-workspace.json`；干净的可信工程可用内容 `{}` 创建此标记。原生重建还需要固定头文件、GNU/Bionic 链接输入。自动恢复整套依赖的便携构建流程尚待整理，不能把本地构建成功称为干净克隆即可复现。
 
-构建执行原有119项逻辑检查（24归档、43配置/语言、13实时图形配置、35触屏/尺寸、4导入互斥），加上存档复制、同名保护、ZIP检查、失败清理、路径隔离和会话锁检查（支持符号链接的主机共26项），再验证签名、对齐和包信息。原生层在需要修改时单独构建，UI 改动保留已验收 GPU 库。`tests/device/TouchGestureInjector.java`是仅由ADB shell运行的自有前台游戏手势测试辅助代码，不进入产品APK。
+构建执行原有119项逻辑检查（24归档、43配置/语言、13实时图形配置、35触屏/尺寸、4导入互斥），加上存档复制、同名保护、ZIP/分片检查、失败清理、路径隔离和会话锁检查（支持符号链接的主机共30项），再验证签名、对齐和包信息。原生层在需要修改时单独构建，UI 改动保留已验收 GPU 库。`tests/device/TouchGestureInjector.java`是仅由ADB shell运行的自有前台游戏手势测试辅助代码，不进入产品APK。
 
 `scripts/build-direct-present.ps1` 和 `scripts/build-direct-wsi.ps1` 保留自有原生层的实际编译命令，仍依赖已准备好的项目内 Zig、头文件与 GNU/Bionic 链接输入，不会自动安装系统工具链。运行这些脚本后须将产物哈希同步到对应运行库清单，再打包。
 
