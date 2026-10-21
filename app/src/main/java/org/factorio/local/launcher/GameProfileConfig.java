@@ -81,9 +81,10 @@ final class GameProfileConfig {
         // texture assets does not change the GPU used to render game frames.
         options.put("gpu-accelerated-compression","false");
         options.put("gpu-accelerated-mipmap-compression","false");
-        // Separate from GPU generation: avoid the compressed sampling path
-        // while diagnosing the user's green ground/blue texture report.
-        options.put("texture-compression-level","none");
+        // Direct Zink high-resolution sprites exceeded memory with no DXT.
+        // High-quality texture compression passed the full-size game test;
+        // keep the previously validated medium presets unchanged.
+        options.put("texture-compression-level","quality".equals(preset)?"high-quality":"none");
         StringBuilder out=new StringBuilder();boolean graphics=false,found=false;
         HashSet<String> seen=new HashSet<>();
         String[] lines=original.split("\\r?\\n",-1);int count=lines.length;

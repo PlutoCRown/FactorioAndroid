@@ -3,7 +3,7 @@
     android:versionCode="2" android:versionName="0.2.0-runtime-probe">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
     <uses-feature android:glEsVersion="0x00030000" android:required="false" />
-    <application android:label="Factorio" android:theme="@style/AppTheme"
+    <application android:label="Factorio" android:appCategory="game" android:theme="@style/AppTheme"
         android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:resizeableActivity="true"
         android:allowBackup="false" android:supportsRtl="true"

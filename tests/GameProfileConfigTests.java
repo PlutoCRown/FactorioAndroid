@@ -53,6 +53,9 @@ public final class GameProfileConfigTests {
         check(balanced.contains("max-texture-size=8192\n")&&balanced.contains("graphics-quality=medium\n"),"balanced switches existing preset");
         String quality=GameProfileConfig.applyGraphicsPreset(balanced,"quality");
         check(quality.contains("graphics-quality=high\n")&&!quality.contains("max-texture-size=16384"),"high quality avoids known problematic 16K atlas");
+        check(quality.contains("texture-compression-level=high-quality\n")&&!quality.contains("texture-compression-level=none\n"),"high-resolution sprites use compression instead of the memory-exhausting uncompressed atlas");
+        check(quality.equals(GameProfileConfig.applyGraphicsPreset(quality,"game")),"game settings retain the proven high-quality compressed configuration");
+        check(GameProfileConfig.applyGraphicsPreset(quality,"balanced").contains("texture-compression-level=none\n"),"switching back preserves the validated balanced preset");
         String absent=GameProfileConfig.applyGraphicsPreset(chinese,"compat");
         check(absent.contains("[graphics]\n")&&"zh-CN".equals(GameProfileConfig.readLocale(absent)),"new graphics section preserves locale");
         for(String bad:new String[]{"unknown","compat\n[path]"}) {

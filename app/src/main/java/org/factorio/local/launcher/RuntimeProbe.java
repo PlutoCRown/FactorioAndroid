@@ -314,6 +314,8 @@ public final class RuntimeProbe {
                 result.put("audioBridge",audioBridge.report());
                 if(progress!=null)progress.update("audioRelayReady",result);
             }
+            File log=new File(user,"factorio-current.log");
+            long logStartBytes=log.isFile()?log.length():0;
             JSONObject initialized=command(graphics,session,graphicsTemp,windowEnvironment,0,control,progress,audioBridge);
             result.put("graphicsInitialization",initialized).put("passed",false)
                 .put("assessment","Window/renderer evidence must be reviewed; an exit code alone is not graphics success");
@@ -324,13 +326,14 @@ public final class RuntimeProbe {
                 else if(!initialized.optBoolean("userStopRequested")&&initialized.optInt("exitCode",-1)!=0)
                     result.put("error","引擎异常结束，退出码 "+initialized.optInt("exitCode",-1)+"；请导出诊断报告。");
             }
-            File log=new File(user,"factorio-current.log");
             if(log.isFile()) {
                 try(RandomAccessFile input=new RandomAccessFile(log,"r")) {
-                    long bytes=input.length(); input.seek(Math.max(0,bytes-65536));
-                    byte[] tail=new byte[(int)Math.min(bytes,65536)]; input.readFully(tail);
+                    long bytes=input.length(),start=bytes<logStartBytes?0:logStartBytes;
+                    long sessionBytes=bytes-start;input.seek(Math.max(start,bytes-65536));
+                    byte[] tail=new byte[(int)Math.min(sessionBytes,65536)]; input.readFully(tail);
                     result.put("engineLog",new String(tail,StandardCharsets.UTF_8)).put("engineLogBytes",bytes)
-                        .put("engineLogTruncated",bytes>65536);
+                        .put("engineLogStartOffset",start).put("engineLogSessionBytes",sessionBytes)
+                        .put("engineLogTruncated",sessionBytes>65536);
                 }
             } else result.put("engineLogMissing",true);
             } finally {

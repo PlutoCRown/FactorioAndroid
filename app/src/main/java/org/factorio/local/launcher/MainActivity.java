@@ -172,7 +172,7 @@ public final class MainActivity extends Activity {
         choice(form,new String[]{"100% · 原生","75% · 均衡","50% · 流畅"},scale==50?2:scale==75?1:0,
             i->getPreferences(0).edit().putInt("renderScalePercent",new int[]{100,75,50}[i]).apply());
         divider(form);
-        field(form,"画质预设","兼容起步适合首次启动；高画质需要更多内存与加载时间。");
+        field(form,"画质预设","高画质使用高质量贴图压缩，保留高清素材。使用游戏内设置时，也建议启用贴图压缩。");
         String preset=getPreferences(0).getString("graphicsPreset","compat");
         choice(form,new String[]{"兼容起步 · 推荐","均衡画质","高画质","使用游戏内设置"},preset.equals("balanced")?1:preset.equals("quality")?2:preset.equals("game")?3:0,
             i->getPreferences(0).edit().putString("graphicsPreset",new String[]{"compat","balanced","quality","game"}[i]).apply());
