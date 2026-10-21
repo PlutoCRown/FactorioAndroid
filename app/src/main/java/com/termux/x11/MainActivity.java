@@ -112,7 +112,7 @@ public final class MainActivity extends Activity {
                         boolean started=server.start(new String[]{":93","-nolisten","tcp","-noreset","-ac","-dpi","96"});
                         report.put("serverStartAccepted",started);record("serverStartRequested");
                         if(!started)throw new Exception("Embedded X server declined start");
-                        view=new LorieView(this,renderScalePercent);layout.addView(view,0,new FrameLayout.LayoutParams(-1,-1));
+                        view=new LorieView(this,renderScalePercent,getIntent().getBooleanExtra("touchMouseSimulation",true));layout.addView(view,0,new FrameLayout.LayoutParams(-1,-1));
                         if(manualSession) {
                             SurfaceView directSurface=new SurfaceView(this);
                             directSurface.setZOrderMediaOverlay(true);
@@ -120,7 +120,7 @@ public final class MainActivity extends Activity {
                             directSurface.getHolder().addCallback(new SurfaceHolder.Callback() {
                                 public void surfaceCreated(SurfaceHolder h) {org.factorio.local.launcher.DirectPresentActivity.startGameSurface(getApplicationContext(),h.getSurface());directSurfaceReady=true;updateBackgroundPause();}
                                 public void surfaceChanged(SurfaceHolder h,int format,int width,int height) {}
-                                public void surfaceDestroyed(SurfaceHolder h) {directSurfaceReady=false;updateBackgroundPause();org.factorio.local.launcher.DirectPresentActivity.detach();}
+                                public void surfaceDestroyed(SurfaceHolder h) {view.cancelTouch();directSurfaceReady=false;updateBackgroundPause();org.factorio.local.launcher.DirectPresentActivity.detach();}
                             });
                             layout.addView(directSurface,1,new FrameLayout.LayoutParams(-1,-1));
                         }
@@ -272,7 +272,7 @@ public final class MainActivity extends Activity {
         catch(Exception error){try{if(report!=null)report.put("backgroundPauseError",error.toString());}catch(Exception ignored){}}
     }
     @Override protected void onResume() {super.onResume();resumed=true;applyImmersiveMode();updateBackgroundPause();}
-    @Override protected void onPause() {resumed=false;updateBackgroundPause();super.onPause();}
+    @Override protected void onPause() {if(view!=null)view.cancelTouch();resumed=false;updateBackgroundPause();super.onPause();}
 
     private void sampleController() {
         if(closed||controllerRelay==null||report==null)return;

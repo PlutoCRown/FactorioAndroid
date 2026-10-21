@@ -1,20 +1,26 @@
 package com.termux.x11;
 
-/** Single-finger absolute mouse state, independent of Android for release tests. */
+/** Touch mouse gestures independent of Android; every owned button has one release. */
 public final class TouchMouseState {
-    public interface Sink {void move(float x,float y);void leftButton(boolean down);void tap(float x,float y);}
+    public interface Sink {
+        void move(float x,float y);void leftButton(boolean down);void rightButton(boolean down);
+        void scroll(int notches);void tap(float x,float y);
+    }
     private final Sink sink;
-    private final float slopSquared;
-    private final long tapTimeout;
-    private int viewportX,viewportY,viewportWidth,viewportHeight,activePointer=-1;
+    private final float slopSquared,scrollDistance;
+    private final long longPressTimeout;
+    private int viewportX,viewportY,viewportWidth,viewportHeight,activePointer=-1,scrollPointer=-1;
     private int sourceWidth=1280,sourceHeight=720;
-    private float downX,downY,lastX,lastY,lastClickX,lastClickY;
-    private long downTime,presses,moves,drags,clicks,cancels,releases;
-    private boolean held,tapCandidate,dragging;
-    public TouchMouseState(Sink sink,float slop,long tapTimeout) {
-        this.sink=sink;slopSquared=slop*slop;this.tapTimeout=tapTimeout;
+    private float downX,downY,fingerX,fingerY,lastX,lastY,lastClickX,lastClickY,scrollY,scrollRemainder;
+    private long downTime,presses,moves,drags,clicks,cancels,releases,rightPresses,rightReleases,scrollEvents,scrollSteps;
+    private boolean leftHeld,rightHeld,tapCandidate,dragging,scrolling;
+    public TouchMouseState(Sink sink,float slop,long timeout) {this(sink,slop,timeout,48);}
+    public TouchMouseState(Sink sink,float slop,long timeout,float scrollDistance) {
+        if(slop<0||timeout<=0||scrollDistance<=0||!Float.isFinite(scrollDistance))throw new IllegalArgumentException("Invalid gesture thresholds");
+        this.sink=sink;slopSquared=slop*slop;longPressTimeout=timeout;this.scrollDistance=scrollDistance;
     }
     public void viewport(int x,int y,int width,int height) {
+        if(x!=viewportX||y!=viewportY||width!=viewportWidth||height!=viewportHeight)cancel();
         viewportX=x;viewportY=y;viewportWidth=width;viewportHeight=height;
         if(width<=0||height<=0)cancel();
     }
@@ -23,55 +29,95 @@ public final class TouchMouseState {
         if(width!=sourceWidth||height!=sourceHeight)cancel();
         sourceWidth=width;sourceHeight=height;
     }
-    private boolean finite(float x,float y){return !Float.isNaN(x)&&!Float.isNaN(y)&&!Float.isInfinite(x)&&!Float.isInfinite(y);}
+    private boolean finite(float x,float y){return Float.isFinite(x)&&Float.isFinite(y);}
     private boolean inside(float x,float y) {
         return finite(x,y)&&viewportWidth>0&&viewportHeight>0&&x>=viewportX&&y>=viewportY&&
             x<viewportX+viewportWidth&&y<viewportY+viewportHeight;
     }
     public void down(int id,float x,float y,long time) {
-        cancel();
-        if(id<0||!inside(x,y))return;
-        activePointer=id;downX=x;downY=y;downTime=time;tapCandidate=true;dragging=false;
-        sendPosition(x,y);sink.leftButton(true);held=true;presses++;
+        cancel();if(id<0||!inside(x,y))return;
+        activePointer=id;downX=fingerX=x;downY=fingerY=y;downTime=time;tapCandidate=true;
+        // Defer left DOWN so a long press or second finger has no initial left click.
+        sendPosition(x,y);
     }
     private void sendPosition(float x,float y) {
         lastX=Math.max(0,Math.min(sourceWidth-1,(x-viewportX)*sourceWidth/viewportWidth));
         lastY=Math.max(0,Math.min(sourceHeight-1,(y-viewportY)*sourceHeight/viewportHeight));
         sink.move(lastX,lastY);
     }
+    private void leftDown(){if(!leftHeld){sink.leftButton(true);leftHeld=true;presses++;}}
+    private void releaseButtons() {
+        if(leftHeld){sink.leftButton(false);leftHeld=false;releases++;}
+        if(rightHeld){sink.rightButton(false);rightHeld=false;rightReleases++;}
+    }
     private void update(float x,float y) {
-        float dx=x-downX,dy=y-downY;
-        if(dx*dx+dy*dy>slopSquared) {
-            tapCandidate=false;if(!dragging){dragging=true;drags++;}
+        float dx=x-downX,dy=y-downY;fingerX=x;fingerY=y;
+        if(!rightHeld&&dx*dx+dy*dy>slopSquared) {
+            tapCandidate=false;
+            if(!dragging){dragging=true;drags++;sendPosition(downX,downY);leftDown();}
         }
         sendPosition(x,y);moves++;
     }
     public void move(int id,float x,float y) {
-        if(!held)return;
+        if(activePointer<0||scrolling)return;
         if(id!=activePointer||!finite(x,y)){cancel();return;}
         update(x,y);
+    }
+    public boolean canLongPress(){return activePointer>=0&&tapCandidate&&!dragging&&!scrolling&&!rightHeld;}
+    /** Called by the Android timer even when no MOVE event arrives. */
+    public void longPress(int id,long time) {
+        if(id!=activePointer||!canLongPress()||time<downTime||time-downTime<longPressTimeout||!inside(fingerX,fingerY))return;
+        tapCandidate=false;releaseButtons();sendPosition(fingerX,fingerY);
+        sink.rightButton(true);rightHeld=true;rightPresses++;
     }
     public void up(int id,float x,float y,long time) {
-        if(!held)return;
+        if(activePointer<0)return;
+        if(scrolling){cancel();return;}
         if(id!=activePointer||!finite(x,y)){cancel();return;}
         update(x,y);
-        boolean click=tapCandidate&&inside(x,y)&&time>=downTime&&time-downTime<=tapTimeout;
-        sink.leftButton(false);held=false;releases++;activePointer=-1;tapCandidate=false;dragging=false;
+        if(canLongPress()&&time>=downTime&&time-downTime>=longPressTimeout)longPress(id,time);
+        boolean click=tapCandidate&&inside(x,y)&&time>=downTime&&time-downTime<longPressTimeout;
+        if(click)leftDown();releaseButtons();clearGesture();
         if(click){clicks++;lastClickX=lastX;lastClickY=lastY;sink.tap(lastX,lastY);}
     }
-    /** Cancel/multitouch/focus or Surface loss always releases an owned button. */
+    public void beginScroll(int first,float x,float y,int second,float x2,float y2) {
+        boolean valid=activePointer==first&&!scrolling&&second>=0&&second!=first&&inside(x,y)&&inside(x2,y2);
+        cancel();if(!valid)return;
+        activePointer=first;scrollPointer=second;scrolling=true;scrollY=(y+y2)/2;scrollRemainder=0;
+        sendPosition((x+x2)/2,scrollY);
+    }
+    public void scrollMove(int first,float x,float y,int second,float x2,float y2) {
+        if(!scrolling)return;
+        if(first!=activePointer||second!=scrollPointer||!finite(x,y)||!finite(x2,y2)){cancel();return;}
+        float center=y/2+y2/2;
+        float delta=Math.max(-12*scrollDistance,Math.min(12*scrollDistance,center-scrollY));
+        scrollRemainder+=delta;scrollY=center;
+        // Bound a single bad/coalesced jump; retain sub-notch movement and direction.
+        int steps=(int)(scrollRemainder/scrollDistance);
+        if(steps!=0){scrollRemainder-=steps*scrollDistance;steps=Math.max(-12,Math.min(12,steps));sink.scroll(steps);scrollEvents++;scrollSteps+=Math.abs(steps);}
+    }
+    private void clearGesture(){activePointer=scrollPointer=-1;tapCandidate=dragging=scrolling=false;scrollRemainder=0;}
+    /** Multitouch end, disabling, focus loss, resize and Surface loss cancel the whole gesture. */
     public void cancel() {
-        if(held){sink.leftButton(false);releases++;cancels++;}
-        held=false;activePointer=-1;tapCandidate=false;dragging=false;
+        if(activePointer>=0)cancels++;
+        releaseButtons();clearGesture();
     }
     public int activePointer(){return activePointer;}
-    public boolean held(){return held;}
+    public int scrollPointer(){return scrollPointer;}
+    public boolean scrolling(){return scrolling;}
+    public boolean held(){return leftHeld||rightHeld;}
+    public boolean leftHeld(){return leftHeld;}
+    public boolean rightHeld(){return rightHeld;}
     public long presses(){return presses;}
     public long moves(){return moves;}
     public long drags(){return drags;}
     public long clicks(){return clicks;}
     public long cancels(){return cancels;}
     public long releases(){return releases;}
+    public long rightPresses(){return rightPresses;}
+    public long rightReleases(){return rightReleases;}
+    public long scrollEvents(){return scrollEvents;}
+    public long scrollSteps(){return scrollSteps;}
     public float lastX(){return lastX;}
     public float lastY(){return lastY;}
     public float lastClickX(){return lastClickX;}

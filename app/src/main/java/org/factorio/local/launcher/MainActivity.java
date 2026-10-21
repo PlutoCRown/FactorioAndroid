@@ -123,6 +123,14 @@ public final class MainActivity extends Activity {
         info.addView(label(gameReport==null?"添加游戏本体":"Factorio",18,TEXT,true));
         String detail=gameReport==null?"官网 Linux ARM64 · .tar.xz":gameReport.optString("version")+"  ·  "+(gameReport.optBoolean("spaceAge")?"Space Age":"基础版");
         info.addView(label(detail,12,MUTED,false));game.addView(title);space(game,18);
+        Switch touchMouse=new Switch(this);touchMouse.setText("触屏鼠标模拟");touchMouse.setTextSize(14);touchMouse.setTextColor(TEXT);
+        touchMouse.setSwitchPadding(dp(16));touchMouse.setMinHeight(dp(44));
+        touchMouse.setThumbTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{ACCENT,MUTED}));
+        touchMouse.setTrackTintList(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff745026,0xff625c55}));
+        touchMouse.setChecked(getPreferences(0).getBoolean("touchMouseSimulation",true));
+        touchMouse.setOnCheckedChangeListener((button,enabled)->getPreferences(0).edit().putBoolean("touchMouseSimulation",enabled).apply());
+        game.addView(touchMouse,new LinearLayout.LayoutParams(-1,-2));actions.add(touchMouse);
+        game.addView(label("轻点左键 · 单指拖动 · 双指滚轮 · 长按右键",11,MUTED,false));space(game,16);
         action(game,gameReport==null?"选择游戏安装包":"启动游戏",true,()->{if(gameReport==null)chooseGame();else startGame();});
         if(gameReport==null) {
             TextView help=link("如何从官网下载？");game.addView(help);help.setOnClickListener(v->downloadHelp());
@@ -294,7 +302,7 @@ public final class MainActivity extends Activity {
     private void startGame() {
         if(busy||gameReport==null)return;
         Intent game=new Intent(this,com.termux.x11.MainActivity.class).putExtra("playGame",true)
-
+            .putExtra("touchMouseSimulation",getPreferences(0).getBoolean("touchMouseSimulation",true))
             .putExtra("renderScalePercent",getPreferences(0).getInt("renderScalePercent",100))
             .putExtra("graphicsPreset",getPreferences(0).getString("graphicsPreset","compat"));startActivity(game);
     }

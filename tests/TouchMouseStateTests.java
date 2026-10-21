@@ -5,113 +5,167 @@ import java.util.List;
 public final class TouchMouseStateTests {
     private static int passed;
     private static final class Events implements TouchMouseState.Sink {
-        final List<String> calls=new ArrayList<>();boolean held;int taps;
+        final List<String> calls=new ArrayList<>();boolean held,right;int taps,wheel;
         public void move(float x,float y){calls.add("move:"+x+","+y);}
-        public void leftButton(boolean down){held=down;calls.add(down?"down":"up");}
-        public void tap(float x,float y){taps++;calls.add("tap");}
+        public void leftButton(boolean down){require(!down||!right,"left and right must not overlap");held=down;calls.add(down?"down":"up");}
+        public void rightButton(boolean down){require(!down||!held,"right and left must not overlap");right=down;calls.add(down?"right-down":"right-up");}
+        public void scroll(int notches){require(!held&&!right,"scroll must not hold any button");wheel+=notches;calls.add("wheel:"+notches);}
+        public void tap(float x,float y){require(!held&&!right,"tap accounting follows release");taps++;calls.add("tap");}
     }
     private static final class Case {
-        final Events events=new Events();final TouchMouseState state=new TouchMouseState(events,8,500);
+        final Events events=new Events();final TouchMouseState state=new TouchMouseState(events,8,500,48);
         Case(){state.viewport(100,50,1280,720);}
+        void scroll(){state.down(1,200,150,0);state.beginScroll(1,200,150,2,300,150);}
     }
     private static void require(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     private static void check(String label,Runnable body){body.run();passed++;System.out.println("PASS "+label);}
     public static void main(String[] arguments) {
-        check("tap presses at DOWN and releases before performClick",()->{
+        check("quick tap defers left press until UP then releases before click",()->{
             Case c=new Case();c.state.down(7,200,150,100);
-            require(c.state.held()&&c.events.held,"DOWN must hold immediately");
-            require(c.events.calls.get(0).equals("move:100.0,100.0")&&c.events.calls.get(1).equals("down"),"position before press");
+            require(!c.state.held()&&c.events.calls.size()==1,"pending touch moves only");
             c.state.up(7,200,150,150);
-            require(c.events.calls.get(3).equals("up")&&c.events.calls.get(4).equals("tap"),"release then tap");
+            require(c.events.calls.get(2).equals("down")&&c.events.calls.get(3).equals("up")&&c.events.calls.get(4).equals("tap"),"one balanced click");
             require(c.state.clicks()==1&&!c.state.held(),"one tap released");
         });
-        check("drag streams moves with button held",()->{
+        check("drag presses at original position and streams moves held",()->{
             Case c=new Case();c.state.down(3,200,150,0);c.state.move(3,250,160);c.state.move(3,300,170);
+            require(c.events.calls.get(1).equals("move:100.0,100.0")&&c.events.calls.get(2).equals("down"),"original anchor pressed before drag move");
             require(c.state.held()&&c.events.held&&c.state.drags()==1,"drag remains held");
-            c.state.up(3,350,180,100);require(c.state.moves()==3&&!c.state.held()&&c.events.taps==0,"final move then release, no click");
+            c.state.up(3,350,180,100);require(c.state.moves()==3&&!c.state.held()&&c.events.taps==0,"release without click");
         });
         check("cancel releases once and ignores further moves",()->{
-            Case c=new Case();c.state.down(1,200,150,0);c.state.cancel();int count=c.events.calls.size();
+            Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,250,150);c.state.cancel();int count=c.events.calls.size();
             c.state.cancel();c.state.move(1,250,160);c.state.up(1,250,160,20);
-            require(c.events.calls.size()==count&&c.state.releases()==1&&c.state.cancels()==1&&!c.events.held,"cancel idempotent");
+            require(c.events.calls.size()==count&&c.state.releases()==1&&c.state.cancels()==1&&!c.events.held,"idempotent cancellation");
         });
-        check("multitouch cancellation cannot resume on remaining finger",()->{
+        check("cancelled gesture cannot restart on remaining finger",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.cancel();c.state.move(1,250,150);c.state.up(1,250,150,20);
-            require(c.state.activePointer()==-1&&!c.state.held()&&c.state.clicks()==0,"only fresh DOWN restarts");
-            c.state.down(8,300,250,30);c.state.up(8,300,250,60);require(c.state.clicks()==1,"fresh gesture works");
+            require(c.state.activePointer()==-1&&!c.state.held()&&c.state.clicks()==0,"fresh DOWN required");
+            c.state.down(8,300,250,30);c.state.up(8,300,250,60);require(c.state.clicks()==1,"fresh tap works");
         });
-        check("letterbox DOWN never becomes a click on entering viewport",()->{
+        check("outside DOWN stays ignored when entering viewport",()->{
             Case c=new Case();c.state.down(0,99,100,0);c.state.move(0,200,100);c.state.up(0,200,100,10);
-            require(c.events.calls.isEmpty(),"outside down ignored for whole gesture");
+            require(c.events.calls.isEmpty(),"outside whole gesture ignored");
         });
-        check("out of bounds drag clamps and UP releases",()->{
+        check("out of bounds drag clamps and releases",()->{
             Case c=new Case();c.state.down(5,200,150,0);c.state.move(5,-100,-100);
-            require(c.state.lastX()==0&&c.state.lastY()==0&&c.events.held,"negative edge clamped");
-            c.state.up(5,5000,5000,100);
-            require(c.state.lastX()==1279&&c.state.lastY()==719&&!c.events.held&&c.events.taps==0,"far edge clamped and released");
+            require(c.state.lastX()==0&&c.state.lastY()==0&&c.events.held,"negative clamp");c.state.up(5,5000,5000,100);
+            require(c.state.lastX()==1279&&c.state.lastY()==719&&!c.events.held&&c.events.taps==0,"far clamp");
         });
-        check("pointer identity mismatch cancels rather than leaving held",()->{
-            Case c=new Case();c.state.down(10,200,150,0);c.state.move(11,250,150);
-            require(!c.state.held()&&!c.events.held&&c.state.cancels()==1,"unexpected finger released");
+        check("pointer mismatch cancels held drag",()->{
+            Case c=new Case();c.state.down(10,200,150,0);c.state.move(10,250,150);c.state.move(11,260,150);
+            require(!c.state.held()&&c.state.cancels()==1,"mismatch releases");
         });
-        check("long press still has matching release without tap",()->{
-            Case c=new Case();c.state.down(1,200,150,0);c.state.up(1,200,150,1000);
-            require(c.state.presses()==1&&c.state.releases()==1&&c.events.taps==0,"hold delivered without tap accounting");
+        check("stationary timeout holds right without any initial left press",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.longPress(1,499);require(!c.state.held(),"not early");
+            c.state.longPress(1,500);c.state.longPress(1,800);
+            require(c.events.right&&c.state.rightPresses()==1&&c.state.presses()==0,"one sustained right press");
+            c.state.up(1,200,150,1000);require(!c.events.right&&c.state.rightReleases()==1&&c.events.taps==0,"release stops mining");
         });
-        check("viewport loss releases owned mouse button",()->{
-            Case c=new Case();c.state.down(1,200,150,0);c.state.viewport(0,0,0,0);
-            require(!c.events.held&&c.state.activePointer()==-1,"invalid viewport cancels");
+        check("delayed timer UP never turns a long press into left click",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.up(1,200,150,900);
+            require(c.state.rightPresses()==1&&c.state.rightReleases()==1&&c.state.presses()==0&&c.events.taps==0,"timer fallback balanced");
         });
-        check("replacement DOWN releases previous gesture first",()->{
-            Case c=new Case();c.state.down(1,200,150,0);c.state.down(2,300,150,10);
-            require(c.events.calls.get(2).equals("up")&&c.state.activePointer()==2&&c.state.presses()==2,"old press cannot leak");
-            c.state.cancel();require(c.state.presses()==c.state.releases(),"balanced presses");
+        check("wrong pointer or regressed clock cannot trigger long press",()->{
+            Case c=new Case();c.state.down(3,200,150,100);c.state.longPress(4,900);c.state.longPress(3,90);require(!c.state.held(),"invalid timer ignored");
+            c.state.cancel();c.state.longPress(3,1000);require(c.state.rightPresses()==0,"cancel invalidates timer");
+        });
+        check("small jitter permits right hold and subsequent right drag",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,203,152);c.state.longPress(1,500);c.state.move(1,300,200);
+            require(c.events.right&&!c.events.held&&c.state.drags()==0,"right stays right after movement");c.state.cancel();require(c.state.rightReleases()==1,"cancel right once");
+        });
+        check("left drag never upgrades to right when it stops moving",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,250,150);c.state.longPress(1,1000);
+            require(c.events.held&&!c.events.right&&c.state.rightPresses()==0,"drag remains left");c.state.cancel();
+        });
+        check("viewport loss releases right button",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.longPress(1,500);c.state.viewport(0,0,0,0);
+            require(!c.events.right&&c.state.activePointer()==-1&&c.state.rightReleases()==1,"viewport cancels mining");
+        });
+        check("nonzero viewport resize cancels pending gesture",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.viewport(100,50,1000,700);c.state.longPress(1,1000);
+            require(c.state.activePointer()==-1&&c.state.rightPresses()==0,"layout changes invalidate timer");
+        });
+        check("replacement DOWN releases old drag before new pending touch",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,250,150);c.state.down(2,300,150,10);
+            require(!c.events.held&&c.state.activePointer()==2&&c.state.presses()==c.state.releases(),"no old press leak");c.state.cancel();
         });
         check("missing MOVE still classifies final UP displacement as drag",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.up(1,400,150,100);
-            require(c.state.drags()==1&&c.state.clicks()==0&&!c.events.held,"UP delta prevents false tap");
+            require(c.state.drags()==1&&c.state.clicks()==0&&c.state.presses()==c.state.releases(),"no false tap");
         });
-        check("nonfinite coordinates cancel without sending invalid position",()->{
+        check("nonfinite coordinates cancel without native invalid positions",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,Float.NaN,100);
-            require(!c.events.held&&c.state.cancels()==1&&c.state.moves()==0,"invalid move safely released");
+            require(c.state.activePointer()==-1&&c.state.moves()==0,"invalid move ignored");
         });
-        check("native tablet geometry preserves full 3:2 screen",()->{
-            RenderSize r=new RenderSize(3408,2272,100);
-            require(r.width==3408&&r.height==2272,"native dimensions without 16:9 letterbox");
+        check("two fingers start scroll without a left click or long press",()->{
+            Case c=new Case();c.scroll();c.state.longPress(1,1000);
+            require(c.state.scrolling()&&!c.state.held()&&c.state.presses()==0&&c.state.rightPresses()==0&&c.events.wheel==0,"pending click consumed");
+        });
+        check("wheel accumulates small vertical moves and reverses direction",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,200,130,2,300,130);require(c.events.wheel==0,"sub-notch retained");
+            c.state.scrollMove(1,200,102,2,300,102);require(c.events.wheel==-1,"up emits wheel up");
+            c.state.scrollMove(1,200,198,2,300,198);require(c.events.wheel==1&&c.state.scrollSteps()==3,"down emits two notches");
+        });
+        check("horizontal motion and centered pinch have no wheel effect",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,250,150,2,350,150);c.state.scrollMove(1,250,100,2,350,200);
+            require(c.events.wheel==0&&c.state.scrollEvents()==0,"centroid stationary");
+        });
+        check("second finger releases left drag before wheel",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,250,150);c.state.beginScroll(1,250,150,2,350,150);
+            c.state.scrollMove(1,250,102,2,350,102);require(!c.events.held&&c.state.presses()==c.state.releases()&&c.events.wheel==-1,"left up precedes scroll");
+        });
+        check("second finger releases right mining before wheel",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.longPress(1,500);c.state.beginScroll(1,200,150,2,300,150);
+            c.state.scrollMove(1,200,198,2,300,198);require(!c.events.right&&c.state.rightPresses()==c.state.rightReleases()&&c.events.wheel==1,"right up precedes scroll");
+        });
+        check("lifting one scroll finger never clicks or resumes single drag",()->{
+            Case c=new Case();c.scroll();c.state.cancel();c.state.move(1,300,200);c.state.up(1,300,200,900);
+            require(c.events.taps==0&&c.state.presses()==0&&c.state.rightPresses()==0,"remaining finger blocked until fresh DOWN");
+        });
+        check("scroll pointer mismatch or nonfinite data cancels",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,200,100,3,300,100);require(!c.state.scrolling(),"wrong pointer cancelled");
+            c.scroll();c.state.scrollMove(1,200,Float.POSITIVE_INFINITY,2,300,100);require(!c.state.scrolling()&&c.events.wheel==0,"invalid wheel data ignored");
+        });
+        check("bad second finger cannot create scroll from ignored DOWN",()->{
+            Case c=new Case();c.state.down(1,10,10,0);c.state.beginScroll(1,200,150,2,300,150);require(!c.state.scrolling(),"no initial accepted finger");
+            c.state.down(1,200,150,0);c.state.beginScroll(1,200,150,1,300,150);require(!c.state.scrolling(),"duplicate identity rejected");
+        });
+        check("scroll cadence uses screen distance independent of render scale",()->{
+            Case c=new Case();c.state.sourceSize(640,360);c.scroll();c.state.scrollMove(1,200,198,2,300,198);
+            require(c.events.wheel==1&&c.state.lastX()==75&&c.state.lastY()==50,"scaled anchor with unscaled wheel distance");
+        });
+        check("scroll resize clears residual movement",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,200,180,2,300,180);c.state.sourceSize(3408,2272);
+            require(!c.state.scrolling()&&!c.state.held(),"resize ends scroll");c.scroll();c.state.scrollMove(1,200,170,2,300,170);require(c.events.wheel==0,"old remainder discarded");
+        });
+        check("extreme finite scroll movement cannot flood native input",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);
+            require(c.events.wheel==12,"one event bounded");c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);require(c.events.wheel==12,"no overflow remainder");
+        });
+        check("native tablet geometry preserves full screen",()->{
+            RenderSize r=new RenderSize(3408,2272,100);require(r.width==3408&&r.height==2272,"native size");
         });
         check("half tablet geometry scales each axis",()->{
-            RenderSize r=new RenderSize(3408,2272,50);
-            require(r.width==1704&&r.height==1136,"half width and height");
-            require((long)r.width*2272==(long)r.height*3408,"aspect unchanged");
+            RenderSize r=new RenderSize(3408,2272,50);require(r.width==1704&&r.height==1136,"half size");require((long)r.width*2272==(long)r.height*3408,"same aspect");
         });
-        check("three quarter geometry and even small sizes",()->{
-            RenderSize r=new RenderSize(3408,2272,75);
-            require(r.width==2556&&r.height==1704,"75 percent dimensions");
-            RenderSize tiny=new RenderSize(3,3,50);require(tiny.width==2&&tiny.height==2,"nonzero even pixels");
+        check("three quarter and tiny geometry",()->{
+            RenderSize r=new RenderSize(3408,2272,75);require(r.width==2556&&r.height==1704,"75 percent");r=new RenderSize(3,3,50);require(r.width==2&&r.height==2,"small nonzero size");
         });
-        check("invalid scale and bounds are rejected",()->{
-            int errors=0;
-            try{new RenderSize(3408,2272,25);}catch(IllegalArgumentException e){errors++;}
-            try{new RenderSize(0,2272,100);}catch(IllegalArgumentException e){errors++;}
-            try{new RenderSize(17000,2272,100);}catch(IllegalArgumentException e){errors++;}
-            require(errors==3,"invalid dimensions cannot reach native window");
+        check("invalid render scale and bounds rejected",()->{
+            int errors=0;try{new RenderSize(3408,2272,25);}catch(IllegalArgumentException e){errors++;}try{new RenderSize(0,2272,100);}catch(IllegalArgumentException e){errors++;}try{new RenderSize(17000,2272,100);}catch(IllegalArgumentException e){errors++;}require(errors==3,"invalid geometry");
         });
-        check("native resolution touch reaches all screen edges",()->{
-            Events e=new Events();TouchMouseState t=new TouchMouseState(e,8,500);
-            t.sourceSize(3408,2272);t.viewport(0,0,3408,2272);
-            t.down(1,1704,1136,0);require(t.lastX()==1704&&t.lastY()==1136,"center maps one to one");
-            t.up(1,3407,2271,100);require(t.lastX()==3407&&t.lastY()==2271&&!e.held,"lower right reachable");
+        check("native touch reaches all edges",()->{
+            Events e=new Events();TouchMouseState t=new TouchMouseState(e,8,500);t.sourceSize(3408,2272);t.viewport(0,0,3408,2272);
+            t.down(1,1704,1136,0);require(t.lastX()==1704&&t.lastY()==1136,"native center");t.up(1,3407,2271,100);require(t.lastX()==3407&&t.lastY()==2271&&!e.held,"native corner");
         });
-        check("half resolution drag scales coordinates without black bars",()->{
-            Events e=new Events();TouchMouseState t=new TouchMouseState(e,8,500);
-            t.sourceSize(1704,1136);t.viewport(0,0,3408,2272);
-            t.down(1,0,0,0);require(t.held(),"top left of complete Surface is clickable");
-            t.move(1,1704,1136);require(t.lastX()==852&&t.lastY()==568&&e.held,"drag remains held at scaled center");
-            t.up(1,9999,9999,100);require(t.lastX()==1703&&t.lastY()==1135&&!e.held,"scaled edge clamp and release");
+        check("half render resolution drag has no letterbox",()->{
+            Events e=new Events();TouchMouseState t=new TouchMouseState(e,8,500);t.sourceSize(1704,1136);t.viewport(0,0,3408,2272);
+            t.down(1,0,0,0);require(t.activePointer()==1,"top left accepted");t.move(1,1704,1136);require(t.lastX()==852&&t.lastY()==568&&e.held,"scaled drag");t.up(1,9999,9999,100);require(t.lastX()==1703&&t.lastY()==1135&&!e.held,"clamped release");
         });
-        check("resolution change releases old gesture",()->{
-            Case c=new Case();c.state.down(1,200,150,0);c.state.sourceSize(3408,2272);
-            require(!c.events.held&&c.state.activePointer()==-1&&c.state.presses()==c.state.releases(),"resize cannot leave mouse held");
+        check("resolution change releases held drag",()->{
+            Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,300,150);c.state.sourceSize(3408,2272);
+            require(!c.events.held&&c.state.activePointer()==-1&&c.state.presses()==c.state.releases(),"no held drag after resize");
         });
         System.out.println("TouchMouseStateTests: "+passed+" passed");
     }

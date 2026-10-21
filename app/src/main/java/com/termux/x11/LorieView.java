@@ -13,15 +13,21 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     private final int renderScalePercent;
     private int renderWidth,renderHeight;
     private final TouchMouseState touch;
+    private final boolean touchMouseSimulation;
+    private final Runnable longPressCheck;
     private int keyEvents,escapeEvents;
     private final java.util.Map<Integer,Integer> pressedKeys=new java.util.HashMap<>();
-    public LorieView(MainActivity activity,int renderScalePercent) {
-        super(activity);this.activity=activity;this.renderScalePercent=renderScalePercent;
+    public LorieView(MainActivity activity,int renderScalePercent,boolean touchMouseSimulation) {
+        super(activity);this.activity=activity;this.renderScalePercent=renderScalePercent;this.touchMouseSimulation=touchMouseSimulation;
         touch=new TouchMouseState(new TouchMouseState.Sink() {
             public void move(float x,float y){if(pointer!=0&&isConnected())sendMouseEvent(pointer,x,y,0,false,false);}
             public void leftButton(boolean down){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,0,1,down,false);}
+            public void rightButton(boolean down){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,0,3,down,false);}
+            // Pinned Xlorie ABI: detail4 is vertical wheel, 120 units per notch.
+            public void scroll(int notches){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,notches*120,4,false,true);}
             public void tap(float x,float y){performClick();}
-        },ViewConfiguration.get(activity).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout());
+        },ViewConfiguration.get(activity).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),48*getResources().getDisplayMetrics().density);
+        longPressCheck=()->{if(touchMouseSimulation&&pointer!=0&&isConnected())touch.longPress(touch.activePointer(),android.os.SystemClock.uptimeMillis());};
         setClickable(true);setFocusable(true);setFocusableInTouchMode(true);requestFocus();
         pointer=nativeInit();getHolder().addCallback(this);
     }
@@ -33,34 +39,51 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     public int renderWidth(){return renderWidth;}
     public int renderHeight(){return renderHeight;}
     public boolean isConnected() {return connected(pointer);}
-    public void dispose() {touch.cancel();releaseKeys();if(pointer!=0) {long old=pointer;pointer=0;nativeDestroy(old);}}
+    public void cancelTouch(){removeCallbacks(longPressCheck);touch.cancel();}
+    public void dispose() {cancelTouch();releaseKeys();if(pointer!=0) {long old=pointer;pointer=0;nativeDestroy(old);}}
     @Override public void surfaceCreated(SurfaceHolder holder) {surfaceChanged(pointer,holder.getSurface());activity.surfaceReady();}
     @Override public void surfaceChanged(SurfaceHolder holder,int format,int width,int height) {surfaceChanged(pointer,holder.getSurface());updateViewport(width,height);}
-    @Override public void surfaceDestroyed(SurfaceHolder holder) {touch.cancel();releaseKeys();activity.surfaceLost();if(pointer!=0)surfaceChanged(pointer,null);}
+    @Override public void surfaceDestroyed(SurfaceHolder holder) {cancelTouch();releaseKeys();activity.surfaceLost();if(pointer!=0)surfaceChanged(pointer,null);}
     @Override public boolean onTouchEvent(MotionEvent event) {
-        if(pointer==0||!isConnected()) {touch.cancel();return super.onTouchEvent(event);}
+        if(pointer==0||!isConnected()) {cancelTouch();return super.onTouchEvent(event);}
         int action=event.getActionMasked();
-        if(action==MotionEvent.ACTION_CANCEL){touch.cancel();return true;}
+        if(action==MotionEvent.ACTION_CANCEL){cancelTouch();return true;}
         if(!event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN))return super.onTouchEvent(event);
-        if(action==MotionEvent.ACTION_POINTER_DOWN||
-            action==MotionEvent.ACTION_POINTER_UP||event.getPointerCount()!=1) {touch.cancel();return true;}
+        if(!touchMouseSimulation){cancelTouch();return true;}
+        if(action==MotionEvent.ACTION_POINTER_DOWN) {
+            removeCallbacks(longPressCheck);
+            int first=event.findPointerIndex(touch.activePointer()),second=event.getActionIndex();
+            if(event.getPointerCount()==2&&first>=0&&first!=second)
+                touch.beginScroll(event.getPointerId(first),event.getX(first),event.getY(first),event.getPointerId(second),event.getX(second),event.getY(second));
+            else cancelTouch();
+            return true;
+        }
+        if(action==MotionEvent.ACTION_POINTER_UP){cancelTouch();return true;}
+        if(touch.scrolling()&&action==MotionEvent.ACTION_MOVE&&event.getPointerCount()==2) {
+            int a=event.findPointerIndex(touch.activePointer()),b=event.findPointerIndex(touch.scrollPointer());
+            if(a<0||b<0)cancelTouch();else touch.scrollMove(event.getPointerId(a),event.getX(a),event.getY(a),event.getPointerId(b),event.getX(b),event.getY(b));
+            return true;
+        }
+        if(event.getPointerCount()!=1){cancelTouch();return true;}
         if(action==MotionEvent.ACTION_DOWN) {
-            requestFocus();touch.down(event.getPointerId(0),event.getX(0),event.getY(0),event.getEventTime());return true;
+            cancelTouch();requestFocus();touch.down(event.getPointerId(0),event.getX(0),event.getY(0),event.getEventTime());
+            if(touch.canLongPress())postDelayed(longPressCheck,ViewConfiguration.getLongPressTimeout());return true;
         }
         int index=event.findPointerIndex(touch.activePointer());
-        if(index<0){touch.cancel();return true;}
+        if(index<0){cancelTouch();return true;}
         if(action==MotionEvent.ACTION_MOVE) {
-            touch.move(event.getPointerId(index),event.getX(index),event.getY(index));return true;
+            touch.move(event.getPointerId(index),event.getX(index),event.getY(index));
+            if(!touch.canLongPress())removeCallbacks(longPressCheck);return true;
         }
         if(action==MotionEvent.ACTION_UP) {
-            touch.up(event.getPointerId(index),event.getX(index),event.getY(index),event.getEventTime());return true;
+            removeCallbacks(longPressCheck);touch.up(event.getPointerId(index),event.getX(index),event.getY(index),event.getEventTime());return true;
         }
         return true;
     }
     @Override public boolean performClick() {super.performClick();return true;}
     public boolean forwardEscape() {
         if(pointer==0||!isConnected())return false;
-        touch.cancel();
+        cancelTouch();
         // Linux evdev KEY_ESC=1; the native keyboard path handles its X11 offset.
         boolean down=sendKeyEvent(pointer,1,KeyEvent.KEYCODE_ESCAPE,true);
         boolean up=sendKeyEvent(pointer,1,KeyEvent.KEYCODE_ESCAPE,false);
@@ -87,12 +110,15 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         pressedKeys.clear();
     }
     @Override public void onWindowFocusChanged(boolean focused) {
-        super.onWindowFocusChanged(focused);if(!focused){touch.cancel();releaseKeys();}
+        super.onWindowFocusChanged(focused);if(!focused){cancelTouch();releaseKeys();}
     }
     public org.json.JSONObject inputState() throws Exception {
         return new org.json.JSONObject().put("touchLeftClicks",touch.clicks()).put("lastClickX",touch.lastClickX()).put("lastClickY",touch.lastClickY())
             .put("touchLeftPresses",touch.presses()).put("touchLeftReleases",touch.releases()).put("touchMoveEvents",touch.moves())
-            .put("touchDrags",touch.drags()).put("touchCanceledGestures",touch.cancels()).put("touchLeftHeld",touch.held())
+            .put("touchDrags",touch.drags()).put("touchCanceledGestures",touch.cancels()).put("touchLeftHeld",touch.leftHeld())
+            .put("touchMouseSimulationEnabled",touchMouseSimulation).put("touchRightHeld",touch.rightHeld())
+            .put("touchRightPresses",touch.rightPresses()).put("touchRightReleases",touch.rightReleases())
+            .put("touchScrollEvents",touch.scrollEvents()).put("touchScrollSteps",touch.scrollSteps()).put("touchScrolling",touch.scrolling())
             .put("touchActivePointer",touch.activePointer()).put("lastTouchX",touch.lastX()).put("lastTouchY",touch.lastY())
             .put("keyboardEventsForwarded",keyEvents).put("androidBackEscapeEvents",escapeEvents).put("pressedKeys",pressedKeys.size()).put("nativeGamepadBridgeReady",false)
             .put("viewportX",viewportX).put("viewportY",viewportY).put("viewportWidth",viewportWidth).put("viewportHeight",viewportHeight)
@@ -107,7 +133,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     private void updateViewport(int width,int height) {
         // Split/freeform transitions may temporarily publish a 0- or 1-pixel buffer.
         // Preserve the last valid render target until a usable Surface arrives.
-        if(width<2||height<2||width>16384||height>16384){touch.cancel();return;}
+        if(width<2||height<2||width>16384||height>16384){cancelTouch();return;}
         if(pointer==0)return;
         RenderSize size=new RenderSize(width,height,renderScalePercent);
         boolean changed=size.width!=renderWidth||size.height!=renderHeight;
