@@ -63,7 +63,8 @@ public final class RuntimeProbe {
         environment.put("PATH","/system/bin");
         environment.put("GLIBC_TUNABLES","glibc.pthread.rseq=0");
         environment.putAll(extraEnvironment);
-        result.put("extraEnvironment",new JSONObject(extraEnvironment));
+        Map<String,String> reportedEnvironment=new HashMap<>(extraEnvironment);reportedEnvironment.remove("REA_IME_TOKEN");
+        result.put("extraEnvironment",new JSONObject(reportedEnvironment));
         result.put("glibcTunables","glibc.pthread.rseq=0");
         java.lang.Process process;
         LiveGraphics liveGraphics=session==null?null:new LiveGraphics();
@@ -313,6 +314,7 @@ public final class RuntimeProbe {
                 windowEnvironment.put("REA_GAMEPAD_SOCKET",pad.getString("gamepadSocket"));
                 if(progress!=null)progress.update("gamepadRelayReady",result);
             }
+            if(manual)windowEnvironment.putAll(control.keyboardEnvironment());
             AudioDiskBridge audioBridge=AudioDiskBridge.create(context);
             try {
             if(audioBridge!=null) {

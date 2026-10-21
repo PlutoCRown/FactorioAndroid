@@ -53,9 +53,9 @@ files/profiles/default-2.1.22/userdata/saves/
 
 ## 开发指南
 
-`jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据和Compose新增AndroidX库。
+`jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据、Compose新增AndroidX库及软键盘请求程序。安卓输入法的触发、文字回传和原生程序编译步骤见 [安卓软键盘接入](docs/ANDROID-KEYBOARD.md)。
 
-`codex/compose-launcher` 的 2026-10-21 Windows 本地标准版实测为31,372,872字节（31.37 MB），旧版23.54 MB，增加33.3%；此样本未启用R8代码收缩。编译、171项既有检查及APK校验已通过，尚未做新版真机界面验收。
+2026-10-21 Windows 本地键盘接入版标准 APK 为31,386,537字节（31.39 MB），比此前 Compose 标准版增加13,665字节。198项主机检查、签名、对齐和载荷校验通过；平板已保留数据升级，原生请求程序通过设备执行与通信测试。游戏输入框自动触发和中文回传仍待真机验收。
 
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
 
@@ -70,13 +70,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 JDK/SDK 放在 `tools/`，下载与 Gradle 缓存放在 `.cache/`；不安装到系统、不永久修改环境。复用现有兼容工具时，直接给构建脚本传 `-Jdk`、`-Sdk`。
 
-Linux/macOS 已有兼容工具时：
+Linux x86_64 已有兼容工具时：
 
 ```bash
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-本项目开发仍遵守 Mac 不安装安卓工具链：本机编辑源码，Windows 或 GitHub Actions 构建。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（现有171项检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB和1个AndroidX路径库的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验原生库。
+本项目开发仍遵守 Mac 不安装安卓工具链：本机编辑源码，Windows 或 GitHub Actions 构建。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（原有检查及键盘请求/组合文字检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB、1个AndroidX路径库及键盘请求程序的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验的第三方运行库；小型键盘请求程序随构建从源码编译，需要工程内 Zig 0.15.2，准备方式见键盘说明。
 
 两个入口均自动恢复固定运行库；也可单独执行（此恢复命令只需JDK11+）：
 

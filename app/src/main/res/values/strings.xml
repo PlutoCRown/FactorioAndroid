@@ -124,4 +124,5 @@
     <string name="folder_sidebar_hint">Open %1$s in the system file manager sidebar.</string>
     <string name="save_imported_name">Imported: %1$s</string>
     <string name="game_exit_code">Game exited unexpectedly (exit code %1$d).</string>
+    <string name="show_keyboard">Show keyboard</string>
 </resources>

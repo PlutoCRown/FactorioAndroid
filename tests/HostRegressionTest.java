@@ -1,6 +1,6 @@
 import org.junit.Test;
 
-/** Keep the existing 171 checks in the normal Gradle test task. */
+/** Keep the host checks, including keyboard composition, in the normal Gradle test task. */
 public final class HostRegressionTest {
     private void run(String name) throws Exception {
         try {Class.forName(name).getMethod("main",String[].class).invoke(null,(Object)new String[0]);}
@@ -15,5 +15,6 @@ public final class HostRegressionTest {
     @Test public void touch() throws Exception {run("com.termux.x11.TouchMouseStateTests");}
     @Test public void gameFiles() throws Exception {run("org.factorio.local.launcher.GameFilesTests");}
     @Test public void languages() throws Exception {run("org.factorio.local.launcher.LanguagePolicyTests");}
+    @Test public void keyboard() throws Exception {run("org.factorio.local.launcher.KeyboardTests");}
     @Test public void importLock() throws Exception {run("org.factorio.local.launcher.ImportLeaseTests");}
 }

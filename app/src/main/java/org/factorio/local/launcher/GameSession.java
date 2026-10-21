@@ -48,6 +48,9 @@ public final class GameSession implements AutoCloseable {
             return name.equals(context.getPackageName()+":window");
         }catch(Exception absent){return false;}
     }
+    private java.util.Map<String,String> keyboardEnvironment=java.util.Collections.emptyMap();
+    public synchronized void setKeyboardEnvironment(java.util.Map<String,String> environment) {keyboardEnvironment=new java.util.HashMap<>(environment);}
+    synchronized java.util.Map<String,String> keyboardEnvironment(){return new java.util.HashMap<>(keyboardEnvironment);}
     private final String graphicsPreset;
     public GameSession(String preset) {graphicsPreset=preset==null?"compat":preset;}
     String graphicsPreset() {return graphicsPreset;}

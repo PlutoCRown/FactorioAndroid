@@ -53,6 +53,10 @@ android {
         }
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1")
     }
+    sourceSets.getByName("main") {
+        jniLibs.srcDir(layout.buildDirectory.dir("generated/ime/jni").get().asFile)
+        assets.srcDir(layout.buildDirectory.dir("generated/ime/assets").get().asFile)
+    }
     sourceSets.getByName("test") {
         java.setSrcDirs(listOf(layout.buildDirectory.dir("generated/host-tests").get().asFile))
     }
@@ -77,7 +81,14 @@ val restoreRuntime by tasks.registering(Exec::class) {
     val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
     commandLine(javaBin.absolutePath, rootProject.file("scripts/RestoreRuntime.java").absolutePath)
 }
-tasks.named("preBuild") { dependsOn(restoreRuntime) }
+val buildImeNative by tasks.registering(Exec::class) {
+    workingDir(rootProject.projectDir)
+    val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
+    commandLine(javaBin.absolutePath, rootProject.file("scripts/BuildImeNative.java").absolutePath)
+    inputs.files(rootProject.file("native-input/ime/keyboard-opener.c"), rootProject.file("scripts/BuildImeNative.java"), rootProject.file("scripts/ime-compiler.properties"))
+    outputs.dir(layout.buildDirectory.dir("generated/ime"))
+}
+tasks.named("preBuild") { dependsOn(restoreRuntime, buildImeNative) }
 
 // Stage only host tests: device injectors and inventory utilities are not tests.
 val stageHostTests by tasks.registering(Sync::class) {

@@ -53,9 +53,9 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 ## Development
 
-See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library.
+See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library. See [Android keyboard integration (Chinese)](docs/ANDROID-KEYBOARD.md) for request routing, Unicode commits and helper build instructions.
 
-The 2026-10-21 Windows local standard build on `codex/compose-launcher` is 31,372,872 bytes (31.37 MB), up 33.3% from 23.54 MB. This sample has R8 code shrinking disabled. Compilation, the existing 171 checks and APK verification pass; the new UI has not yet been tested on the physical device.
+The 2026-10-21 Windows local keyboard integration standard APK is 31,386,537 bytes (31.39 MB), 13,665 bytes above the earlier Compose standard build. All 198 host checks, signature, alignment and payload verification pass. A data-preserving tablet upgrade and native helper execution/socket tests pass; automatic game text-field activation and Unicode input still await device verification.
 
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 
@@ -70,13 +70,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 JDK/SDK tools go under `tools/`, and downloads/Gradle state under `.cache/`. No system installation or persistent environment changes. To reuse compatible existing tools, pass `-Jdk` and `-Sdk` to the build script instead.
 
-On Linux/macOS with an existing JDK/SDK:
+On Linux x86_64 with an existing JDK/SDK:
 
 ```bash
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-This project does not install Android tools on the author's Mac; development builds use Windows or GitHub Actions. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (the existing 171 checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB and the additional AndroidX path library inside each APK. The compile-only JNI annotation stub is not packaged. Native libraries are neither rebuilt nor stripped by Gradle.
+This project does not install Android tools on the author's Mac; development builds use Windows or GitHub Actions. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB, the additional AndroidX path library and the keyboard request helper inside each APK. The compile-only JNI annotation stub is not packaged. Verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The small keyboard helper is compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
 
 Both entry points restore the pinned runtime automatically. To restore separately (JDK 11+):
 

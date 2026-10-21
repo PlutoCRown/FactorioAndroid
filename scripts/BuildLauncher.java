@@ -60,10 +60,18 @@ class BuildLauncher {
                 if(data.length!=Long.parseLong(parts[1])||!sha(data).equals(parts[0]))throw new IOException("Compose native dependency changed: "+parts[2]);
                 count++;
             }
+            Properties ime=new Properties();try(InputStream in=Files.newInputStream(root.resolve("app/build/generated/ime/assets/ime-native.properties"))){ime.load(in);}
+            String imePath="lib/arm64-v8a/"+ime.getProperty("name");ZipEntry helper=zip.getEntry(imePath);
+            if(helper==null)throw new IOException("APK missing keyboard helper");
+            byte[] helperData=zip.getInputStream(helper).readAllBytes();
+            if(helperData.length!=Long.parseLong(ime.getProperty("bytes"))||!sha(helperData).equals(ime.getProperty("sha256")))throw new IOException("Keyboard helper differs");
+            byte[] packedManifest=zip.getInputStream(zip.getEntry("assets/ime-native.properties")).readAllBytes();
+            if(!Arrays.equals(packedManifest,Files.readAllBytes(root.resolve("app/build/generated/ime/assets/ime-native.properties"))))throw new IOException("Keyboard helper manifest differs");
+            count++;
             long actual=zip.stream().filter(x->x.getName().startsWith("lib/")&&x.getName().endsWith(".so")).count();
             if(actual!=count)throw new IOException("Unexpected native payload count: "+actual);
         }
-        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" AndroidX native libraries + XKB");
+        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" additional native libraries (AndroidX + keyboard helper) + XKB");
     }
     public static void main(String[] args)throws Exception {
         if(Runtime.version().feature()<17)throw new IOException("JDK 17+ required for Kotlin/Compose/AGP");
@@ -88,7 +96,7 @@ class BuildLauncher {
         javax.xml.parsers.DocumentBuilderFactory parser=javax.xml.parsers.DocumentBuilderFactory.newInstance();
         parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
         org.w3c.dom.Element suite=parser.newDocumentBuilder().parse(testXml.toFile()).getDocumentElement();
-        if(!suite.getAttribute("tests").equals("7")||!suite.getAttribute("failures").equals("0")||!suite.getAttribute("errors").equals("0"))throw new IOException("Host regression suite did not pass all 7 groups");
+        if(!suite.getAttribute("tests").equals("8")||!suite.getAttribute("failures").equals("0")||!suite.getAttribute("errors").equals("0"))throw new IOException("Host regression suite did not pass all 8 groups");
         Properties version=new Properties();try(InputStream in=Files.newInputStream(root.resolve("gradle.properties"))){version.load(in);}
         String versionName=version.getProperty("factorioVersionName"),versionFile=versionName.split("-",2)[0];
         Path artifacts=root.resolve("artifacts");Files.createDirectories(artifacts);Files.copy(testXml,artifacts.resolve("host-tests.xml"),StandardCopyOption.REPLACE_EXISTING);List<String> packages=new ArrayList<>();
@@ -103,7 +111,7 @@ class BuildLauncher {
             if(!badge.contains("package: name='"+id+"'")||!badge.contains("launchable-activity: name='org.factorio.local.launcher.MainActivity'")||badge.contains("application-debuggable"))throw new IOException("APK identity or release mode incorrect");
             packages.add("{\"apk\":"+quote(apk.toString())+",\"bytes\":"+Files.size(apk)+",\"sha256\":"+quote(sha(Files.readAllBytes(apk)))+",\"package\":"+quote(id)+",\"performancePackage\":"+perf+"}");
         }
-        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"androidxNativeLibrariesVerified\":1,\"testGroupsPassed\":7,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
+        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
         Files.writeString(artifacts.resolve("build-result.json"),result+"\n");System.out.println("__FACTORIO_REPORT__"+result);
     }
 }

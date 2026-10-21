@@ -4,6 +4,10 @@
  */
 package com.termux.x11;
 import android.view.*;
+import android.view.inputmethod.*;
+import android.text.InputType;
+import java.nio.charset.StandardCharsets;
+import org.factorio.local.launcher.KeyboardRequest;
 import dalvik.annotation.optimization.CriticalNative;
 
 public final class LorieView extends SurfaceView implements SurfaceHolder.Callback {
@@ -16,6 +20,9 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     private final boolean touchMouseSimulation;
     private final Runnable longPressCheck;
     private int keyEvents,escapeEvents;
+    private boolean keyboardRequested,imeVisible,keyboardSuppressed,windowResumed;
+    private int keyboardMode,imeCommits,imeCodePoints;
+    private GameImeConnection imeConnection;
     private final java.util.Map<Integer,Integer> pressedKeys=new java.util.HashMap<>();
     public LorieView(MainActivity activity,int renderScalePercent,boolean touchMouseSimulation) {
         super(activity);this.activity=activity;this.renderScalePercent=renderScalePercent;this.touchMouseSimulation=touchMouseSimulation;
@@ -40,7 +47,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     public int renderHeight(){return renderHeight;}
     public boolean isConnected() {return connected(pointer);}
     public void cancelTouch(){removeCallbacks(longPressCheck);touch.cancel();}
-    public void dispose() {cancelTouch();releaseKeys();if(pointer!=0) {long old=pointer;pointer=0;nativeDestroy(old);}}
+    public void dispose() {setGameKeyboard(null);cancelTouch();releaseKeys();if(pointer!=0) {long old=pointer;pointer=0;nativeDestroy(old);}}
     @Override public void surfaceCreated(SurfaceHolder holder) {surfaceChanged(pointer,holder.getSurface());activity.surfaceReady();}
     @Override public void surfaceChanged(SurfaceHolder holder,int format,int width,int height) {surfaceChanged(pointer,holder.getSurface());updateViewport(width,height);}
     @Override public void surfaceDestroyed(SurfaceHolder holder) {cancelTouch();releaseKeys();activity.surfaceLost();if(pointer!=0)surfaceChanged(pointer,null);}
@@ -109,9 +116,6 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         if(pointer!=0&&isConnected())for(java.util.Map.Entry<Integer,Integer> key:pressedKeys.entrySet())sendKeyEvent(pointer,key.getValue(),key.getKey(),false);
         pressedKeys.clear();
     }
-    @Override public void onWindowFocusChanged(boolean focused) {
-        super.onWindowFocusChanged(focused);if(!focused){cancelTouch();releaseKeys();}
-    }
     public org.json.JSONObject inputState() throws Exception {
         return new org.json.JSONObject().put("touchLeftClicks",touch.clicks()).put("lastClickX",touch.lastClickX()).put("lastClickY",touch.lastClickY())
             .put("touchLeftPresses",touch.presses()).put("touchLeftReleases",touch.releases()).put("touchMoveEvents",touch.moves())
@@ -123,8 +127,78 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
             .put("keyboardEventsForwarded",keyEvents).put("androidBackEscapeEvents",escapeEvents).put("pressedKeys",pressedKeys.size()).put("nativeGamepadBridgeReady",false)
             .put("viewportX",viewportX).put("viewportY",viewportY).put("viewportWidth",viewportWidth).put("viewportHeight",viewportHeight)
             .put("viewWidth",getWidth()).put("viewHeight",getHeight())
+            .put("imeRequested",keyboardRequested).put("imeVisible",imeVisible).put("imeMode",keyboardMode).put("imeCommits",imeCommits).put("imeCodePoints",imeCodePoints)
             .put("renderWidth",renderWidth).put("renderHeight",renderHeight).put("renderScalePercent",renderScalePercent);
     }
+    public void setGameKeyboard(KeyboardRequest request) {
+        keyboardRequested=request!=null&&request.show;keyboardSuppressed=false;
+        if(request!=null)keyboardMode=request.mode;
+        if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
+        InputMethodManager manager=(InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+        manager.restartInput(this);
+        if(keyboardRequested&&windowResumed)showGameKeyboard();else manager.hideSoftInputFromWindow(getWindowToken(),0);
+    }
+    public boolean acceptsIme(){return keyboardRequested&&windowResumed&&pointer!=0&&isConnected();}
+    public boolean keyboardRequested(){return keyboardRequested;}
+    public void showGameKeyboard() {
+        if(!acceptsIme())return;keyboardSuppressed=false;requestFocus();
+        InputMethodManager manager=(InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+        if(imeConnection==null||imeConnection.isClosed())manager.restartInput(this);
+        manager.showSoftInput(this,0,new android.os.ResultReceiver(new android.os.Handler(android.os.Looper.getMainLooper())) {
+            @Override protected void onReceiveResult(int result,android.os.Bundle data) {
+                if(android.os.Build.VERSION.SDK_INT<30&&keyboardRequested&&windowResumed)
+                    imeVisible=result==InputMethodManager.RESULT_SHOWN||result==InputMethodManager.RESULT_UNCHANGED_SHOWN;
+            }
+        });
+    }
+    public boolean hideGameKeyboard() {
+        if(!imeVisible)return false;keyboardSuppressed=true;
+        if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
+        ((InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(getWindowToken(),0);
+        imeVisible=false;return true;
+    }
+    public void imeVisibilityChanged(boolean visible){imeVisible=visible;}
+    public void setImeResumed(boolean resumed) {
+        windowResumed=resumed;
+        if(!resumed){if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
+            ((InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(getWindowToken(),0);}
+        else if(keyboardRequested&&!keyboardSuppressed)post(this::showGameKeyboard);
+    }
+    @Override public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);if(!focused){cancelTouch();releaseKeys();}
+        else if(keyboardRequested&&windowResumed&&!keyboardSuppressed&&!imeVisible)post(this::showGameKeyboard);
+    }
+    @Override public boolean onCheckIsTextEditor(){return keyboardRequested;}
+    @Override public InputConnection onCreateInputConnection(EditorInfo info) {
+        if(!keyboardRequested)return null;
+        if(imeConnection!=null)imeConnection.discard();
+        info.inputType=keyboardMode==3?InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_SIGNED:
+            InputType.TYPE_CLASS_TEXT|(keyboardMode==2?InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)|
+            (keyboardMode==1?InputType.TYPE_TEXT_FLAG_MULTI_LINE:0);
+        info.imeOptions=EditorInfo.IME_FLAG_NO_FULLSCREEN|EditorInfo.IME_FLAG_NO_EXTRACT_UI|
+            (keyboardMode==1?EditorInfo.IME_ACTION_NONE:EditorInfo.IME_ACTION_DONE);
+        info.initialSelStart=-1;info.initialSelEnd=-1;
+        imeConnection=new GameImeConnection(this);return imeConnection;
+    }
+    @Override public boolean onKeyPreIme(int code,KeyEvent event) {
+        if(code==KeyEvent.KEYCODE_BACK&&imeVisible){if(event.getAction()==KeyEvent.ACTION_UP)hideGameKeyboard();return true;}
+        return super.onKeyPreIme(code,event);
+    }
+    boolean commitImeText(String text) {
+        if(!acceptsIme()||text.length()>65536)return false;
+        if(!text.isEmpty()){sendTextEvent(pointer,text.getBytes(StandardCharsets.UTF_8));imeCommits++;imeCodePoints+=text.codePointCount(0,text.length());}
+        return true;
+    }
+    boolean imeKey(int code) {
+        if(!acceptsIme())return false;
+        int scan;
+        switch(code){case KeyEvent.KEYCODE_DEL:scan=14;break;case KeyEvent.KEYCODE_FORWARD_DEL:scan=111;break;
+            case KeyEvent.KEYCODE_ENTER:scan=28;break;case KeyEvent.KEYCODE_TAB:scan=15;break;
+            case KeyEvent.KEYCODE_DPAD_LEFT:scan=105;break;case KeyEvent.KEYCODE_DPAD_RIGHT:scan=106;break;
+            case KeyEvent.KEYCODE_DPAD_UP:scan=103;break;case KeyEvent.KEYCODE_DPAD_DOWN:scan=108;break;default:return false;}
+        boolean down=sendKeyEvent(pointer,scan,code,true),up=sendKeyEvent(pointer,scan,code,false);return down&&up;
+    }
+    // X11 top-level focus/mouse callbacks are not game text-field requests.
     public void resetIme() {}
     public void setClipboardText(String text) {}
     public void requestClipboard() {}

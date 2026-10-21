@@ -32,6 +32,7 @@ public final class MainActivity extends Activity {
     private boolean manualSession;
     private GameSession gameSession;
     private ControllerRelay controllerRelay;
+    private org.factorio.local.launcher.KeyboardBridge keyboardBridge;
     private Thread sessionThread;
     private int renderScalePercent=100;
     public static native void nativeSetLaunchWindowingModeFreeform(Object options);
@@ -45,6 +46,7 @@ public final class MainActivity extends Activity {
         // without dismissing it or accessing any other application's screen.
         if(!manualSession&&Build.VERSION.SDK_INT>=27) {setShowWhenLocked(true);setTurnScreenOn(true);}
         WindowPolicy.apply(this);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         FrameLayout layout=new FrameLayout(this);layout.setBackgroundColor(android.graphics.Color.BLACK);
         status=new TextView(this);status.setText(manualSession?getString(R.string.window_preparing):getIntent().getBooleanExtra("windowGraphics",false)?getString(R.string.window_probe_start):getString(R.string.window_probe_only));
         status.setPadding(dp(12),dp(8),dp(12),dp(8));status.setTextSize(12);status.setMaxLines(4);
@@ -61,6 +63,8 @@ public final class MainActivity extends Activity {
                 new android.app.AlertDialog.Builder(this).setTitle(getString(R.string.runtime_info))
                     .setMessage(org.factorio.local.launcher.RuntimeGraphicsInfo.describe(this)).setPositiveButton(getString(R.string.close),null).show();
             }catch(Exception e){fail(e);}return true;});
+            if(view!=null&&view.keyboardRequested())popup.getMenu().add(getString(R.string.show_keyboard))
+                .setOnMenuItemClickListener(item->{view.showGameKeyboard();return true;});
             popup.getMenu().add(status.getVisibility()==View.VISIBLE?getString(R.string.hide_startup_status):getString(R.string.show_startup_status)).setOnMenuItemClickListener(item->{status.setVisibility(status.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);return true;});
             popup.getMenu().add(getString(R.string.end_session_home)).setOnMenuItemClickListener(item->{if(manualSession)askStop();else finish();return true;});
             popup.show();
@@ -71,6 +75,7 @@ public final class MainActivity extends Activity {
                 statusPosition.leftMargin=dp(12)+cutout.getSafeInsetLeft();statusPosition.topMargin=dp(12)+cutout.getSafeInsetTop();status.setLayoutParams(statusPosition);
 
             }
+            if(view!=null&&Build.VERSION.SDK_INT>=30)view.imeVisibilityChanged(insets.isVisible(WindowInsets.Type.ime()));
             int safeRight=0,safeBottom=0;
             if(Build.VERSION.SDK_INT>=30) {
                 android.graphics.Insets safe=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
@@ -114,7 +119,12 @@ public final class MainActivity extends Activity {
                         report.put("serverStartAccepted",started);record("serverStartRequested");
                         if(!started)throw new Exception("Embedded X server declined start");
                         view=new LorieView(this,renderScalePercent,getIntent().getBooleanExtra("touchMouseSimulation",true));layout.addView(view,0,new FrameLayout.LayoutParams(-1,-1));
+                        view.setImeResumed(resumed);
                         if(manualSession) {
+                            keyboardBridge=new org.factorio.local.launcher.KeyboardBridge(this,request->handler.post(()-> {
+                                if(!closed&&view!=null){view.setGameKeyboard(request);try{record(request.show?"keyboardRequested":"keyboardClosed");}catch(Exception ignored){}}
+                            }));
+                            gameSession.setKeyboardEnvironment(keyboardBridge.environment());
                             SurfaceView directSurface=new SurfaceView(this);
                             directSurface.setZOrderMediaOverlay(true);
                             directSurface.setClickable(false);directSurface.setFocusable(false);
@@ -272,8 +282,8 @@ public final class MainActivity extends Activity {
         try {gameSession.setBackgroundPaused(!resumed||!directSurfaceReady);if(report!=null)report.put("lifecycle",gameSession.lifecycleState());}
         catch(Exception error){try{if(report!=null)report.put("backgroundPauseError",error.toString());}catch(Exception ignored){}}
     }
-    @Override protected void onResume() {super.onResume();resumed=true;applyImmersiveMode();updateBackgroundPause();}
-    @Override protected void onPause() {if(view!=null)view.cancelTouch();resumed=false;updateBackgroundPause();super.onPause();}
+    @Override protected void onResume() {super.onResume();resumed=true;applyImmersiveMode();if(view!=null)view.setImeResumed(true);updateBackgroundPause();}
+    @Override protected void onPause() {if(view!=null){view.cancelTouch();view.setImeResumed(false);}resumed=false;updateBackgroundPause();super.onPause();}
 
     private void sampleController() {
         if(closed||controllerRelay==null||report==null)return;
@@ -283,6 +293,7 @@ public final class MainActivity extends Activity {
     private void record(String phase) throws Exception {
         JSONObject controller=controllerRelay==null?null:controllerRelay.report();
         if(controller!=null)report.put("controller",controller);
+        if(keyboardBridge!=null)report.put("keyboardBridge",keyboardBridge.report());
         if(view!=null) {
             JSONObject input=view.inputState();
             if(controller!=null)input.put("nativeGamepadBridgeReady",controller.optBoolean("nativeGamepadRecognized"))
@@ -326,6 +337,7 @@ public final class MainActivity extends Activity {
             .setNegativeButton(getString(R.string.continue_game),null).show();
     }
     @Override public void onBackPressed() {
+        if(view!=null&&view.hideGameKeyboard())return;
         if(graphicsStarted&&view!=null&&view.forwardEscape()) {
             try {record("androidBackForwardedAsEscape");}catch(Exception e){fail(e);}
             return;
@@ -335,6 +347,7 @@ public final class MainActivity extends Activity {
     @Override protected void onDestroy() {
         if(manualSession&&report!=null)try {report.put("activityClosed",true);record("closing");}catch(Exception ignored) {}
         closed=true;handler.removeCallbacksAndMessages(null);
+        if(keyboardBridge!=null)keyboardBridge.close();
         if(controllerRelay!=null)controllerRelay.close();
         if(gameSession!=null)gameSession.close();
         if(view!=null)view.dispose();
