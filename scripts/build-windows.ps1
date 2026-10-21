@@ -1,12 +1,13 @@
 param(
     [string]$Sdk = 'D:\Android\Sdk',
-    [string]$Jdk = 'D:\Java\jdk-15.0.2'
+    [string]$Jdk = 'D:\Java\jdk-15.0.2',
+    [switch]$PerformancePackage
 )
 [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false)
 $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
-$taskRoot=$PSScriptRoot
-if(-not $taskRoot) {$taskRoot=Join-Path ([Environment]::GetFolderPath('Desktop')) 'FactorioAndroid'}
+if(-not $PSScriptRoot) {$taskRoot=Join-Path ([Environment]::GetFolderPath('Desktop')) 'FactorioAndroid'}
+else {$taskRoot=Split-Path $PSScriptRoot -Parent}
 if (-not (Test-Path (Join-Path $taskRoot '.factorio-migration-workspace.json'))) {throw 'Workspace marker missing'}
 $taskBuild=Join-Path $taskRoot 'build'
 $taskTools=Join-Path $Sdk 'build-tools\33.0.1'
@@ -107,8 +108,18 @@ Invoke-TaskTool (Join-Path $Jdk 'bin\javac.exe') @('-encoding','UTF-8','--releas
 Invoke-TaskTool (Join-Path $Jdk 'bin\java.exe') @('-cp',(Join-Path $taskBuild 'tests'),'org.factorio.local.launcher.LanguagePolicyTests')
 
 Invoke-TaskTool (Join-Path $taskTools 'aapt2.exe') @('compile','--dir',(Join-Path $taskRoot 'app\src\main\res'),'-o',(Join-Path $taskBuild 'resources.zip'))
+# Application id lives in the manifest. Java and R stay in the original source
+# package, so one dex can be packed into the normal and performance ids.
+$taskJavaPackage='org.factorio.local.launcher'
+$taskAppPackage='dev.plutocrown.factorio'
+$taskPerfPackage='com.miHoYo.Yuanshen'
+$taskManifest=Join-Path $taskRoot 'app\src\main\AndroidManifest.xml'
+$taskManifestText=[IO.File]::ReadAllText($taskManifest)
+if($taskManifestText -notmatch 'package="dev\.plutocrown\.factorio"') {throw 'Manifest package must be dev.plutocrown.factorio'}
+if($taskManifestText -notmatch 'android:versionName="([0-9]+\.[0-9]+\.[0-9]+)') {throw 'Version name must start with a numeric version'}
+$taskVersionFile=$Matches[1]
 $taskUnsigned=Join-Path $taskBuild 'unsigned.apk'
-Invoke-TaskTool (Join-Path $taskTools 'aapt2.exe') @('link','-o',$taskUnsigned,'-I',$taskAndroid,'--manifest',(Join-Path $taskRoot 'app\src\main\AndroidManifest.xml'),'--java',(Join-Path $taskBuild 'generated'),'-A',(Join-Path $taskRoot 'app\src\main\assets'),(Join-Path $taskBuild 'resources.zip'))
+Invoke-TaskTool (Join-Path $taskTools 'aapt2.exe') @('link','-o',$taskUnsigned,'-I',$taskAndroid,'--manifest',$taskManifest,'--custom-package',$taskJavaPackage,'--java',(Join-Path $taskBuild 'generated'),'-A',(Join-Path $taskRoot 'app\src\main\assets'),(Join-Path $taskBuild 'resources.zip'))
 $taskSources=@(Get-ChildItem -LiteralPath $taskSourceRoot -Recurse -Filter '*.java' | Select-Object -ExpandProperty FullName)
 $taskSources+=@(Get-ChildItem -LiteralPath (Join-Path $taskBuild 'generated') -Recurse -Filter '*.java' | Select-Object -ExpandProperty FullName)
 # Use JDK Java-8 compiler APIs for lambda lowering; android.jar intentionally
@@ -128,25 +139,74 @@ Invoke-TaskTool (Join-Path $Jdk 'bin\jar.exe') @('cf',$taskClasses,'-C',(Join-Pa
 # Older installed d8.bat uses java.ext.dirs, removed in JDK 9. Invoke the
 # same installed compiler jar directly without modifying the SDK.
 Invoke-TaskTool (Join-Path $Jdk 'bin\java.exe') @('-cp',(Join-Path $taskTools 'lib\d8.jar'),'com.android.tools.r8.D8','--release','--min-api','26','--lib',$taskAndroid,'--output',(Join-Path $taskBuild 'dex'),$taskClasses,$taskBaseJar)
-Invoke-TaskTool (Join-Path $Jdk 'bin\jar.exe') @('uf',$taskUnsigned,'-C',(Join-Path $taskBuild 'dex'),'classes.dex')
-$taskNativeRoot=Join-Path $taskBuild 'native'
-$taskNativeLib=Join-Path $taskNativeRoot 'lib'
-if(Test-Path $taskNativeRoot) {Remove-Item -Recurse -Force $taskNativeRoot}
+$script:taskNativeRoot=Join-Path $taskBuild 'native'
+$taskNativeLib=Join-Path $script:taskNativeRoot 'lib'
+if(Test-Path $script:taskNativeRoot) {Remove-Item -Recurse -Force $script:taskNativeRoot}
 New-Item -ItemType Directory -Path $taskNativeLib -Force | Out-Null
-Copy-Item -Path (Join-Path $taskRoot 'app\src\main\jniLibs\*') -Destination $taskNativeLib -Recurse
-Invoke-TaskTool (Join-Path $Jdk 'bin\jar.exe') @('uf',$taskUnsigned,'-C',$taskNativeRoot,'lib')
-$taskAligned=Join-Path $taskBuild 'aligned.apk'
-Invoke-TaskTool (Join-Path $taskTools 'zipalign.exe') @('-f','4',$taskUnsigned,$taskAligned)
-$taskKey=Join-Path $taskLocal 'preflight-debug.keystore'
-if(-not (Test-Path $taskKey)) {
-    Invoke-TaskTool (Join-Path $Jdk 'bin\keytool.exe') @('-genkeypair','-noprompt','-keystore',$taskKey,'-alias','androiddebugkey','-storepass','android','-keypass','android','-dname','CN=Factorio Local Preflight','-keyalg','RSA','-keysize','2048','-validity','10000')
+$script:taskHasNative=$false
+$taskJni=Join-Path $taskRoot 'app\src\main\jniLibs'
+if(Test-Path -LiteralPath $taskJni) {
+    $taskJniFiles=@(Get-ChildItem -LiteralPath $taskJni -Recurse -File)
+    if($taskJniFiles.Count -gt 0) {
+        Copy-Item -Path (Join-Path $taskJni '*') -Destination $taskNativeLib -Recurse
+        $script:taskHasNative=$true
+    }
 }
-$taskApk=Join-Path $taskArtifacts 'FactorioLauncher-0.2.0-runtime-probe-debug.apk'
-Invoke-TaskTool (Join-Path $taskTools 'apksigner.bat') @('sign','--ks',$taskKey,'--ks-key-alias','androiddebugkey','--ks-pass','pass:android','--key-pass','pass:android','--out',$taskApk,$taskAligned)
-Invoke-TaskTool (Join-Path $taskTools 'apksigner.bat') @('verify','--verbose','--print-certs',$taskApk)
-Invoke-TaskTool (Join-Path $taskTools 'zipalign.exe') @('-c','4',$taskApk)
-Invoke-TaskTool (Join-Path $taskTools 'aapt2.exe') @('dump','badging',$taskApk)
-$taskResult=[pscustomobject]@{Apk=$taskApk;Bytes=(Get-Item $taskApk).Length;Sha256=(Get-FileHash $taskApk -Algorithm SHA256).Hash.ToLowerInvariant();Package='org.factorio.local.launcher';Version='0.2.0-runtime-probe';Sdk=$Sdk;Jdk=$Jdk;BuildTools='33.0.1';DeviceInstalled=$false;GameLaunched=$false;DependencySourceSha256=$taskXzSourceSha;DependencyBuiltJarSha256=(Get-FileHash $taskBaseJar -Algorithm SHA256).Hash.ToLowerInvariant()}
-$taskResultJson=$taskResult | ConvertTo-Json -Compress
+if(-not $script:taskHasNative) {Write-Output 'No jniLibs; APK will not contain the pinned native runtime'}
+$taskKey=Join-Path $taskLocal 'release.keystore'
+$taskPassFile=Join-Path $taskLocal 'release-keystore.pass'
+$script:taskKeyAlias='factoriorelease'
+if(Test-Path -LiteralPath $taskPassFile) {
+    $script:taskStorePass=([IO.File]::ReadAllText($taskPassFile)).Trim()
+} else {
+    $taskBytes=New-Object byte[] 24
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($taskBytes)
+    $script:taskStorePass=[Convert]::ToBase64String($taskBytes)
+    [IO.File]::WriteAllText($taskPassFile,$script:taskStorePass,[Text.UTF8Encoding]::new($false))
+}
+$script:taskKeyPass=$script:taskStorePass
+if(-not (Test-Path $taskKey)) {
+    Invoke-TaskTool (Join-Path $Jdk 'bin\keytool.exe') @('-genkeypair','-noprompt','-keystore',$taskKey,'-alias',$script:taskKeyAlias,'-storepass',$script:taskStorePass,'-keypass',$script:taskKeyPass,'-dname','CN=Factorio Local Release','-keyalg','RSA','-keysize','2048','-validity','10000')
+}
+function Complete-LauncherApk([string]$unsigned,[string]$apkName,[string]$packageName,[bool]$performance) {
+    $payload=Join-Path $taskBuild ($packageName+'.unsigned.apk')
+    Copy-Item -LiteralPath $unsigned -Destination $payload -Force
+    foreach($dexFile in @(Get-ChildItem -LiteralPath (Join-Path $taskBuild 'dex') -Filter 'classes*.dex')) {
+        Invoke-TaskTool (Join-Path $Jdk 'bin\jar.exe') @('uf',$payload,'-C',$dexFile.DirectoryName,$dexFile.Name)
+    }
+    if($script:taskHasNative) {
+        Invoke-TaskTool (Join-Path $Jdk 'bin\jar.exe') @('uf',$payload,'-C',$script:taskNativeRoot,'lib')
+    }
+    $aligned=Join-Path $taskBuild ($packageName+'.aligned.apk')
+    Invoke-TaskTool (Join-Path $taskTools 'zipalign.exe') @('-f','4',$payload,$aligned)
+    $apk=Join-Path $taskArtifacts $apkName
+    Invoke-TaskTool (Join-Path $taskTools 'apksigner.bat') @('sign','--ks',$taskKey,'--ks-key-alias',$script:taskKeyAlias,'--ks-pass',('pass:'+$script:taskStorePass),'--key-pass',('pass:'+$script:taskKeyPass),'--out',$apk,$aligned)
+    Invoke-TaskTool (Join-Path $taskTools 'apksigner.bat') @('verify','--verbose','--print-certs',$apk)
+    Invoke-TaskTool (Join-Path $taskTools 'zipalign.exe') @('-c','4',$apk)
+    $badgeLines=& (Join-Path $taskTools 'aapt2.exe') @('dump','badging',$apk)
+    if($LASTEXITCODE -ne 0) {throw 'aapt2 dump badging failed'}
+    $badge=$badgeLines -join "`n"
+    Write-Output $badge
+    if($badge -notmatch ("package: name='"+[regex]::Escape($packageName)+"'")) {throw ('Application id mismatch for '+$packageName)}
+    if($badge -notmatch "launchable-activity: name='org\.factorio\.local\.launcher\.MainActivity'") {throw 'Launcher activity was rewritten with the application id'}
+    if($badge -match 'application-debuggable') {throw 'Release APK is still debuggable'}
+    [pscustomobject]@{Apk=$apk;Bytes=(Get-Item $apk).Length;Sha256=(Get-FileHash $apk -Algorithm SHA256).Hash.ToLowerInvariant();Package=$packageName;PerformancePackage=$performance;Version='0.2.0-runtime-probe'}
+}
+$taskPackages=@(Complete-LauncherApk $taskUnsigned ('FactorioLauncher-'+$taskVersionFile+'.apk') $taskAppPackage $false)
+if($PerformancePackage) {
+    $taskPerfUnsigned=Join-Path $taskBuild 'unsigned-performance.apk'
+    $taskPerfJava=Join-Path $taskBuild 'generated-performance'
+    if(Test-Path $taskPerfJava) {Remove-Item -Recurse -Force $taskPerfJava}
+    New-Item -ItemType Directory -Path $taskPerfJava | Out-Null
+    Invoke-TaskTool (Join-Path $taskTools 'aapt2.exe') @('link','-o',$taskPerfUnsigned,'-I',$taskAndroid,'--manifest',$taskManifest,'--custom-package',$taskJavaPackage,'--rename-manifest-package',$taskPerfPackage,'--rename-resources-package',$taskPerfPackage,'--java',$taskPerfJava,'-A',(Join-Path $taskRoot 'app\src\main\assets'),(Join-Path $taskBuild 'resources.zip'))
+    $taskDefaultR=Join-Path $taskBuild 'generated\org\factorio\local\launcher\R.java'
+    $taskPerfR=Join-Path $taskPerfJava 'org\factorio\local\launcher\R.java'
+    if((Get-FileHash -LiteralPath $taskDefaultR -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $taskPerfR -Algorithm SHA256).Hash) {
+        throw 'Performance package changed R.java; the compiled dex cannot be reused'
+    }
+    $taskPackages += @(Complete-LauncherApk $taskPerfUnsigned ('FactorioLauncher-'+$taskVersionFile+'-YuanShen-sign.apk') $taskPerfPackage $true)
+}
+$taskResult=[pscustomobject]@{Version='0.2.0-runtime-probe';JavaPackage=$taskJavaPackage;Sdk=$Sdk;Jdk=$Jdk;BuildTools='33.0.1';BuildType='release';NativeLibraries=[bool]$script:taskHasNative;DeviceInstalled=$false;GameLaunched=$false;DependencySourceSha256=$taskXzSourceSha;DependencyBuiltJarSha256=(Get-FileHash $taskBaseJar -Algorithm SHA256).Hash.ToLowerInvariant();Packages=$taskPackages}
+$taskResultJson=$taskResult | ConvertTo-Json -Compress -Depth 4
 [IO.File]::WriteAllText((Join-Path $taskArtifacts 'build-result.json'),$taskResultJson,[Text.UTF8Encoding]::new($false))
 Write-Output ('__FACTORIO_REPORT__'+$taskResultJson)

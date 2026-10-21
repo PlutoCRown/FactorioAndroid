@@ -1,3 +1,5 @@
+PROJECT LICENSE: project-owned launcher code is GPL-3.0-or-later, Copyright (C) 2026 Pluto_CRown. The license text is GPL-3.0.txt in this APK. This grant does not relicense third-party components and does not cover the Factorio name, trademarks, engine, game data, factorio_icon.png, or factory_background.jpg.
+
 CURRENT BUILD: direct GNU Zink / libhybris Vulkan ICD / GPU AHardwareBuffer / Android Surface. No VirGL, ANGLE, Venus or software game-renderer entry remains. See THIRD-PARTY-NOTICES.md in the source repository for the current component map. The retained historical notice collection below includes notices for some components no longer packaged. Runtime manifests direct-zink.json, direct-dependencies.json, window-clients.json, window-runtime.json and runtime-glibc.json identify actual payloads.
 
 XZ for Java 1.12

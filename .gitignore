@@ -1,9 +1,13 @@
+# Local workspace sentinel created by the build. Content can be {}.
+.factorio-migration-workspace.json
+
 # Project-local tools and temporary transfer files
 tools/
 inputs/
 .cache/
 .local/
 .incoming-*
+.DS_Store
 
 # Build products, logs and private signing material
 build/

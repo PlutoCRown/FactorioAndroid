@@ -23,7 +23,9 @@ public final class ImportLeaseTests {
         File lockPath=new File(GameSession.profileDirectory(context),"session.lock");
         try(RandomAccessFile file=new RandomAccessFile(lockPath,"rw");FileLock lease=file.getChannel().lock()){blocked(context);}
         System.out.println("PASS same-process lease prevents package replacement");
-        Process child=new ProcessBuilder(new File(System.getProperty("java.home"),"bin/java.exe").getPath(),"-cp",System.getProperty("java.class.path"),ImportLeaseTests.class.getName(),"hold",lockPath.getPath()).start();
+        File javaBin=new File(System.getProperty("java.home"),"bin/java");
+        if(!javaBin.isFile()) javaBin=new File(System.getProperty("java.home"),"bin/java.exe");
+        Process child=new ProcessBuilder(javaBin.getPath(),"-cp",System.getProperty("java.class.path"),ImportLeaseTests.class.getName(),"hold",lockPath.getPath()).start();
         try {
             String ready=new BufferedReader(new InputStreamReader(child.getInputStream(),StandardCharsets.UTF_8)).readLine();
             if(!"READY".equals(ready))throw new AssertionError("Child did not acquire session lease");

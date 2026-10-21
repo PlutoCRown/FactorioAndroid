@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "**"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "platforms;android-34" "build-tools;35.0.0"
+
+      - name: Build launcher packages
+        env:
+          FACTORIO_KEYSTORE_BASE64: ${{ secrets.FACTORIO_KEYSTORE_BASE64 }}
+          FACTORIO_KEY_ALIAS: ${{ secrets.FACTORIO_KEY_ALIAS }}
+          FACTORIO_KEYSTORE_PASSWORD: ${{ secrets.FACTORIO_KEYSTORE_PASSWORD }}
+          FACTORIO_KEY_PASSWORD: ${{ secrets.FACTORIO_KEY_PASSWORD }}
+        run: ./scripts/build.sh --performance-package
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.apk
+            artifacts/build-result.json
+          fail_on_unmatched_files: true
