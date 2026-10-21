@@ -22,7 +22,7 @@ public final class KeyboardBridge implements AutoCloseable {
     private volatile boolean running=true;
     private volatile LocalSocket active;
     private volatile int requests,rejected;
-    private volatile int inputEdits,inputKeys,inputFailures;
+    private volatile int inputEdits,inputKeys,inputFailures,visibilityUpdates,visibilityEchoes;
     private volatile String inputError;
     private volatile String error;
     public KeyboardBridge(Context context,Listener listener) throws Exception {
@@ -69,6 +69,9 @@ public final class KeyboardBridge implements AutoCloseable {
     public boolean key(int androidCode) {
         boolean accepted=sendInput(2,androidCode,0,new byte[0],0);if(accepted)inputKeys++;return accepted;
     }
+    public boolean visibility(boolean shown) {
+        boolean accepted=sendInput(3,shown?1:0,0,new byte[0],0);if(accepted)visibilityUpdates++;return accepted;
+    }
     private synchronized boolean sendInput(int kind,int a,int b,byte[] bytes,int d) {
         if(!directText||!running)return false;
         try(LocalSocket client=new LocalSocket()) {
@@ -90,10 +93,12 @@ public final class KeyboardBridge implements AutoCloseable {
                 InputStream in=client.getInputStream();ByteArrayOutputStream line=new ByteArrayOutputStream();
                 int n;for(;(n=in.read())!=-1&&n!='\n';) {if(n<32||n>126||line.size()>=431)throw new IOException("Keyboard packet rejected");line.write(n);}
                 if(n!='\n')throw new IOException("Incomplete keyboard packet");
-                String value=line.toString("US-ASCII"),prefix="RIME1 "+token+" ";
-                if(!value.startsWith(prefix))throw new IOException("Keyboard session rejected");
+                String value=line.toString("US-ASCII"),prefix="RIME1 "+token+" ",echoPrefix="RIME2 "+token+" ";
+                boolean echo=value.startsWith(echoPrefix);
+                if(!value.startsWith(prefix)&&!echo)throw new IOException("Keyboard session rejected");
                 KeyboardRequest request=KeyboardRequest.parse(value.substring(prefix.length()));
-                listener.requested(request);requests++;client.getOutputStream().write(new byte[]{'O','K','\n'});
+                if(echo)visibilityEchoes++;else {listener.requested(request);requests++;}
+                client.getOutputStream().write(new byte[]{'O','K','\n'});
             }catch(Exception failure){if(running){rejected++;error=failure.getClass().getSimpleName();}}
             finally{active=null;}
         }
@@ -102,6 +107,7 @@ public final class KeyboardBridge implements AutoCloseable {
         return new JSONObject().put("requests",requests).put("rejected",rejected).put("running",running)
             .put("lastError",error==null?JSONObject.NULL:error).put("gameFileModified",false)
             .put("directTextSelected",directText).put("inputEdits",inputEdits).put("inputKeys",inputKeys).put("inputFailures",inputFailures)
+            .put("visibilityUpdates",visibilityUpdates).put("visibilityEchoes",visibilityEchoes)
             .put("lastInputError",inputError==null?JSONObject.NULL:inputError);
     }
     @Override public void close() {

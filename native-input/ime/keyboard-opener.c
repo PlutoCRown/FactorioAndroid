@@ -28,7 +28,8 @@ int main(int argc, char **argv) {
     struct ucred peer;socklen_t size=sizeof(peer);
     if(getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&size) || peer.uid!=getuid()) {close(fd);return 77;}
     char line[432];size_t n=0;
-    memcpy(line,"RIME1 ",6);n=6;memcpy(line+n,token,36);n+=36;line[n++]=' ';
+    const char *echo=getenv("REA_IME_VISIBILITY_ECHO");
+    memcpy(line,echo&&!strcmp(echo,"1")?"RIME2 ":"RIME1 ",6);n=6;memcpy(line+n,token,36);n+=36;line[n++]=' ';
     memcpy(line+n,url,len);n+=len;line[n++]='\n';
     for(size_t sent=0;sent<n;) {ssize_t s=send(fd,line+sent,n-sent,MSG_NOSIGNAL);if(s<=0){close(fd);return 74;}sent+=(size_t)s;}
     char ack[3];size_t have=0;

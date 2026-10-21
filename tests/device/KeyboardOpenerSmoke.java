@@ -46,17 +46,17 @@ public final class KeyboardOpenerSmoke {
         Object callback=java.lang.reflect.Proxy.newProxyInstance(listener.getClassLoader(),new Class<?>[]{listener},(proxy,method,values)->{if(method.getName().equals("requested"))received.incrementAndGet();return null;});
         try(AutoCloseable bridge=(AutoCloseable)type.getConstructor(android.content.Context.class,listener).newInstance(context,callback)) {
             @SuppressWarnings("unchecked") java.util.Map<String,String> environment=(java.util.Map<String,String>)type.getMethod("environment").invoke(bridge);
-            for(int mode=0;mode<7;mode++) {
-                String url=mode==4?"steam://close/keyboard":"steam://open/keyboard?XPosition=0&YPosition=0&Width=300&Height=24&Mode="+(mode<4?mode:0);
+            for(int mode=0;mode<9;mode++) {
+                String url=(mode==4||mode==8)?"steam://close/keyboard":"steam://open/keyboard?XPosition=0&YPosition=0&Width=300&Height=24&Mode="+(mode<4?mode:0);
                 if(mode==6)url="steam://open/keyboard?Mode=0";
                 ProcessBuilder builder=new ProcessBuilder(environment.get("PATH").split(":")[0]+"/xdg-open",url);
-                builder.environment().putAll(environment);if(mode==5)builder.environment().put("REA_IME_TOKEN",UUID.randomUUID().toString());
+                builder.environment().putAll(environment);if(mode>=7)builder.environment().put("REA_IME_VISIBILITY_ECHO","1");if(mode==5)builder.environment().put("REA_IME_TOKEN",UUID.randomUUID().toString());
                 java.lang.Process child=builder.start();if(!child.waitFor(6,TimeUnit.SECONDS)){child.destroyForcibly();throw new IOException("Production bridge timed out");}
-                if(child.exitValue()!=(mode<5?0:74))throw new IOException("Production bridge unexpected exit "+mode);
+                if(child.exitValue()!=(mode<5||mode>=7?0:74))throw new IOException("Production bridge unexpected exit "+mode);
             }
             org.json.JSONObject report=(org.json.JSONObject)type.getMethod("report").invoke(bridge);
-            if(received.get()!=5||report.getInt("requests")!=5||report.getInt("rejected")!=2)throw new IOException("Production bridge counters differ");
-            System.out.println("IME_PRODUCTION_BRIDGE modes=4 close=true rejected=2 passed=true gameStarted=false imeShown=false");
+            if(received.get()!=5||report.getInt("requests")!=5||report.getInt("rejected")!=2||report.getInt("visibilityEchoes")!=2)throw new IOException("Production bridge counters differ");
+            System.out.println("IME_PRODUCTION_BRIDGE modes=4 close=true visibilityEchoes=2 rejected=2 passed=true gameStarted=false imeShown=false");
         }
     }
     public static void main(String[] args) {

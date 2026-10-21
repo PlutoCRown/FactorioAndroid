@@ -259,6 +259,7 @@ public final class MainActivity extends Activity {
     boolean hasDirectImeText(){return keyboardBridge!=null&&keyboardBridge.hasDirectText();}
     boolean sendImeEdit(int before,int deletes,String text,int after){return keyboardBridge!=null&&keyboardBridge.edit(before,deletes,text,after);}
     boolean sendImeKey(int code){return keyboardBridge!=null&&keyboardBridge.key(code);}
+    boolean sendImeVisibility(boolean shown){return keyboardBridge!=null&&keyboardBridge.visibility(shown);}
     @Override public boolean dispatchGenericMotionEvent(MotionEvent event) {
         if(controllerRelay!=null&&controllerRelay.motion(event))return true;
         return super.dispatchGenericMotionEvent(event);

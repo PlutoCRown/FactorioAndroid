@@ -20,7 +20,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     private final boolean touchMouseSimulation;
     private final Runnable longPressCheck;
     private int keyEvents,escapeEvents;
-    private boolean keyboardRequested,imeVisible,keyboardSuppressed,windowResumed;
+    private boolean keyboardRequested,imeVisible,keyboardSuppressed,windowResumed,nativeImeVisible;
     private int keyboardMode,imeCommits,imeCodePoints;
     private GameImeConnection imeConnection;
     private final java.util.Map<Integer,Integer> pressedKeys=new java.util.HashMap<>();
@@ -128,11 +128,13 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
             .put("keyboardEventsForwarded",keyEvents).put("androidBackEscapeEvents",escapeEvents).put("pressedKeys",pressedKeys.size()).put("nativeGamepadBridgeReady",false)
             .put("viewportX",viewportX).put("viewportY",viewportY).put("viewportWidth",viewportWidth).put("viewportHeight",viewportHeight)
             .put("viewWidth",getWidth()).put("viewHeight",getHeight())
-            .put("imeRequested",keyboardRequested).put("imeVisible",imeVisible).put("imeMode",keyboardMode).put("imeCommits",imeCommits).put("imeCodePoints",imeCodePoints)
+            .put("imeRequested",keyboardRequested).put("imeVisible",imeVisible).put("imeSuppressed",keyboardSuppressed).put("imeSdlVisible",nativeImeVisible)
+            .put("imeMode",keyboardMode).put("imeCommits",imeCommits).put("imeCodePoints",imeCodePoints)
             .put("renderWidth",renderWidth).put("renderHeight",renderHeight).put("renderScalePercent",renderScalePercent);
     }
     public void setGameKeyboard(KeyboardRequest request) {
         keyboardRequested=request!=null&&request.show;keyboardSuppressed=false;
+        nativeImeVisible=keyboardRequested;
         if(request!=null)keyboardMode=request.mode;
         if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
         InputMethodManager manager=(InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
@@ -143,12 +145,16 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     public boolean keyboardRequested(){return keyboardRequested;}
     public void showGameKeyboard() {
         if(!acceptsIme())return;keyboardSuppressed=false;requestFocus();
+        if(activity.hasDirectImeText()&&!nativeImeVisible) {
+            if(!activity.sendImeVisibility(true)){keyboardSuppressed=true;return;}
+            nativeImeVisible=true;
+        }
         InputMethodManager manager=(InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
         if(imeConnection==null||imeConnection.isClosed())manager.restartInput(this);
         manager.showSoftInput(this,0,new android.os.ResultReceiver(new android.os.Handler(android.os.Looper.getMainLooper())) {
             @Override protected void onReceiveResult(int result,android.os.Bundle data) {
                 if(android.os.Build.VERSION.SDK_INT<30&&keyboardRequested&&windowResumed)
-                    imeVisible=result==InputMethodManager.RESULT_SHOWN||result==InputMethodManager.RESULT_UNCHANGED_SHOWN;
+                    imeVisibilityChanged(result==InputMethodManager.RESULT_SHOWN||result==InputMethodManager.RESULT_UNCHANGED_SHOWN);
             }
         });
     }
@@ -156,9 +162,16 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         if(!imeVisible)return false;keyboardSuppressed=true;
         if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
         ((InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(getWindowToken(),0);
-        imeVisible=false;return true;
+        imeVisibilityChanged(false);return true;
     }
-    public void imeVisibilityChanged(boolean visible){imeVisible=visible;}
+    public void imeVisibilityChanged(boolean visible){
+        boolean wasVisible=imeVisible;imeVisible=visible;
+        if(wasVisible&&!visible&&windowResumed){
+            keyboardSuppressed=true;
+            if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
+        }
+        if(windowResumed&&keyboardRequested&&activity.hasDirectImeText()&&nativeImeVisible!=visible&&activity.sendImeVisibility(visible))nativeImeVisible=visible;
+    }
     public void setImeResumed(boolean resumed) {
         windowResumed=resumed;
         if(!resumed){if(imeConnection!=null){imeConnection.discard();imeConnection=null;}
