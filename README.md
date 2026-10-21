@@ -83,7 +83,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 普通包的应用 ID 是 `dev.plutocrown.factorio`，输出在 `artifacts/`。`--performance-package` 会再用应用 ID `com.miHoYo.Yuanshen` 打一份包，让部分手机套用该游戏的性能调度；界面名称仍是 Factorio。
 
-两个构建入口都会先运行上述恢复工具，缺少依赖且无法下载时会直接失败，避免生成没有运行环境的 APK。下载缓存在项目的 `.cache/runtime/`。仍需自行准备 Android SDK 和 JDK；签名密钥从本地或 CI secrets 读取，未提供时使用项目内生成的密钥。推送应用 Git 标签会由 `.github/workflows/release.yml` 构建并上传 APK；`runtime-` 前缀标签仅用于固定依赖附件，不运行应用发布任务。
+两个构建入口都会先运行上述恢复工具，缺少依赖且无法下载时会直接失败，避免生成没有运行环境的 APK。下载缓存在项目的 `.cache/runtime/`。仍需自行准备 Android SDK 和 JDK；签名密钥从本地或 CI secrets 读取，未提供时使用项目内生成的密钥。推送应用 Git 标签会由 `.github/workflows/release.yml` 构建并上传 APK；`runtime-` 前缀标签仅用于固定依赖附件，不运行应用发布任务。 手动发布可进入 Actions → Release → Run workflow，选择源码分支，并在 `release_tag` 填写应用版本标签（例如 `v0.2.0`）；构建成功后，两个 APK 和构建报告会直接出现在该版本 Releases 附件中。留空则只构建并保存 Actions 附件。已有标签不会被移动，新标签指向本次构建提交。
 
 ## 许可证
 

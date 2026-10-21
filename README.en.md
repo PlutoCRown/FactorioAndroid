@@ -83,7 +83,7 @@ This restores 52 ARM64 libraries and `window-xkb.zip` from a versioned Release a
 
 For offline use, download the asset in your browser and run `java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`. Use `--check` for verification only. Changed files are preserved unless you explicitly pass `--force`. This recovers pinned prebuilt dependencies; it does not rebuild every upstream component from source.
 
-Both build entry points invoke the restorer automatically and fail if runtime dependencies cannot be restored. The cache is project-local under `.cache/runtime/`. Android SDK and JDK must still be available. Signing keys are local or provided via CI secrets; otherwise a project-local key is generated. Application tags run `.github/workflows/release.yml`; `runtime-` tags host dependency assets and skip application publishing.
+Both build entry points invoke the restorer automatically and fail if runtime dependencies cannot be restored. The cache is project-local under `.cache/runtime/`. Android SDK and JDK must still be available. Signing keys are local or provided via CI secrets; otherwise a project-local key is generated. Application tags run `.github/workflows/release.yml`; `runtime-` tags host dependency assets and skip application publishing. To publish manually, open Actions → Release → Run workflow, select the source branch, and enter an application tag such as `v0.2.0` in `release_tag`. Both APKs and the build report are uploaded directly to that Release after a successful build. Leave the field empty for build-only Actions artifacts. Existing tags are not moved; a new tag targets the build commit.
 
 ## License
 

@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to publish (leave empty for build only)"
+        required: false
+        type: string
+        default: ""
   push:
     tags:
       - "**"
@@ -15,6 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate manual release target
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [[ "$RELEASE_TAG" == runtime-* ]]; then
+            echo "runtime- tags are reserved for pinned runtime dependencies" >&2
+            exit 1
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -50,9 +66,11 @@ jobs:
           if-no-files-found: error
 
       - name: Publish release
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: |
             artifacts/*.apk
             artifacts/build-result.json
