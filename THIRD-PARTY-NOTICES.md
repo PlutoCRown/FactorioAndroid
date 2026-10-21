@@ -1,5 +1,7 @@
 # Third-party components
 
+For exact binary download locations, original archive members, roles, checksums and reproduction limits, see [Native library provenance and reproduction (Chinese)](docs/NATIVE-LIBRARIES.md).
+
 This private source repository is an Android compatibility launcher for a user-supplied game. It contains no Factorio engine, installation archive, save, account credential, proprietary GPU driver, or precompiled runtime library. Project-owned launcher code, native adapters, tests, and build scripts are GPL-3.0-or-later, Copyright (C) 2026 Pluto_CRown; the text is `LICENSE`. Game names and local UI artwork remain their respective owners' property. No license is granted here for redistribution of Wube artwork, including `factorio_icon.png` and `factory_background.jpg`.
 
 The local build restores the following separately pinned runtime components. Their original licenses apply; this project does not relicense third-party code. Full retained copyright/license texts are in `app/src/main/assets/*COPYRIGHT.txt`. Some collected notice bundles also cover historical components that are no longer packaged. Their presence does not mean those renderers remain in the application.

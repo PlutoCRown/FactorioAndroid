@@ -53,6 +53,8 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 ## Development
 
+See [Native library provenance and reproduction (Chinese)](docs/NATIVE-LIBRARIES.md) for every packaged `.so`: its role, exact download URL, original archive member, size and SHA-256, plus the distinction between restoring pinned binaries and rebuilding sources. It covers the 52 runtime libraries, XKB and the additional Compose/AndroidX library.
+
 The 2026-10-21 Windows local standard build on `codex/compose-launcher` is 31,372,872 bytes (31.37 MB), up 33.3% from 23.54 MB. This sample has R8 code shrinking disabled. Compilation, the existing 171 checks and APK verification pass; the new UI has not yet been tested on the physical device.
 
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.

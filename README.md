@@ -53,6 +53,8 @@ files/profiles/default-2.1.22/userdata/saves/
 
 ## 开发指南
 
+`jniLibs` 中各个 `.so` 的来源、用途、精确下载 URL、原包成员路径、大小/SHA-256，以及预编译恢复和源码重建的区别，见 [原生库来源与复现说明](docs/NATIVE-LIBRARIES.md)。文档覆盖原52库、XKB及Compose新增AndroidX库。
+
 `codex/compose-launcher` 的 2026-10-21 Windows 本地标准版实测为31,372,872字节（31.37 MB），旧版23.54 MB，增加33.3%；此样本未启用R8代码收缩。编译、171项既有检查及APK校验已通过，尚未做新版真机界面验收。
 
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
