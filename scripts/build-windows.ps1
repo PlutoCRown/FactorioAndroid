@@ -28,10 +28,10 @@ $env:TEMP=Join-Path $taskCache 'tmp'
 $env:TMP=$env:TEMP
 $env:PATH=(Join-Path $Jdk 'bin')+';'+$env:PATH
 function Invoke-TaskTool([string]$taskExecutable,[string[]]$taskArguments) {
-    Write-Output ('TOOL '+[IO.Path]::GetFileName($taskExecutable))
+    Write-Host ('TOOL '+[IO.Path]::GetFileName($taskExecutable))
     $taskSavedPreference=$ErrorActionPreference
     $ErrorActionPreference='Continue'
-    & $taskExecutable @taskArguments
+    & $taskExecutable @taskArguments | Out-Host
     $taskExit=$LASTEXITCODE
     $ErrorActionPreference=$taskSavedPreference
     if($taskExit -ne 0) {throw ('Tool failed: '+$taskExecutable+' exit '+$taskExit)}
@@ -186,7 +186,7 @@ function Complete-LauncherApk([string]$unsigned,[string]$apkName,[string]$packag
     $badgeLines=& (Join-Path $taskTools 'aapt2.exe') @('dump','badging',$apk)
     if($LASTEXITCODE -ne 0) {throw 'aapt2 dump badging failed'}
     $badge=$badgeLines -join "`n"
-    Write-Output $badge
+    Write-Host $badge
     if($badge -notmatch ("package: name='"+[regex]::Escape($packageName)+"'")) {throw ('Application id mismatch for '+$packageName)}
     if($badge -notmatch "launchable-activity: name='org\.factorio\.local\.launcher\.MainActivity'") {throw 'Launcher activity was rewritten with the application id'}
     if($badge -match 'application-debuggable') {throw 'Release APK is still debuggable'}
@@ -205,6 +205,11 @@ if($PerformancePackage) {
         throw 'Performance package changed R.java; the compiled dex cannot be reused'
     }
     $taskPackages += @(Complete-LauncherApk $taskPerfUnsigned ('FactorioLauncher-'+$taskVersionFile+'-YuanShen-sign.apk') $taskPerfPackage $true)
+}
+$taskExpectedPackages=if($PerformancePackage){2}else{1}
+if($taskPackages.Count -ne $taskExpectedPackages){throw 'Unexpected APK result count; build logs must not enter package metadata'}
+foreach($taskPackage in $taskPackages){
+    if(-not $taskPackage.Apk -or $taskPackage.Sha256 -notmatch '^[a-f0-9]{64}$'){throw 'Invalid APK result metadata'}
 }
 $taskResult=[pscustomobject]@{Version='0.2.0-runtime-probe';JavaPackage=$taskJavaPackage;Sdk=$Sdk;Jdk=$Jdk;BuildTools='33.0.1';BuildType='release';NativeLibraries=[bool]$script:taskHasNative;DeviceInstalled=$false;GameLaunched=$false;DependencySourceSha256=$taskXzSourceSha;DependencyBuiltJarSha256=(Get-FileHash $taskBaseJar -Algorithm SHA256).Hash.ToLowerInvariant();Packages=$taskPackages}
 $taskResultJson=$taskResult | ConvertTo-Json -Compress -Depth 4
