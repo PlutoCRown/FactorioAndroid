@@ -19,7 +19,7 @@ import java.util.concurrent.*;
 
 /** Local game library, launch preferences and device information. */
 public final class MainActivity extends Activity {
-    private static final int IMPORT=10, HOME=0, SETTINGS=1, DEVICE=2;
+    private static final int IMPORT=10, IMPORT_SAVE=11, HOME=0, SETTINGS=1, DEVICE=2;
     private static final int BG=0xff242324, PANEL=0xff313031, LINE=0xff201815;
     private static final int TEXT=0xffffe6c0, MUTED=0xffb6b1ad, ACCENT=0xffe39827;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -137,6 +137,14 @@ public final class MainActivity extends Activity {
             actions.add(help);
         } else {
             action(game,"启动设置",false,()->navigate(SETTINGS));
+            divider(game);
+            LinearLayout saves=new LinearLayout(this);saves.setOrientation(LinearLayout.HORIZONTAL);
+            game.addView(saves,new LinearLayout.LayoutParams(-1,-2));
+            Button open=action(saves,"打开存档文件夹",false,()->openGameFolder("saves"));
+            Button add=action(saves,"导入存档",false,this::chooseSave);
+            LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(54),1);left.topMargin=dp(8);left.rightMargin=dp(8);open.setLayoutParams(left);
+            LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,dp(54),1);right.topMargin=dp(8);add.setLayoutParams(right);
+            action(game,"打开模组文件夹",false,()->openGameFolder("mods"));
             TextView replace=link("更换游戏安装包");game.addView(replace);replace.setOnClickListener(v->chooseGame());actions.add(replace);
         }
         space(body,18);statusRow(body);
@@ -293,6 +301,47 @@ public final class MainActivity extends Activity {
     private void chooseGame() {
         if(busy)return;Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("*/*");startActivityForResult(intent,IMPORT);
     }
+    private void chooseSave() {
+        if(busy)return;
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+        try{startActivityForResult(intent,IMPORT_SAVE);}catch(ActivityNotFoundException e){Toast.makeText(this,"未找到系统文件选择器。",Toast.LENGTH_LONG).show();}
+    }
+    private void openGameFolder(String root) {
+        if(busy)return;
+        try {
+            new GameFiles(GameSession.profileDirectory(this)).directory(root);
+            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(GameDocumentsProvider.rootUri(root),"vnd.android.document/root"));
+        }catch(ActivityNotFoundException e) {
+            // OEM file managers may omit ACTION_VIEW for SAF roots. The system
+            // browser can still show this exact directory as a document tree.
+            Intent browser=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI,
+                android.provider.DocumentsContract.buildDocumentUri(GameDocumentsProvider.AUTHORITY,root));
+            try{startActivityForResult(browser,12);}catch(ActivityNotFoundException missing){Toast.makeText(this,"请在系统文件管理器侧边栏打开 Factorio · "+(root.equals("saves")?"存档":"模组"),Toast.LENGTH_LONG).show();}
+        }catch(Exception e){fail("目录未能打开",e);}
+    }
+    private void importSave(Uri uri) {
+        setBusy(true,"正在导入存档，请稍候…");
+        worker.execute(()-> {
+            try {
+                String name="导入存档.zip";
+                try(android.database.Cursor cursor=getContentResolver().query(uri,new String[]{android.provider.OpenableColumns.DISPLAY_NAME},null,null,null)) {
+                    if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))name=cursor.getString(0);
+                }
+                String imported;
+                try(InputStream input=getContentResolver().openInputStream(uri)) {
+                    if(input==null)throw new IOException("无法读取所选存档。");
+                    imported=new GameFiles(GameSession.profileDirectory(this)).importSave(input,name);
+                }
+                GameDocumentsProvider.changed(this,"saves");
+                runOnUiThread(()-> {if(isDestroyed())return;setBusy(false,"已导入："+imported);Toast.makeText(this,"存档已导入，可在游戏的加载游戏中打开。",Toast.LENGTH_LONG).show();});
+            }catch(Exception e) {
+                android.util.Log.e("FactorioLauncher","Save import failed",e);
+                runOnUiThread(()-> {if(isFinishing()||isDestroyed())return;setBusy(false,"存档导入未完成");
+                    new AlertDialog.Builder(this).setTitle("存档导入未完成").setMessage(e instanceof IOException?e.getMessage():"请检查所选 ZIP 存档和设备剩余空间后重试。")
+                        .setPositiveButton("知道了",null).show();});
+            }
+        });
+    }
     private void downloadHelp() {
         new AlertDialog.Builder(this).setTitle("获取游戏本体")
             .setMessage("登录 Factorio 官网，在下载页面选择 Linux ARM64 图形完整包（.tar.xz）。Steam 用户可以先关联官网账号。\n\nSpace Age 需要对应的完整游戏包。下载完成后，回到这里选择安装包。当前验证版本为 2.1.22。")
@@ -330,12 +379,15 @@ public final class MainActivity extends Activity {
                 .setPositiveButton("知道了",null).show();});
     }
     @Override protected void onActivityResult(int request,int result,Intent data) {
-        super.onActivityResult(request,result,data);if(request!=IMPORT||result!=RESULT_OK||data==null||data.getData()==null||busy)return;
+        super.onActivityResult(request,result,data);if(result!=RESULT_OK||data==null||data.getData()==null||busy)return;
+        if(request==IMPORT_SAVE){importSave(data.getData());return;}
+        if(request!=IMPORT)return;
         Uri uri=data.getData();setBusy(true,"正在导入游戏，请保持应用打开…");
         worker.execute(()-> {try {
             JSONObject report=GameImporter.importGame(getApplicationContext(),uri,progress->runOnUiThread(()-> {
                 if(!isDestroyed()){message=importProgress(progress);applyBusy();}
             }));
+            getContentResolver().notifyChange(android.provider.DocumentsContract.buildRootsUri(GameDocumentsProvider.AUTHORITY),null);
             runOnUiThread(()-> {if(isDestroyed())return;gameReport=report;page=HOME;setBusy(false,"游戏已添加");renderPage();});
         }catch(Exception e){fail("导入未完成",e);}});
     }
