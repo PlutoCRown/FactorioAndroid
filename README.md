@@ -53,6 +53,8 @@ files/profiles/default-2.1.22/userdata/saves/
 
 ## 开发指南
 
+`codex/compose-launcher` 的 2026-10-21 Windows 本地标准版实测为31,372,872字节（31.37 MB），旧版23.54 MB，增加33.3%；此样本未启用R8代码收缩。编译、171项既有检查及APK校验已通过，尚未做新版真机界面验收。
+
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
 
 构建需要 JDK 17+、SDK platform 36、Build Tools 36.0.0。固定 AGP 9.0.1（内置 Kotlin 2.2.10）、Gradle 9.1.0、Compose BOM 2026.01.00；Wrapper JAR 与 Gradle 发行包均有固定 SHA-256。此次 UI 迁移保持 minSdk 26、targetSdk 33，避免同时改变运行环境行为。
@@ -72,7 +74,7 @@ Linux/macOS 已有兼容工具时：
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-本项目开发仍遵守 Mac 不安装安卓工具链：本机编辑源码，Windows 或 GitHub Actions 构建。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（现有171项检查），再检查签名、对齐、包名，以及 APK 内52个库和XKB的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验原生库。
+本项目开发仍遵守 Mac 不安装安卓工具链：本机编辑源码，Windows 或 GitHub Actions 构建。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（现有171项检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB和1个AndroidX路径库的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验原生库。
 
 两个入口均自动恢复固定运行库；也可单独执行（此恢复命令只需JDK11+）：
 

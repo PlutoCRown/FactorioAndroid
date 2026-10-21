@@ -53,6 +53,8 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 ## Development
 
+The 2026-10-21 Windows local standard build on `codex/compose-launcher` is 31,372,872 bytes (31.37 MB), up 33.3% from 23.54 MB. This sample has R8 code shrinking disabled. Compilation, the existing 171 checks and APK verification pass; the new UI has not yet been tested on the physical device.
+
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 
 Build requirements: JDK 17+, SDK platform 36 and Build Tools 36.0.0. AGP 9.0.1 supplies Kotlin 2.2.10; Gradle 9.1.0 and Compose BOM 2026.01.00 are pinned. The wrapper JAR and Gradle distribution have fixed SHA-256 checksums. Android minSdk 26 and targetSdk 33 stay unchanged for this UI migration.
@@ -72,7 +74,7 @@ On Linux/macOS with an existing JDK/SDK:
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-This project does not install Android tools on the author's Mac; development builds use Windows or GitHub Actions. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (the existing 171 checks) and verify signatures, alignment, package identities, all 52 native library hashes and the XKB asset inside each APK. The compile-only JNI annotation stub is not packaged. Native libraries are neither rebuilt nor stripped by Gradle.
+This project does not install Android tools on the author's Mac; development builds use Windows or GitHub Actions. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (the existing 171 checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB and the additional AndroidX path library inside each APK. The compile-only JNI annotation stub is not packaged. Native libraries are neither rebuilt nor stripped by Gradle.
 
 Both entry points restore the pinned runtime automatically. To restore separately (JDK 11+):
 

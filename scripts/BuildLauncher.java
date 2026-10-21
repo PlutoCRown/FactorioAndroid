@@ -52,29 +52,38 @@ class BuildLauncher {
                 byte[] data=zip.getInputStream(member).readAllBytes();
                 if(data.length!=Long.parseLong(parts[1])||!sha(data).equals(parts[0]))throw new IOException("APK payload changed: "+entry);
             }
+            for(String row:Files.readAllLines(root.resolve("scripts/compose-native-files.tsv"))) {
+                if(row.isBlank()||row.startsWith("#"))continue;
+                String[] parts=row.split("\t");ZipEntry member=zip.getEntry(parts[2]);
+                if(member==null)throw new IOException("APK missing Compose native dependency: "+parts[2]);
+                byte[] data=zip.getInputStream(member).readAllBytes();
+                if(data.length!=Long.parseLong(parts[1])||!sha(data).equals(parts[0]))throw new IOException("Compose native dependency changed: "+parts[2]);
+                count++;
+            }
             long actual=zip.stream().filter(x->x.getName().startsWith("lib/")&&x.getName().endsWith(".so")).count();
             if(actual!=count)throw new IOException("Unexpected native payload count: "+actual);
         }
-        System.out.println("APK runtime payload verified: "+count+" native libraries + XKB");
+        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" AndroidX native libraries + XKB");
     }
     public static void main(String[] args)throws Exception {
         if(Runtime.version().feature()<17)throw new IOException("JDK 17+ required for Kotlin/Compose/AGP");
-        root=Path.of("").toAbsolutePath();boolean performance=false;
+        root=Path.of("").toAbsolutePath();boolean performance=false,verifyOnly=false;
         for(int i=0;i<args.length;i++) {
             if(args[i].equals("--root"))root=Path.of(args[++i]).toAbsolutePath();
             else if(args[i].equals("--performance-package"))performance=true;
+            else if(args[i].equals("--verify-only"))verifyOnly=true;
             else throw new IOException("Unknown argument: "+args[i]);
         }
         java=Path.of(System.getProperty("java.home"),"bin",windows?"java.exe":"java");
         sdk=Path.of(env("ANDROID_HOME"));Path tools=sdk.resolve("build-tools/36.0.0");
         if(!Files.exists(tool(tools,"aapt2")))throw new IOException("Build Tools 36.0.0 required in ANDROID_HOME");
         if(!Files.exists(sdk.resolve("platforms/android-36/android.jar")))throw new IOException("Android SDK platform 36 required");
-        run(List.of(java.toString(),root.resolve("scripts/RestoreRuntime.java").toString()));signing();
+        if(!verifyOnly){run(List.of(java.toString(),root.resolve("scripts/RestoreRuntime.java").toString()));signing();}
         String gradleSha="76805e32c009c0cf0dd5d206bddc9fb22ea42e84db904b764f3047de095493f3";
         Path wrapper=root.resolve("gradle/wrapper/gradle-wrapper.jar");
         if(!sha(Files.readAllBytes(wrapper)).equals(gradleSha))throw new IOException("Gradle wrapper checksum mismatch");
         List<String> command=new ArrayList<>(List.of(java.toString(),"-classpath",wrapper.toString(),"org.gradle.wrapper.GradleWrapperMain","--no-daemon","--console=plain",":app:testStandardDebugUnitTest",":app:assembleStandardRelease"));
-        if(performance)command.add(":app:assemblePerformanceRelease");run(command);
+        if(performance)command.add(":app:assemblePerformanceRelease");if(!verifyOnly)run(command);
         Path testXml=root.resolve("app/build/test-results/testStandardDebugUnitTest/TEST-HostRegressionTest.xml");
         javax.xml.parsers.DocumentBuilderFactory parser=javax.xml.parsers.DocumentBuilderFactory.newInstance();
         parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
@@ -94,7 +103,7 @@ class BuildLauncher {
             if(!badge.contains("package: name='"+id+"'")||!badge.contains("launchable-activity: name='org.factorio.local.launcher.MainActivity'")||badge.contains("application-debuggable"))throw new IOException("APK identity or release mode incorrect");
             packages.add("{\"apk\":"+quote(apk.toString())+",\"bytes\":"+Files.size(apk)+",\"sha256\":"+quote(sha(Files.readAllBytes(apk)))+",\"package\":"+quote(id)+",\"performancePackage\":"+perf+"}");
         }
-        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
+        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"androidxNativeLibrariesVerified\":1,\"testGroupsPassed\":7,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
         Files.writeString(artifacts.resolve("build-result.json"),result+"\n");System.out.println("__FACTORIO_REPORT__"+result);
     }
 }

@@ -25,3 +25,5 @@ The local build restores the following separately pinned runtime components. The
 ## Kotlin / Jetpack Compose / Gradle
 
 AndroidX Activity, Compose UI/Foundation/Material 3 and their AndroidX dependencies are from Google/AOSP under Apache-2.0. Kotlin standard library is from JetBrains under Apache-2.0. The Gradle wrapper is the verified official Gradle 9.1.0 wrapper, Apache-2.0. Apache-2.0 text is retained in `app/src/main/assets/APACHE-2.0.txt`. These components do not replace or modify the game's renderer. Project-owned navigation vectors and Compose theme code remain GPL-3.0-or-later.
+
+Compose also bundles `androidx.graphics:graphics-path:1.0.1` (Apache-2.0). Its ARM64 `libandroidx.graphics.path.so` is pinned separately in `scripts/compose-native-files.tsv`; it is not part of the 52-library game runtime.

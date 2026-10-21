@@ -30,3 +30,4 @@ app/src/main/assets/diagnostic-eglinfo.aarch64
 .gradle/
 **/build/
 local.properties
+.kotlin/
