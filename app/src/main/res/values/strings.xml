@@ -134,4 +134,16 @@
     <string name="loading_limit_8" formatted="false">8</string>
     <string name="loading_limit_16" formatted="false">16</string>
     <string name="loading_limit_32" formatted="false">32</string>
+
+    <string name="import_stage_open">1/4 · Opening game package…</string>
+    <string name="import_stage_extract">2/4 · Extracting game files…</string>
+    <string name="import_stage_verify">3/4 · Verifying ARM64 engine and checksums…</string>
+    <string name="import_stage_finish">4/4 · Switching game package and removing the previous copy…</string>
+    <string name="import_read_known">Package read: %1$d%% · %2$.1f / %3$.1f MiB</string>
+    <string name="import_read_unknown">Package read: %1$.1f MiB · Total size unavailable</string>
+    <string name="import_extracted">Extracted: %1$.1f MiB · %2$d files</string>
+    <string name="import_elapsed">Elapsed: %1$d min %2$02d sec</string>
+    <string name="import_duration_hint">On this test device, the base game took about 2 minutes; Space Age took about 5 minutes and may take longer. Keep the app open. Reading 100% is followed by verification and cleanup.</string>
+    <string name="save_import_invalid">This ZIP is not a complete, supported Factorio save. Select the original save ZIP without extracting it.</string>
+    <string name="save_import_copy_failed">Could not copy the save. Check free storage and whether the selected file is still accessible, then try again.</string>
 </resources>

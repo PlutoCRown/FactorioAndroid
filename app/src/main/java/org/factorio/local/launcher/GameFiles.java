@@ -69,7 +69,7 @@ final class GameFiles {
     }
     String importSave(InputStream input,String name) throws IOException {
         checkName(name);
-        if(!name.toLowerCase(Locale.ROOT).endsWith(".zip"))throw new IOException("请选择 Factorio 的 .zip 存档，无需解压。");
+        if(!name.toLowerCase(Locale.ROOT).endsWith(".zip"))throw new SaveFormatException("请选择 Factorio 的 .zip 存档，无需解压。");
         try(Lease lease=edit()) {
             File dir=directory("saves"),pending=File.createTempFile(".save-import-",".part",dir);
             try {
@@ -82,13 +82,23 @@ final class GameFiles {
                     }
                 }
                 validateSave(pending);
-                String target=unusedName("saves",name);
-                // A hard-link publishes the complete file atomically without ever
-                // replacing an existing save, even if another writer wins a race.
-                Files.createLink(new File(dir,target).toPath(),pending.toPath());
-                return target;
+                // Android app SELinux policy denies hard links even in private storage.
+                // Same-directory move publishes the validated ZIP without a second copy.
+                // Every DocumentsProvider writer shares this session lease; never replace.
+                for(int attempt=0;attempt<10000;attempt++) {
+                    String target=unusedName("saves",name);
+                    try {
+                        Files.move(pending.toPath(),new File(dir,target).toPath());
+                        return target;
+                    }catch(FileAlreadyExistsException collision) { /* Choose the next free name. */ }
+                }
+                throw new IOException("同名文件过多，请重命名后再试");
             }finally {Files.deleteIfExists(pending.toPath());}
         }
+    }
+    static final class SaveFormatException extends IOException {
+        SaveFormatException(String message){super(message);}
+        SaveFormatException(String message,Throwable cause){super(message,cause);}
     }
     private static void validateSave(File file) throws IOException {
         try(ZipFile zip=new ZipFile(file)) {
@@ -96,22 +106,22 @@ final class GameFiles {
             Enumeration<? extends ZipEntry> entries=zip.entries();
             while(entries.hasMoreElements()) {
                 ZipEntry entry=entries.nextElement();String name=entry.getName();
-                if(!names.add(name))throw new IOException("存档 ZIP 有重复文件。");
-                if(++count>100000||name.startsWith("/")||name.contains("\\"))throw new IOException("存档 ZIP 内容无效。");
+                if(!names.add(name))throw new SaveFormatException("存档 ZIP 有重复文件。");
+                if(++count>100000||name.startsWith("/")||name.contains("\\"))throw new SaveFormatException("存档 ZIP 内容无效。");
                 String[] parts=name.split("/");
-                for(String part:parts)if(part.equals("..")||part.equals("."))throw new IOException("存档 ZIP 路径无效。");
-                if(entry.getSize()<0||entry.getSize()>4L*1024*1024*1024-expanded)throw new IOException("存档展开大小无效或过大。");
+                for(String part:parts)if(part.equals("..")||part.equals("."))throw new SaveFormatException("存档 ZIP 路径无效。");
+                if(entry.getSize()<0||entry.getSize()>4L*1024*1024*1024-expanded)throw new SaveFormatException("存档展开大小无效或过大。");
                 expanded+=entry.getSize();
                 String leaf=parts.length==0?"":parts[parts.length-1];
                 // Chunked saves use level.dat0, level.dat1, ... . Requiring
                 // only the old level.dat would reject normal Factorio saves.
                 if(!entry.isDirectory()&&parts.length<=2&&(leaf.equals("level.dat")||leaf.equals("level.dat0"))) {
-                    if(entry.getSize()==0)throw new IOException("存档地图数据为空。");
-                    try(InputStream level=zip.getInputStream(entry)){if(level.read()<0)throw new IOException("无法读取存档。");}
+                    if(entry.getSize()==0)throw new SaveFormatException("存档地图数据为空。");
+                    try(InputStream level=zip.getInputStream(entry)){if(level.read()<0)throw new SaveFormatException("无法读取存档。");}
                     mapRoots.add(parts.length==1?"":parts[0]);
                 }
             }
-            if(mapRoots.size()!=1)throw new IOException("这个 ZIP 不是可识别的单个 Factorio 存档（缺少 level.dat 或 level.dat0）。");
-        }catch(ZipException e){throw new IOException("ZIP 已损坏或不是 Factorio 存档。",e);}
+            if(mapRoots.size()!=1)throw new SaveFormatException("这个 ZIP 不是可识别的单个 Factorio 存档（缺少 level.dat 或 level.dat0）。");
+        }catch(ZipException e){throw new SaveFormatException("ZIP 已损坏或不是 Factorio 存档。",e);}
     }
 }

@@ -19,6 +19,29 @@ public final class ImportLeaseTests {
             }
             return;
         }
+        try(ImportProgress.Input input=new ImportProgress.Input(new ByteArrayInputStream(new byte[20]))) {
+            if(input.read()!=0||input.read(new byte[4])!=4||input.skip(3)!=3||input.bytes!=8)
+                throw new AssertionError("Compressed byte count incorrect");
+            if(input.read(new byte[100])!=12||input.read()!=-1||input.bytes!=20)
+                throw new AssertionError("EOF double-counted");
+        }
+        ImportProgress known=new ImportProgress(ImportProgress.Stage.EXTRACT,50,100,900,3,10);
+        if(known.fraction()!=.5f)throw new AssertionError("Known size progress");
+        if(new ImportProgress(ImportProgress.Stage.EXTRACT,100,100,900,3,10).fraction()!=.99f)
+            throw new AssertionError("Read-ahead must not announce completion");
+        if(new ImportProgress(ImportProgress.Stage.EXTRACT,100,-1,900,3,10).fraction()!=-1f
+                ||new ImportProgress(ImportProgress.Stage.VERIFY,100,100,900,3,10).fraction()!=-1f)
+            throw new AssertionError("Unknown size and verification are indeterminate");
+        java.util.List<ImportProgress> updates=new java.util.ArrayList<>();
+        ImportProgress.Reporter reporter=new ImportProgress.Reporter(updates::add);
+        reporter.update(ImportProgress.Stage.OPEN,0,-1,0,0,true);
+        reporter.update(ImportProgress.Stage.EXTRACT,0,100,0,0,false);
+        reporter.update(ImportProgress.Stage.EXTRACT,10,100,10,0,false);
+        reporter.update(ImportProgress.Stage.VERIFY,100,100,100,1,false);
+        reporter.update(ImportProgress.Stage.FINISH,100,100,100,1,false);
+        if(updates.size()!=4||updates.get(1).stage!=ImportProgress.Stage.EXTRACT
+                ||updates.get(3).stage!=ImportProgress.Stage.FINISH)throw new AssertionError("Stage/throttle regression");
+        System.out.println("PASS 5 progress checks: byte counts, fraction, cap, fallback, stage/throttle");
         Path root=Files.createTempDirectory("factorio-import-lease-");Context context=new Context(root.toFile());
         File lockPath=new File(GameSession.profileDirectory(context),"session.lock");
         try(RandomAccessFile file=new RandomAccessFile(lockPath,"rw");FileLock lease=file.getChannel().lock()){blocked(context);}
@@ -41,6 +64,6 @@ public final class ImportLeaseTests {
         try(java.util.stream.Stream<Path> children=Files.list(root.resolve("games"))){if(children.findAny().isPresent())throw new AssertionError("Failed import staging was retained");}
         System.out.println("PASS failed import preserves metadata and removes its staging");
         try(java.util.stream.Stream<Path> paths=Files.walk(root)){for(Path p:(Iterable<Path>)paths.sorted(java.util.Comparator.reverseOrder())::iterator)Files.delete(p);}
-        System.out.println("ImportLeaseTests: 4 passed");
+        System.out.println("ImportLeaseTests: 9 passed");
     }
 }

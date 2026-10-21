@@ -59,6 +59,7 @@ private data class LauncherState(
     val gpu: String? = null,
     val api: String? = null,
     val graphicsPassed: Boolean? = null,
+    val progress: Float = -1f,
 )
 
 /** Compose owns presentation; Java continues to own imports and the game session. */
@@ -79,7 +80,7 @@ class LauncherUi(private val host: MainActivity) {
         }
     }
 
-    fun show(page: Int, busy: Boolean, message: String, game: JSONObject?, device: JSONObject?) {
+    fun show(page: Int, busy: Boolean, message: String, game: JSONObject?, device: JSONObject?, progress: Float) {
         val preferences = host.getPreferences(0)
         val gl = device?.optJSONObject("graphics")
         state = LauncherState(
@@ -91,6 +92,7 @@ class LauncherUi(private val host: MainActivity) {
             gl?.optString("glRenderer"),
             gl?.optString("glVersion")?.let { Regex("OpenGL ES\\s+\\d+\\.\\d+").find(it)?.value },
             gl?.optBoolean("clearReadbackPassed"),
+            progress,
         )
     }
 
@@ -118,7 +120,7 @@ class LauncherUi(private val host: MainActivity) {
                                 2 -> Device(s)
                                 else -> Home(s)
                             }
-                            Status(s)
+                            if (s.page != 0) Status(s)
                         }
                     }
                     if (wide) Artwork(Modifier.weight(1f).fillMaxHeight())
@@ -165,6 +167,7 @@ class LauncherUi(private val host: MainActivity) {
         Text(stringResource(if (s.version == null) R.string.home_welcome else R.string.home_continue),
             style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
         Hint(if (s.version == null) R.string.home_import_hint else R.string.home_ready)
+        Status(s)
         FactoryPanel {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Image(painterResource(R.drawable.factorio_icon), null, Modifier.size(44.dp))
@@ -267,7 +270,10 @@ class LauncherUi(private val host: MainActivity) {
     private fun Status(s: LauncherState) {
         if (s.busy || s.message.isNotEmpty()) {
             Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (s.busy) {
+                    if (s.progress >= 0f) LinearProgressIndicator(progress = { s.progress }, modifier = Modifier.fillMaxWidth())
+                    else LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
                 if (s.message.isNotEmpty()) Text(s.message, color = Copper, style = MaterialTheme.typography.bodyMedium)
             }
         }

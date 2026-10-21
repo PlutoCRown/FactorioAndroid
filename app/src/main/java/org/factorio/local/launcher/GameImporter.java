@@ -13,7 +13,7 @@ import java.security.*;
 import java.util.UUID;
 
 final class GameImporter {
-    interface Progress { void update(String message); }
+    interface Progress { void update(ImportProgress progress); }
     private static final String BASELINE="5d6ff79eb190a29d4fb78b86d50fa28e099feffbc8b394c3d4f515a886ab5bf1";
     private static final long RESERVE=256L*1024*1024;
     static String hex(byte[] bytes) {
@@ -95,20 +95,29 @@ final class GameImporter {
         String id=UUID.randomUUID().toString();
         File staging=new File(root,"staging-"+id), destination=new File(root,"game-"+id);
         if(!staging.mkdir()) throw new IOException("无法创建临时目录");
+        String stagingPrefix=staging.getCanonicalPath()+File.separator;
         boolean committed=false; long extracted=0; int files=0, graphics=0;
         JSONObject previous=current(context);
         MessageDigest sha=MessageDigest.getInstance("SHA-256");
-        long last=0;
+        ImportProgress.Reporter status=new ImportProgress.Reporter(progress);
+        status.update(ImportProgress.Stage.OPEN,0,-1,0,0,true);
         try {
             InputStream selected=context.getContentResolver().openInputStream(uri);
             if(selected==null) throw new IOException("无法打开选中的文件");
-            try(InputStream compressed=new DigestInputStream(selected,sha);
+            long total=-1;
+            try(android.database.Cursor cursor=context.getContentResolver().query(uri,
+                    new String[]{android.provider.OpenableColumns.SIZE},null,null,null)) {
+                if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))total=cursor.getLong(0);
+            }catch(Exception ignored) { /* Providers may omit size; keep measured bytes. */ }
+            ImportProgress.Input counted=new ImportProgress.Input(selected);
+            status.update(ImportProgress.Stage.EXTRACT,0,total,0,0,true);
+            try(InputStream compressed=new DigestInputStream(new BufferedInputStream(counted,256*1024),sha);
                 XZInputStream xz=new XZInputStream(compressed,65536);
                 SafeTarReader tar=new SafeTarReader(xz)) {
                 byte[] buffer=new byte[65536];
                 for(SafeTarReader.Entry entry;(entry=tar.next())!=null;) {
                     File target=new File(staging,entry.name);
-                    if(!target.getCanonicalPath().startsWith(staging.getCanonicalPath()+File.separator))
+                    if(!target.getCanonicalPath().startsWith(stagingPrefix))
                         throw new IOException("归档路径越界");
                     if(entry.directory) {
                         if(!target.isDirectory() && !target.mkdirs()) throw new IOException("无法建立游戏目录");
@@ -120,17 +129,16 @@ final class GameImporter {
                     if(!parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法建立资源目录");
                     if(!target.createNewFile()) throw new IOException("安装包重复文件");
                     try(OutputStream out=new BufferedOutputStream(new FileOutputStream(target))) {
-                        for(int n;(n=tar.read(buffer,0,buffer.length))!=-1;) out.write(buffer,0,n);
+                        for(int n;(n=tar.read(buffer,0,buffer.length))!=-1;) {
+                            out.write(buffer,0,n);extracted+=n;
+                            status.update(ImportProgress.Stage.EXTRACT,counted.bytes,total,extracted,files,false);
+                        }
                     }
                     // This preflight version only imports and inspects; never launches executable code.
                     target.setExecutable(false,false);
-                    extracted+=entry.size; files++;
+                    files++;
                     if(entry.name.startsWith("factorio/data/base/graphics/")) graphics++;
-                    long now=System.currentTimeMillis();
-                    if(now-last>500) {
-                        progress.update("正在导入："+(extracted/(1024*1024))+" MiB · "+files+" 个文件");
-                        last=now;
-                    }
+                    status.update(ImportProgress.Stage.EXTRACT,counted.bytes,total,extracted,files,false);
                 }
             }
             String archiveHash=hex(sha.digest());
@@ -145,7 +153,7 @@ final class GameImporter {
             File expansion=new File(game,"data/space-age/info.json");
             if(expansion.isFile() && !version.equals(readJson(expansion).optString("version")))
                 throw new IOException("Space Age 与基础版版本不一致");
-            progress.update("正在核验 ARM64 引擎与文件哈希…");
+            status.update(ImportProgress.Stage.VERIFY,counted.bytes,total,extracted,files,true);
             JSONObject report=new JSONObject().put("schema",1).put("version",version)
                 .put("spaceAge",expansion.isFile()).put("archiveSha256",archiveHash)
                 .put("engineSha256",digest(engine)).put("elf",elf(engine))
@@ -153,6 +161,7 @@ final class GameImporter {
                 .put("officialBaselineHashMatched",BASELINE.equals(archiveHash))
                 .put("relativeDirectory","games/"+destination.getName()+"/factorio")
                 .put("gameLaunched",false).put("runtimeReady",false);
+            status.update(ImportProgress.Stage.FINISH,counted.bytes,total,extracted,files,true);
             if(!staging.renameTo(destination)) throw new IOException("无法提交游戏目录");
             File descriptor=new File(context.getFilesDir(),"active-game.json");
             File pending=new File(context.getFilesDir(),"active-game.json.pending");

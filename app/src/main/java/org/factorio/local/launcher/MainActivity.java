@@ -21,6 +21,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     private JSONObject gameReport,deviceReport;
     private int page=HOME;
     private boolean busy;
+    private float progressFraction=-1f;
     private String message="";
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -59,7 +60,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         page=destination;renderPage();
     }
     private void renderPage() {applyBusy();}
-    private void applyBusy() {if(ui!=null)ui.show(page,busy,message,gameReport,deviceReport);}
+    private void applyBusy() {if(ui!=null)ui.show(page,busy,message,gameReport,deviceReport,progressFraction);}
     /** UI events stay on the main thread; existing import/session code owns I/O. */
     public void performUiAction(String action) {
         if(action.equals("home")){navigate(HOME);return;}
@@ -89,7 +90,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         }
     }
     private void setBusy(boolean value,String text) {
-        busy=value;message=text;applyBusy();
+        busy=value;message=text;progressFraction=-1f;applyBusy();
         getWindow().setFlags(value?WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON:0,WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
     private void chooseGame() {
@@ -131,7 +132,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             }catch(Exception e) {
                 android.util.Log.e("FactorioLauncher","Save import failed",e);
                 runOnUiThread(()-> {if(isFinishing()||isDestroyed())return;setBusy(false,getString(R.string.save_import_failed));
-                    new AlertDialog.Builder(this).setTitle(getString(R.string.save_import_failed)).setMessage(getString(e instanceof GameFiles.BusyException?R.string.edit_game_busy:R.string.save_import_retry))
+                    new AlertDialog.Builder(this).setTitle(getString(R.string.save_import_failed)).setMessage(getString(e instanceof GameFiles.BusyException?R.string.edit_game_busy:e instanceof GameFiles.SaveFormatException?R.string.save_import_invalid:R.string.save_import_copy_failed))
                         .setPositiveButton(getString(R.string.ok),null).show();});
             }
         });
@@ -180,17 +181,29 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         Uri uri=data.getData();setBusy(true,getString(R.string.game_import_progress));
         worker.execute(()-> {try {
             JSONObject report=GameImporter.importGame(getApplicationContext(),uri,progress->runOnUiThread(()-> {
-                if(!isDestroyed()){message=importProgress(progress);applyBusy();}
+                if(!isDestroyed()){message=importProgress(progress);progressFraction=progress.fraction();applyBusy();}
             }));
             getContentResolver().notifyChange(android.provider.DocumentsContract.buildRootsUri(GameDocumentsProvider.AUTHORITY),null);
             runOnUiThread(()-> {if(isDestroyed())return;gameReport=report;page=HOME;setBusy(false,getString(R.string.game_added));renderPage();});
         }catch(Exception e){fail(getString(R.string.game_import_failed),e);}});
     }
-    private String importProgress(String progress) {
-        // File names, package hashes and extraction paths stay in internal reports.
-        if(progress.contains("校验"))return getString(R.string.game_verifying);
-        if(progress.contains("解包")||progress.contains("解压"))return getString(R.string.game_extracting);
-        return getString(R.string.game_import_wait);
+    private String importProgress(ImportProgress progress) {
+        String title;
+        switch(progress.stage) {
+            case OPEN:title=getString(R.string.import_stage_open);break;
+            case EXTRACT:title=getString(R.string.import_stage_extract);break;
+            case VERIFY:title=getString(R.string.import_stage_verify);break;
+            default:title=getString(R.string.import_stage_finish);
+        }
+        String details="";
+        if(progress.stage==ImportProgress.Stage.EXTRACT) {
+            String read=progress.totalBytes>0
+                ?getString(R.string.import_read_known,(int)(progress.fraction()*100),progress.inputBytes/1048576.0,progress.totalBytes/1048576.0)
+                :getString(R.string.import_read_unknown,progress.inputBytes/1048576.0);
+            details="\n"+read+"\n"+getString(R.string.import_extracted,progress.outputBytes/1048576.0,progress.files);
+        }
+        return title+details+"\n"+getString(R.string.import_elapsed,progress.elapsedSeconds/60,progress.elapsedSeconds%60)
+            +"\n"+getString(R.string.import_duration_hint);
     }
     private boolean resumeExistingGame() {
         if(getIntent().hasExtra("gameExitMessage")||!GameSession.hasActiveWindow(this))return false;

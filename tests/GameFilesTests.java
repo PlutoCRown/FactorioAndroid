@@ -28,6 +28,9 @@ public final class GameFilesTests {
             for(String id:new String[]{"games","saves:../outside","saves:/absolute","mods:a\\b","saves:folder//file","saves:.hidden","saves:folder/.."})
                 rejected(()->storage.resolve(id),"unsafe ID "+id);
             check(storage.resolve("mods:folder/mod.zip").toPath().startsWith(storage.directory("mods").toPath()),"nested scope");
+            try {storage.importSave(new ByteArrayInputStream(zip("unrelated.txt")),"invalid.zip");
+                throw new AssertionError("Invalid save must have a distinct error");
+            }catch(GameFiles.SaveFormatException expected){checks++;}
             byte[] valid=zip("map/level.dat","map/info.json");
             check(storage.importSave(new ByteArrayInputStream(valid),"地图.zip").equals("地图.zip"),"unicode save name");
             check(storage.importSave(new ByteArrayInputStream(valid),"地图.zip").equals("地图 (1).zip"),"collision numbered");

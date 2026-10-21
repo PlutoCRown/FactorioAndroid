@@ -22,7 +22,7 @@ The launcher presents the game through Mesa Zink and Vulkan onto an Android Surf
 | Gamepad, keyboard, and mouse input | ✅     |
 | Touchscreen mouse                  | ✅     |
 
-A complete game has been played on a real device. There is no separate screen yet for importing or exporting saves and mods. Keyboard, mouse, and SDL gamepad events are delivered to the game. Touch currently holds the left button and drags with one finger; a fuller touch mouse is still being finished.
+A complete game has been played on a real device. The home screen imports ZIP saves and opens the save and mod folders through the system file manager. Keyboard, mouse, and SDL gamepad events are delivered to the game. Touch currently holds the left button and drags with one finger; a fuller touch mouse is still being finished.
 
 ## How to play
 
@@ -31,6 +31,10 @@ A complete game has been played on a real device. There is no separate screen ye
 3. On the [download page](https://factorio.com/download), choose the **Linux ARM64 graphical full client `.tar.xz`**. If that version is not listed, switch to the experimental channel beside it. For Space Age, download only the Space Age package; you do not need to download the base game as well.
 4. Put the original archive somewhere the Android file picker can open. On the launcher home screen, choose **Select game package**. Do not unpack it first.
 5. Choose **Launch game**.
+
+Game import opens the archive, extracts files, verifies the engine and checksums, then switches the active package and removes the previous copy. During extraction, the launcher shows compressed-package read progress, extracted size, file count, and elapsed time. If the document provider does not supply a total size, it shows the bytes read instead. This is not an overall time estimate: verification and cleanup follow extraction. On the current test tablet, the base game took about 2 minutes and Space Age about 5 minutes; either can take longer. Keep the app open.
+
+The home screen offers **Open saves**, **Import save**, and **Open mods**. Select an original `.zip` save without extracting it. Existing saves are preserved and duplicate names receive a numeric suffix. Save and end the game session before editing saves or mods.
 
 Saves created inside the game live in the app's private directory:
 
