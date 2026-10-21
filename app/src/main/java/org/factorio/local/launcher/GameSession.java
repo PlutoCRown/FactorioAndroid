@@ -87,6 +87,7 @@ public final class GameSession implements AutoCloseable {
         String original=config.isFile()?new String(Files.readAllBytes(config.toPath()),StandardCharsets.UTF_8):"; version=13\n[path]\n";
         String read=new File(gameDirectory,"data").getCanonicalPath(),write=userdata.getCanonicalPath();
         String updated=GameProfileConfig.mapPaths(original,read,write);
+        updated=GameProfileConfig.initializeLocale(updated,AppLanguage.gameLocale(context));
         updated=GameProfileConfig.applyGraphicsPreset(updated,preset);
         File graphicsBackup=new File(profile,"config.before-graphics-presets.ini");
         if(!"game".equals(preset)&&config.isFile()&&!graphicsBackup.exists()&&!updated.equals(original))
@@ -96,6 +97,7 @@ public final class GameSession implements AutoCloseable {
         Files.move(pending,config.toPath(),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
         JSONObject metadata=new JSONObject().put("schema",1).put("id","default-2.1.22")
             .put("graphicsPreset",preset).put("graphicsBackup",graphicsBackup.isFile()?graphicsBackup.getAbsolutePath():JSONObject.NULL)
+            .put("locale",GameProfileConfig.readLocale(updated)).put("initialLocaleFallback",AppLanguage.gameLocale(context))
             .put("readData",read).put("writeData",write).put("configuration",config.getAbsolutePath())
             .put("saves",new File(userdata,"saves").getAbsolutePath()).put("mods",new File(userdata,"mods").getAbsolutePath());
         Files.write(new File(profile,"profile.json").toPath(),metadata.toString(2).getBytes(StandardCharsets.UTF_8));

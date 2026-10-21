@@ -48,11 +48,14 @@ final class GameFiles {
             FileLock candidate=null;
             try {
                 try {candidate=file.getChannel().tryLock();}catch(OverlappingFileLockException ignored) {}
-                if(candidate==null)throw new IOException("请先保存并结束游戏会话，再修改存档或模组。");
+                if(candidate==null)throw new BusyException();
                 lock=candidate;
             }catch(IOException|RuntimeException e){file.close();throw e;}
         }
         public void close() throws IOException {try {lock.release();}finally{file.close();}}
+    }
+    static final class BusyException extends IOException {
+        BusyException(){super("Save and end the game session before editing saves or mods.");}
     }
     Lease edit() throws IOException {return new Lease(profile);}
     String unusedName(String parent,String requested) throws IOException {

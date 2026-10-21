@@ -2,6 +2,7 @@
 package com.termux.x11;
 
 import android.app.Activity;
+import org.factorio.local.launcher.R;
 import android.content.res.Configuration;
 import org.factorio.local.launcher.WindowPolicy;
 import android.os.*;
@@ -45,23 +46,23 @@ public final class MainActivity extends Activity {
         if(!manualSession&&Build.VERSION.SDK_INT>=27) {setShowWhenLocked(true);setTurnScreenOn(true);}
         WindowPolicy.apply(this);
         FrameLayout layout=new FrameLayout(this);layout.setBackgroundColor(android.graphics.Color.BLACK);
-        status=new TextView(this);status.setText(manualSession?"正在准备本地游戏窗口…":getIntent().getBooleanExtra("windowGraphics",false)?"正在验证游戏窗口初始化（有时间限制）。":"正在验证内置窗口组件；暂不加载游戏。");
+        status=new TextView(this);status.setText(manualSession?getString(R.string.window_preparing):getIntent().getBooleanExtra("windowGraphics",false)?getString(R.string.window_probe_start):getString(R.string.window_probe_only));
         status.setPadding(dp(12),dp(8),dp(12),dp(8));status.setTextSize(12);status.setMaxLines(4);
         status.setTextColor(android.graphics.Color.WHITE);status.setBackgroundColor(0xc0202630);
         FrameLayout.LayoutParams statusPosition=new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.START);
         statusPosition.setMargins(dp(12),dp(12),dp(76),0);status.setMaxWidth(dp(560));layout.addView(status,statusPosition);
-        Button menu=new Button(this);menu.setText("会话");menu.setAllCaps(false);menu.setContentDescription("会话菜单");
+        Button menu=new Button(this);menu.setText(getString(R.string.session));menu.setAllCaps(false);menu.setContentDescription(getString(R.string.session_menu));
         menu.setMinWidth(0);menu.setMinimumWidth(0);menu.setTextSize(12);menu.setAlpha(0.72f);
         FrameLayout.LayoutParams menuPosition=new FrameLayout.LayoutParams(dp(64),dp(48),Gravity.BOTTOM|Gravity.END);
         menuPosition.setMargins(0,0,dp(8),dp(8));layout.addView(menu,menuPosition);
         menu.setOnClickListener(anchor-> {
             PopupMenu popup=new PopupMenu(this,anchor);
-            if(!manualSession)popup.getMenu().add("查看实际运行信息").setOnMenuItemClickListener(item->{try {
-                new android.app.AlertDialog.Builder(this).setTitle("游戏实际运行信息")
-                    .setMessage(org.factorio.local.launcher.RuntimeGraphicsInfo.describe(this)).setPositiveButton("关闭",null).show();
+            if(!manualSession)popup.getMenu().add(getString(R.string.show_runtime_info)).setOnMenuItemClickListener(item->{try {
+                new android.app.AlertDialog.Builder(this).setTitle(getString(R.string.runtime_info))
+                    .setMessage(org.factorio.local.launcher.RuntimeGraphicsInfo.describe(this)).setPositiveButton(getString(R.string.close),null).show();
             }catch(Exception e){fail(e);}return true;});
-            popup.getMenu().add(status.getVisibility()==View.VISIBLE?"隐藏启动状态":"显示启动状态").setOnMenuItemClickListener(item->{status.setVisibility(status.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);return true;});
-            popup.getMenu().add("结束会话并返回启动器").setOnMenuItemClickListener(item->{if(manualSession)askStop();else finish();return true;});
+            popup.getMenu().add(status.getVisibility()==View.VISIBLE?getString(R.string.hide_startup_status):getString(R.string.show_startup_status)).setOnMenuItemClickListener(item->{status.setVisibility(status.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);return true;});
+            popup.getMenu().add(getString(R.string.end_session_home)).setOnMenuItemClickListener(item->{if(manualSession)askStop();else finish();return true;});
             popup.show();
         });
         layout.setOnApplyWindowInsetsListener((v,insets)-> {
@@ -171,7 +172,7 @@ public final class MainActivity extends Activity {
                         if("gamepadRelayReady".equals(phase)&&controllerRelay!=null)controllerRelay.connect(progressDetail.getString("gamepadSocket"));
                         report.put("engineProbeProgress",progressDetail);record("engine:"+phase);
                         if(!automaticStatusHidden&&(phase.equals("engineProcessStarted")||phase.equals("audioStreaming"))) {automaticStatusHidden=true;status.setVisibility(View.GONE);}
-                        if(manualSession)status.setText((phase.equals("engineProcessStarted")||phase.equals("audioStreaming"))?"游戏正在运行":phase.equals("queryGlCapabilities")?"正在准备图形环境…":"正在准备游戏运行环境…");
+                        if(manualSession)status.setText((phase.equals("engineProcessStarted")||phase.equals("audioStreaming"))?getString(R.string.game_running):phase.equals("queryGlCapabilities")?getString(R.string.graphics_preparing):getString(R.string.runtime_preparing));
                     }catch(Exception e) {fail(e);}});
                 };
                 JSONObject result=gameSession.run(getApplicationContext(),serverTemp,progress);
@@ -186,14 +187,14 @@ public final class MainActivity extends Activity {
                         report.put("sessionComplete",true);
                         if(result.has("error"))report.put("error",result.optString("error"));
                         record("sessionEnded");
-                        status.setText(result.has("error")?"游戏未能正常启动，请返回启动器检查启动设置后重试。":"游戏会话已结束，配置与存档保留在本机。");
+                        status.setText(result.has("error")?getString(R.string.game_failed_settings):getString(R.string.session_ended_data_kept));
                         JSONObject execution=result.optJSONObject("graphicsInitialization");
                         int code=execution==null?-1:execution.optInt("exitCode",-1);
-                        returnToLauncher(result.has("error")?(code>=0?"游戏异常退出（退出码 "+code+"）。":"游戏启动未完成，请检查游戏文件和设备状态。"):"游戏已退出。");
+                        returnToLauncher(result.has("error")?(code>=0?getString(R.string.game_exit_code,code):getString(R.string.game_start_failed)):getString(R.string.game_exited));
                         return;
                     }
                     captureSurface("final");
-                    status.setText("窗口初始化诊断已保存；尚未验收完整图形运行。");
+                    status.setText(getString(R.string.window_probe_saved));
                     handler.postDelayed(this::finish,3000);
                 }catch(Exception e) {fail(e);}});
             }catch(Throwable e) {runOnUiThread(()->fail(e));}
@@ -235,7 +236,7 @@ public final class MainActivity extends Activity {
                 .put("windowTransportPassed",connected&&surfaceValid&&syncEchoed);
             report.put("keyguardLocked",((android.app.KeyguardManager)getSystemService(KEYGUARD_SERVICE)).isKeyguardLocked())
                 .put("interactive",((PowerManager)getSystemService(POWER_SERVICE)).isInteractive()).put("windowFocused",hasWindowFocus());
-            if(!manualSession)status.setText(graphicsStarted?"正在验证游戏图形加载；诊断结束后窗口会关闭。":connected&&syncEchoed?"内置显示连接已建立。此处尚未验证 Factorio 或桌面 OpenGL。":"正在检测内置窗口连接…");
+            if(!manualSession)status.setText(graphicsStarted?getString(R.string.graphics_probe_progress):connected&&syncEchoed?getString(R.string.window_connection_ready):getString(R.string.window_connection_progress));
             record("sampled");
         } catch(Throwable e) {fail(e);}
     }
@@ -306,8 +307,8 @@ public final class MainActivity extends Activity {
     }
     private void fail(Throwable error) {
         try {if(report!=null) {report.put("error",error.toString());record("failed");}} catch(Exception ignored) {}
-        if(status!=null)status.setText(manualSession?"游戏启动未完成，请检查启动设置后重试。":"窗口组件验证失败；诊断已保存在本机。");
-        if(manualSession)returnToLauncher("游戏启动未完成，请检查游戏文件和设备状态。");
+        if(status!=null)status.setText(manualSession?getString(R.string.game_failed_retry):getString(R.string.window_probe_failed));
+        if(manualSession)returnToLauncher(getString(R.string.game_start_failed));
         else handler.postDelayed(this::finish,3000);
     }
     private void returnToLauncher(String reason) {
@@ -319,10 +320,10 @@ public final class MainActivity extends Activity {
         startActivity(launcher);finish();
     }
     private void askStop() {
-        new android.app.AlertDialog.Builder(this).setTitle("结束游戏会话？")
-            .setMessage("请先在游戏中保存进度。返回后可随时从启动器再次启动；未保存的进度可能丢失。")
-            .setPositiveButton("结束并返回",(d,w)-> {if(gameSession!=null)gameSession.close();returnToLauncher("游戏会话已结束。");})
-            .setNegativeButton("继续游戏",null).show();
+        new android.app.AlertDialog.Builder(this).setTitle(getString(R.string.end_session_question))
+            .setMessage(getString(R.string.end_session_warning))
+            .setPositiveButton(getString(R.string.end_and_return),(d,w)-> {if(gameSession!=null)gameSession.close();returnToLauncher(getString(R.string.session_ended));})
+            .setNegativeButton(getString(R.string.continue_game),null).show();
     }
     @Override public void onBackPressed() {
         if(graphicsStarted&&view!=null&&view.forwardEscape()) {

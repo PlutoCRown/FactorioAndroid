@@ -38,6 +38,20 @@ final class GameProfileConfig {
         return locale;
     }
 
+    /** Seed only missing preferences. An existing choice, including auto, wins. */
+    static String initializeLocale(String original,String fallback) throws IOException {
+        if(!"en".equals(fallback)&&!"zh-CN".equals(fallback))throw new IOException("Unsupported initial game locale");
+        if(readLocale(original)!=null)return original;
+        StringBuilder out=new StringBuilder();boolean inserted=false;
+        for(String raw:original.split("\\r?\\n",-1)) {
+            out.append(raw).append('\n');
+            int comment=raw.indexOf(';');String effective=(comment<0?raw:raw.substring(0,comment)).trim();
+            if(effective.equals("[general]")){out.append("locale=").append(fallback).append('\n');inserted=true;}
+        }
+        if(!inserted)out.append("[general]\nlocale=").append(fallback).append('\n');
+        return out.toString();
+    }
+
     static String mapPaths(String original,String read,String write) throws IOException {
         validateVersion(original);
         if(read.indexOf('\n')>=0||write.indexOf('\n')>=0||read.indexOf('\r')>=0||write.indexOf('\r')>=0)

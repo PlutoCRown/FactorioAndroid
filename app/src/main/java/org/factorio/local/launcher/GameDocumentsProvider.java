@@ -20,7 +20,7 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     private GameFiles files() throws FileNotFoundException {
         try{return new GameFiles(GameSession.profileDirectory(getContext()));}catch(Exception e){throw failure(e);}
     }
-    private static FileNotFoundException failure(Exception e){FileNotFoundException result=new FileNotFoundException(e.getMessage());result.initCause(e);return result;}
+    private FileNotFoundException failure(Exception e){FileNotFoundException result=new FileNotFoundException(getContext().getString(e instanceof GameFiles.BusyException?R.string.edit_game_busy:R.string.file_operation_failed));result.initCause(e);return result;}
     static Uri rootUri(String root){return DocumentsContract.buildRootUri(AUTHORITY,root);}
     static void changed(android.content.Context context,String root) {
         context.getContentResolver().notifyChange(DocumentsContract.buildChildDocumentsUri(AUTHORITY,root),null);
@@ -32,7 +32,7 @@ public final class GameDocumentsProvider extends DocumentsProvider {
             try {
                 File dir=files().directory(root);
                 cursor.newRow().add(Root.COLUMN_ROOT_ID,root).add(Root.COLUMN_DOCUMENT_ID,root)
-                    .add(Root.COLUMN_TITLE,root.equals("saves")?"Factorio · 存档":"Factorio · 模组")
+                    .add(Root.COLUMN_TITLE,root.equals("saves")?getContext().getString(R.string.save_root_title):getContext().getString(R.string.mod_root_title))
                     .add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_CREATE|Root.FLAG_SUPPORTS_IS_CHILD)
                     .add(Root.COLUMN_ICON,R.mipmap.ic_launcher).add(Root.COLUMN_MIME_TYPES,"*/*").add(Root.COLUMN_AVAILABLE_BYTES,dir.getUsableSpace());
             }catch(IOException e){throw failure(e);}
@@ -46,11 +46,11 @@ public final class GameDocumentsProvider extends DocumentsProvider {
         return type==null?"application/octet-stream":type;
     }
     private void row(MatrixCursor cursor,String id) throws IOException {
-        File file=files().resolve(id);if(!file.exists())throw new FileNotFoundException("文件不存在");
+        File file=files().resolve(id);if(!file.exists())throw new FileNotFoundException(getContext().getString(R.string.file_missing));
         boolean root=id.indexOf(':')<0;
         int flags=file.isDirectory()?Document.FLAG_DIR_SUPPORTS_CREATE:Document.FLAG_SUPPORTS_WRITE;
         if(!root)flags|=Document.FLAG_SUPPORTS_DELETE|Document.FLAG_SUPPORTS_RENAME;
-        cursor.newRow().add(Document.COLUMN_DOCUMENT_ID,id).add(Document.COLUMN_DISPLAY_NAME,root?(id.equals("saves")?"存档":"模组"):file.getName())
+        cursor.newRow().add(Document.COLUMN_DOCUMENT_ID,id).add(Document.COLUMN_DISPLAY_NAME,root?(id.equals("saves")?getContext().getString(R.string.saves_label):getContext().getString(R.string.mods_label)):file.getName())
             .add(Document.COLUMN_MIME_TYPE,mime(file)).add(Document.COLUMN_FLAGS,flags)
             .add(Document.COLUMN_SIZE,file.isDirectory()?null:file.length()).add(Document.COLUMN_LAST_MODIFIED,file.lastModified());
     }
@@ -62,7 +62,7 @@ public final class GameDocumentsProvider extends DocumentsProvider {
         MatrixCursor cursor=new MatrixCursor(projection==null?DOC_COLUMNS:projection);
         try {
             GameFiles storage=files();File dir=storage.resolve(parent);File[] children=dir.listFiles();
-            if(children==null)throw new IOException("无法读取目录");
+            if(children==null)throw new IOException(getContext().getString(R.string.folder_read_failed));
             for(File child:children) {
                 if(child.getName().startsWith("."))continue;
                 try{row(cursor,storage.childId(parent,child.getName()));}catch(IOException ignored) {} // Never expose symlinks.
@@ -80,7 +80,7 @@ public final class GameDocumentsProvider extends DocumentsProvider {
         GameFiles.Lease lease=null;
         try {
             if(signal!=null)signal.throwIfCanceled();
-            GameFiles storage=files();File file=storage.resolve(id);if(!file.isFile())throw new IOException("文件不存在");
+            GameFiles storage=files();File file=storage.resolve(id);if(!file.isFile())throw new IOException(getContext().getString(R.string.file_missing));
             int access=ParcelFileDescriptor.parseMode(mode);
             if((access&ParcelFileDescriptor.MODE_WRITE_ONLY)==0)return ParcelFileDescriptor.open(file,access);
             lease=storage.edit();final GameFiles.Lease held=lease;
@@ -98,16 +98,16 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     @Override public String createDocument(String parent,String type,String name) throws FileNotFoundException {
         GameFiles storage=files();
         try(GameFiles.Lease lease=storage.edit()) {
-            if(!storage.resolve(parent).isDirectory())throw new IOException("目标不是目录");
+            if(!storage.resolve(parent).isDirectory())throw new IOException(getContext().getString(R.string.not_directory));
             String id=storage.childId(parent,storage.unusedName(parent,name));File file=storage.resolve(id);
-            if(!(Document.MIME_TYPE_DIR.equals(type)?file.mkdir():file.createNewFile()))throw new IOException("无法创建文件");
+            if(!(Document.MIME_TYPE_DIR.equals(type)?file.mkdir():file.createNewFile()))throw new IOException(getContext().getString(R.string.file_create_failed));
             notifyParent(id);return id;
         }catch(IOException e){throw failure(e);}
     }
     @Override public String renameDocument(String id,String name) throws FileNotFoundException {
         GameFiles storage=files();
         try(GameFiles.Lease lease=storage.edit()) {
-            int colon=id.indexOf(':');if(colon<0)throw new IOException("不能重命名游戏根目录");
+            int colon=id.indexOf(':');if(colon<0)throw new IOException(getContext().getString(R.string.root_rename_denied));
             int slash=id.lastIndexOf('/');String parent=id.substring(0,slash<0?colon:slash);
             GameFiles.checkName(name);File source=storage.resolve(id);
             if(source.getName().equals(name))return id;
@@ -118,14 +118,14 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     @Override public void deleteDocument(String id) throws FileNotFoundException {
         GameFiles storage=files();
         try(GameFiles.Lease lease=storage.edit()) {
-            if(id.indexOf(':')<0)throw new IOException("不能删除游戏根目录");
+            if(id.indexOf(':')<0)throw new IOException(getContext().getString(R.string.root_delete_denied));
             deleteTree(storage,id);notifyParent(id);
         }catch(IOException e){throw failure(e);}
     }
     private void deleteTree(GameFiles storage,String id) throws IOException {
         File file=storage.resolve(id);
         if(file.isDirectory()) {
-            File[] children=file.listFiles();if(children==null)throw new IOException("无法读取目录");
+            File[] children=file.listFiles();if(children==null)throw new IOException(getContext().getString(R.string.folder_read_failed));
             for(File child:children)deleteTree(storage,storage.childId(id,child.getName()));
         }
         Files.delete(file.toPath());

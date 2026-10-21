@@ -103,6 +103,8 @@ Invoke-TaskTool (Join-Path $Jdk 'bin\javac.exe') @('-encoding','UTF-8','--releas
 Invoke-TaskTool (Join-Path $Jdk 'bin\java.exe') @('-cp',(Join-Path $taskBuild 'tests'),'com.termux.x11.TouchMouseStateTests')
 Invoke-TaskTool (Join-Path $Jdk 'bin\javac.exe') @('-encoding','UTF-8','--release','8','-d',(Join-Path $taskBuild 'tests'),(Join-Path $taskSourceRoot 'org\factorio\local\launcher\GameFiles.java'),(Join-Path $taskRoot 'tests\GameFilesTests.java'))
 Invoke-TaskTool (Join-Path $Jdk 'bin\java.exe') @('-cp',(Join-Path $taskBuild 'tests'),'org.factorio.local.launcher.GameFilesTests')
+Invoke-TaskTool (Join-Path $Jdk 'bin\javac.exe') @('-encoding','UTF-8','--release','8','-d',(Join-Path $taskBuild 'tests'),(Join-Path $taskSourceRoot 'org\factorio\local\launcher\LanguagePolicy.java'),(Join-Path $taskRoot 'tests\LanguagePolicyTests.java'))
+Invoke-TaskTool (Join-Path $Jdk 'bin\java.exe') @('-cp',(Join-Path $taskBuild 'tests'),'org.factorio.local.launcher.LanguagePolicyTests')
 
 Invoke-TaskTool (Join-Path $taskTools 'aapt2.exe') @('compile','--dir',(Join-Path $taskRoot 'app\src\main\res'),'-o',(Join-Path $taskBuild 'resources.zip'))
 $taskUnsigned=Join-Path $taskBuild 'unsigned.apk'

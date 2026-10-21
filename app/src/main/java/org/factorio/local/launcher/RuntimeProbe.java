@@ -280,6 +280,12 @@ public final class RuntimeProbe {
             else result.put("configuration",settings);
             if(progress!=null)progress.update("graphicsStarting",result);
             Map<String,String> windowEnvironment=new HashMap<>();
+            // SDL's Unix preferred-locale detection reads LANG/LANGUAGE directly.
+            // Keep LC_ALL=C for existing numeric/runtime behavior; the persistent
+            // [general] locale is seeded separately and never overrides a choice.
+            windowEnvironment.putAll(AppLanguage.environment(context));
+            result.put("androidLanguageTags",context.getResources().getConfiguration().getLocales().toLanguageTags())
+                .put("languageEnvironment",new JSONObject(AppLanguage.environment(context)));
             File graphicsTemp=context.getCacheDir();
             if(withDisplay) {
                 graphicsTemp=serverTemp;

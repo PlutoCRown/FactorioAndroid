@@ -64,6 +64,20 @@ public final class GameProfileConfigTests {
         for(String bad:new String[]{"; version=13\n[graphics]\n[graphics]\n","; version=13\n[graphics]\nmax-texture-size=4096\nmax-texture-size=8192\n","; version=14\n[graphics]\n"}) {
             try {GameProfileConfig.applyGraphicsPreset(bad,"compat");throw new AssertionError("ambiguous config accepted");}catch(IOException expected){checks++;}
         }
+        String fresh=GameProfileConfig.initializeLocale(original,"zh-CN");
+        check("zh-CN".equals(GameProfileConfig.readLocale(fresh)),"first game launch seeds Chinese");
+        check(fresh.equals(GameProfileConfig.initializeLocale(fresh,"en")),"system change does not overwrite saved language");
+        check("en".equals(GameProfileConfig.readLocale(GameProfileConfig.initializeLocale(original,"en"))),"first English launch");
+        check(chinese.equals(GameProfileConfig.initializeLocale(chinese,"en")),"existing Chinese exact bytes preserved");
+        String auto="; version=13\r\n[general]\r\nlocale=auto\r\n";
+        check(auto.equals(GameProfileConfig.initializeLocale(auto,"zh-CN")),"explicit auto preserved");
+        String german="; version=13\n[general]\nlocale=de\n";
+        check(german.equals(GameProfileConfig.initializeLocale(german,"en")),"other existing game languages preserved");
+        String commented="; version=13\r\n[general] ; user preferences\r\n; locale=auto\r\n[graphics]\r\nquality=high\r\n";
+        String seeded=GameProfileConfig.initializeLocale(commented,"en");
+        check("en".equals(GameProfileConfig.readLocale(seeded))&&seeded.contains("; locale=auto"),"commented default with existing general section");
+        try{GameProfileConfig.initializeLocale(original,"en\n[path]");throw new AssertionError("locale injection accepted");}catch(IOException expected){checks++;}
+        try{GameProfileConfig.initializeLocale("; version=13\n[general]\n[general]\n","en");throw new AssertionError("duplicate section seeded");}catch(IOException expected){checks++;}
         System.out.println(checks+" persistent profile configuration and locale checks passed");
     }
 }

@@ -1,0 +1,127 @@
+<resources>
+    <string name="home" formatted="false">Home</string>
+    <string name="launch_settings" formatted="false">Launch settings</string>
+    <string name="device_info" formatted="false">Device info</string>
+    <string name="home_welcome" formatted="false">Every factory\nstarts here.</string>
+    <string name="home_continue" formatted="false">Keep building.</string>
+    <string name="home_import_hint" formatted="false">Import your game and start building on this device.</string>
+    <string name="home_ready" formatted="false">Your factory is ready when you are.</string>
+    <string name="add_game" formatted="false">Add your game</string>
+    <string name="game_package_hint" formatted="false">Official Linux ARM64 · .tar.xz</string>
+    <string name="base_game" formatted="false">Base game</string>
+    <string name="touch_mouse" formatted="false">Touchscreen mouse</string>
+    <string name="touch_mouse_hint" formatted="false">Tap to click · Drag · Two-finger scroll · Hold for right click</string>
+    <string name="choose_game" formatted="false">Choose game package</string>
+    <string name="launch_game" formatted="false">Play</string>
+    <string name="download_help_link" formatted="false">How do I download my game?</string>
+    <string name="open_saves" formatted="false">Open save folder</string>
+    <string name="import_save" formatted="false">Import save</string>
+    <string name="open_mods" formatted="false">Open mod folder</string>
+    <string name="replace_game" formatted="false">Replace game package</string>
+    <string name="own_game_footer" formatted="false">Your own legitimate copy · Runs locally</string>
+    <string name="artwork_caption" formatted="false">Keep the factory running.</string>
+    <string name="settings_hint" formatted="false">Changes apply at the next launch. Your game language, saves and controls are preserved.</string>
+    <string name="render_resolution" formatted="false">Render resolution</string>
+    <string name="render_resolution_hint" formatted="false">Scale both dimensions of the game window. The image always fills the window.</string>
+    <string name="scale_native" formatted="false">100% · Native</string>
+    <string name="scale_balanced" formatted="false">75% · Balanced</string>
+    <string name="scale_smooth" formatted="false">50% · Performance</string>
+    <string name="graphics_preset" formatted="false">Graphics preset</string>
+    <string name="graphics_preset_hint" formatted="false">High quality keeps high-resolution sprites with high-quality texture compression. Compression is also recommended when using in-game settings.</string>
+    <string name="preset_compat" formatted="false">Compatibility · Recommended</string>
+    <string name="preset_balanced" formatted="false">Balanced</string>
+    <string name="preset_quality" formatted="false">High quality</string>
+    <string name="preset_game" formatted="false">Use in-game settings</string>
+    <string name="graphics_renderer" formatted="false">Graphics renderer</string>
+    <string name="renderer_hint" formatted="false">Renders directly on the GPU. No backend selection is needed.</string>
+    <string name="back_home" formatted="false">Back to home</string>
+    <string name="device_hint" formatted="false">View device details and system graphics checks.</string>
+    <string name="device_label" formatted="false">Device</string>
+    <string name="system_label" formatted="false">System</string>
+    <string name="memory_label" formatted="false">Memory</string>
+    <string name="gpu_label" formatted="false">GPU</string>
+    <string name="waiting_for_check" formatted="false">Not checked yet</string>
+    <string name="unavailable" formatted="false">Unavailable</string>
+    <string name="graphics_api" formatted="false">Graphics API</string>
+    <string name="check_device" formatted="false">Check device</string>
+    <string name="recheck_device" formatted="false">Check again</string>
+    <string name="device_check_local" formatted="false">Checks run locally. No game import is required.</string>
+    <string name="device_check_pass" formatted="false">System graphics checks passed. This does not establish game compatibility or actual frame rate.</string>
+    <string name="device_check_fail" formatted="false">System graphics checks did not pass. Check your device\'s graphics support.</string>
+    <string name="picker_missing" formatted="false">No system file picker was found.</string>
+    <string name="folder_open_failed" formatted="false">Could not open folder</string>
+    <string name="save_import_progress" formatted="false">Importing save…</string>
+    <string name="default_save_name" formatted="false">Imported save.zip</string>
+    <string name="save_read_failed" formatted="false">Could not read the selected save.</string>
+    <string name="save_import_done" formatted="false">Save imported. Open Load game in Factorio to play it.</string>
+    <string name="save_import_failed" formatted="false">Save import failed</string>
+    <string name="save_import_retry" formatted="false">Choose a complete Factorio ZIP save, check available storage and try again.</string>
+    <string name="ok" formatted="false">OK</string>
+    <string name="get_game" formatted="false">Get your game</string>
+    <string name="download_instructions" formatted="false">Sign in at factorio.com and download the full Linux ARM64 graphical client (.tar.xz). Steam owners can link their account first.\n\nSpace Age requires its corresponding full game package. Return here to import the download. The verified version is 2.1.22.</string>
+    <string name="open_website" formatted="false">Open website</string>
+    <string name="website_fallback" formatted="false">Visit factorio.com/download in your browser.</string>
+    <string name="close" formatted="false">Close</string>
+    <string name="device_check_progress" formatted="false">Checking device…</string>
+    <string name="device_check_done" formatted="false">Device check complete</string>
+    <string name="device_check_failed" formatted="false">Device check failed</string>
+    <string name="runtime_check_progress" formatted="false">Checking runtime…</string>
+    <string name="runtime_check_done" formatted="false">Check complete</string>
+    <string name="runtime_check_fail" formatted="false">Runtime checks did not pass</string>
+    <string name="check_failed" formatted="false">Check failed</string>
+    <string name="replace_busy" formatted="false">Save and end the game session before replacing the game package.</string>
+    <string name="game_import_retry" formatted="false">Choose the full official Linux ARM64 game package, check available storage and try again.</string>
+    <string name="try_again" formatted="false">Try again later. You can continue using the other pages.</string>
+    <string name="game_import_progress" formatted="false">Importing game. Keep the app open…</string>
+    <string name="game_added" formatted="false">Game added</string>
+    <string name="game_import_failed" formatted="false">Game import failed</string>
+    <string name="game_verifying" formatted="false">Verifying game package…</string>
+    <string name="game_extracting" formatted="false">Extracting game files…</string>
+    <string name="game_import_wait" formatted="false">Importing game…</string>
+    <string name="session_interrupted" formatted="false">The last game session ended unexpectedly. Returned to the launcher.</string>
+    <string name="work_in_progress" formatted="false">Work is in progress. Please wait until it finishes.</string>
+    <string name="keep_waiting" formatted="false">Keep waiting</string>
+    <string name="window_preparing" formatted="false">Preparing the game window…</string>
+    <string name="window_probe_start" formatted="false">Checking game window initialization (time limited).</string>
+    <string name="window_probe_only" formatted="false">Checking the embedded window component without loading the game.</string>
+    <string name="session" formatted="false">Session</string>
+    <string name="session_menu" formatted="false">Session menu</string>
+    <string name="show_runtime_info" formatted="false">View runtime info</string>
+    <string name="runtime_info" formatted="false">Game runtime info</string>
+    <string name="hide_startup_status" formatted="false">Hide startup status</string>
+    <string name="show_startup_status" formatted="false">Show startup status</string>
+    <string name="end_session_home" formatted="false">End session and return</string>
+    <string name="game_running" formatted="false">Game running</string>
+    <string name="graphics_preparing" formatted="false">Preparing graphics…</string>
+    <string name="runtime_preparing" formatted="false">Preparing the game runtime…</string>
+    <string name="game_failed_settings" formatted="false">The game did not start normally. Check launch settings and try again.</string>
+    <string name="session_ended_data_kept" formatted="false">Session ended. Settings and saves remain on this device.</string>
+    <string name="game_start_failed" formatted="false">The game could not start. Check game files and device status.</string>
+    <string name="game_exited" formatted="false">Game exited.</string>
+    <string name="window_probe_saved" formatted="false">Window initialization diagnostics saved. Full graphics operation has not been verified.</string>
+    <string name="graphics_probe_progress" formatted="false">Checking game graphics loading. The window closes when diagnostics finish.</string>
+    <string name="window_connection_ready" formatted="false">Embedded display connected. Factorio and desktop OpenGL have not yet been verified here.</string>
+    <string name="window_connection_progress" formatted="false">Checking the embedded window connection…</string>
+    <string name="game_failed_retry" formatted="false">The game could not start. Check launch settings and try again.</string>
+    <string name="window_probe_failed" formatted="false">Window checks failed. Diagnostics were saved locally.</string>
+    <string name="end_session_question" formatted="false">End game session?</string>
+    <string name="end_session_warning" formatted="false">Save your progress in the game first. You can launch it again at any time. Unsaved progress may be lost.</string>
+    <string name="end_and_return" formatted="false">End and return</string>
+    <string name="session_ended" formatted="false">Game session ended.</string>
+    <string name="continue_game" formatted="false">Continue playing</string>
+    <string name="save_root_title" formatted="false">Factorio · Saves</string>
+    <string name="mod_root_title" formatted="false">Factorio · Mods</string>
+    <string name="saves_label" formatted="false">Saves</string>
+    <string name="mods_label" formatted="false">Mods</string>
+    <string name="file_missing" formatted="false">File not found</string>
+    <string name="folder_read_failed" formatted="false">Could not read folder</string>
+    <string name="not_directory" formatted="false">The destination is not a folder</string>
+    <string name="file_create_failed" formatted="false">Could not create file</string>
+    <string name="root_rename_denied" formatted="false">The game data root cannot be renamed</string>
+    <string name="root_delete_denied" formatted="false">The game data root cannot be deleted</string>
+    <string name="edit_game_busy" formatted="false">Save and end the game session before editing saves or mods.</string>
+    <string name="file_operation_failed" formatted="false">File operation failed. Check the file and available storage, then try again.</string>
+    <string name="folder_sidebar_hint">Open %1$s in the system file manager sidebar.</string>
+    <string name="save_imported_name">Imported: %1$s</string>
+    <string name="game_exit_code">Game exited unexpectedly (exit code %1$d).</string>
+</resources>

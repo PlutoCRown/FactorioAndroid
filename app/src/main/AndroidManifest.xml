@@ -4,6 +4,7 @@
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
     <uses-feature android:glEsVersion="0x00030000" android:required="false" />
     <application android:label="Factorio" android:appCategory="game" android:theme="@style/AppTheme"
+        android:localeConfig="@xml/locales_config"
         android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
         android:resizeableActivity="true"
         android:allowBackup="false" android:supportsRtl="true"
@@ -24,7 +25,7 @@
         </activity>
         <activity android:name="com.termux.x11.MainActivity" android:exported="true"
             android:resizeableActivity="true" android:process=":window" android:launchMode="singleTask" android:screenOrientation="sensorLandscape"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden" />
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden|locale|layoutDirection" />
 
     </application>
 </manifest>
