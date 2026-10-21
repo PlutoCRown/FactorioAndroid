@@ -63,6 +63,7 @@ fi
 
 export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
+"$JDK/bin/java" "$ROOT/scripts/RestoreRuntime.java" --root "$ROOT"
 BUILD="$ROOT/build"
 CACHE="$ROOT/.cache"
 LOCAL="$ROOT/.local"
@@ -223,7 +224,8 @@ if [[ -d "$ROOT/app/src/main/jniLibs" ]] && find "$ROOT/app/src/main/jniLibs" -t
   cp -R "$ROOT/app/src/main/jniLibs/." "$BUILD/native/lib/"
   HAS_NATIVE=1
 else
-  echo "No jniLibs; APK will not contain the pinned native runtime"
+  echo "Pinned native runtime missing after restoration" >&2
+  exit 1
 fi
 
 if [[ -n "${FACTORIO_KEYSTORE_BASE64:-}" ]]; then

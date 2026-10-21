@@ -8,7 +8,7 @@ $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
 if(-not $PSScriptRoot) {$taskRoot=Join-Path ([Environment]::GetFolderPath('Desktop')) 'FactorioAndroid'}
 else {$taskRoot=Split-Path $PSScriptRoot -Parent}
-if (-not (Test-Path (Join-Path $taskRoot '.factorio-migration-workspace.json'))) {throw 'Workspace marker missing'}
+# The restorer creates the project-local marker after verifying all runtime files.
 $taskBuild=Join-Path $taskRoot 'build'
 $taskTools=Join-Path $Sdk 'build-tools\33.0.1'
 $taskAndroid=Join-Path $Sdk 'platforms\android-33\android.jar'
@@ -39,6 +39,7 @@ function Invoke-TaskTool([string]$taskExecutable,[string[]]$taskArguments) {
 foreach($taskRequired in @($taskAndroid,(Join-Path $Jdk 'bin\javac.exe'),(Join-Path $taskTools 'aapt2.exe'),(Join-Path $taskTools 'd8.bat'),(Join-Path $taskTools 'zipalign.exe'),(Join-Path $taskTools 'apksigner.bat'))) {
     if(-not (Test-Path -LiteralPath $taskRequired)) {throw ('Missing existing tool: '+$taskRequired)}
 }
+Invoke-TaskTool (Join-Path $Jdk 'bin\java.exe') @((Join-Path $taskRoot 'scripts\RestoreRuntime.java'),'--root',$taskRoot)
 # A UI rewrite can remove nested classes/resources. Never ship stale generated
 # files from an earlier source revision in the next APK.
 foreach($taskGenerated in @('classes','generated','dex','tests')) {
@@ -152,7 +153,7 @@ if(Test-Path -LiteralPath $taskJni) {
         $script:taskHasNative=$true
     }
 }
-if(-not $script:taskHasNative) {Write-Output 'No jniLibs; APK will not contain the pinned native runtime'}
+if(-not $script:taskHasNative) {throw 'Pinned native runtime missing after restoration'}
 $taskKey=Join-Path $taskLocal 'release.keystore'
 $taskPassFile=Join-Path $taskLocal 'release-keystore.pass'
 $script:taskKeyAlias='factoriorelease'

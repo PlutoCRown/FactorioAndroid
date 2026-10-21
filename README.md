@@ -55,6 +55,22 @@ files/profiles/default-2.1.22/userdata/saves/
 
 macOS 和 Linux 用 `scripts/build.sh`，Windows 用 `scripts/build-windows.ps1`。构建不使用 Gradle。
 
+先在项目根目录恢复固定版本的运行库和 XKB（需要 JDK11+，使用构建已有的 JDK 即可）：
+
+```bash
+java scripts/RestoreRuntime.java
+```
+
+Windows 若 Java 不在 PATH，可使用已有 JDK 的完整路径：
+
+```powershell
+& 'D:\Java\jdk-15.0.2\bin\java.exe' .\scripts\RestoreRuntime.java
+```
+
+该命令下载 Release 中的固定依赖包，校验 ZIP 及每个文件的 SHA-256，恢复52个原生库和 `window-xkb.zip`。已完整恢复时直接校验并跳过下载；不会执行下载的原生程序或改系统环境。依赖二进制不进入 Git。当前仓库为私有时，需要先在本地设置有本仓库 Contents: read 权限的 `GITHUB_TOKEN`（或 `GH_TOKEN`）；不要把令牌写入脚本、提交或发给他人。公开仓库无需令牌。
+
+也可在浏览器下载依赖包后离线恢复：`java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`。`--check` 仅验证现有文件；现有文件被改动时默认拒绝覆盖，需要明确使用 `--force` 才恢复为固定版本。这是恢复经过验证的预编译依赖，不等于从源码重新编译所有第三方组件。
+
 ```bash
 ./scripts/build.sh
 ./scripts/build.sh --performance-package
@@ -67,7 +83,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 普通包的应用 ID 是 `dev.plutocrown.factorio`，输出在 `artifacts/`。`--performance-package` 会再用应用 ID `com.miHoYo.Yuanshen` 打一份包，让部分手机套用该游戏的性能调度；界面名称仍是 Factorio。
 
-干净克隆还不能直接构建。预编译原生库、XKB 数据、Android SDK 和签名密钥都不在 Git 里，需要按 `app/src/main/assets/` 里的清单恢复对应文件。推送 Git 标签会由 `.github/workflows/release.yml` 构建并上传 APK。
+两个构建入口都会先运行上述恢复工具，缺少依赖且无法下载时会直接失败，避免生成没有运行环境的 APK。下载缓存在项目的 `.cache/runtime/`。仍需自行准备 Android SDK 和 JDK；签名密钥从本地或 CI secrets 读取，未提供时使用项目内生成的密钥。推送应用 Git 标签会由 `.github/workflows/release.yml` 构建并上传 APK；`runtime-` 前缀标签仅用于固定依赖附件，不运行应用发布任务。
 
 ## 许可证
 

@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release:
+    if: ${{ !startsWith(github.ref_name, 'runtime-') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +29,7 @@ jobs:
 
       - name: Build launcher packages
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           FACTORIO_KEYSTORE_BASE64: ${{ secrets.FACTORIO_KEYSTORE_BASE64 }}
           FACTORIO_KEY_ALIAS: ${{ secrets.FACTORIO_KEY_ALIAS }}
           FACTORIO_KEYSTORE_PASSWORD: ${{ secrets.FACTORIO_KEYSTORE_PASSWORD }}

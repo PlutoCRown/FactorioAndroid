@@ -67,7 +67,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 The normal application id is `dev.plutocrown.factorio`, and the APK is written to `artifacts/`. `--performance-package` links a second APK with the application id `com.miHoYo.Yuanshen` so some phones apply that game's performance profile. The visible name remains Factorio.
 
-A clean clone cannot build yet. The prebuilt native libraries, XKB data, Android SDK, and signing key are not in Git. Restore the payloads listed under `app/src/main/assets/` before building. Pushing a Git tag runs `.github/workflows/release.yml`, which builds and uploads the APKs.
+Restore the pinned runtime from the project root using the JDK already required by the build (JDK 11+):
+
+```bash
+java scripts/RestoreRuntime.java
+```
+
+On Windows, an explicit existing JDK path also works:
+
+```powershell
+& 'D:\Java\jdk-15.0.2\bin\java.exe' .\scripts\RestoreRuntime.java
+```
+
+This restores 52 ARM64 libraries and `window-xkb.zip` from a versioned Release asset, checking both the archive and every file against pinned SHA-256 hashes. Binaries remain outside Git. For a private repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Contents: read access; never commit or share a token. A public repository needs no token. Already valid files skip the download. Nothing downloaded is executed and no system tools are installed.
+
+For offline use, download the asset in your browser and run `java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`. Use `--check` for verification only. Changed files are preserved unless you explicitly pass `--force`. This recovers pinned prebuilt dependencies; it does not rebuild every upstream component from source.
+
+Both build entry points invoke the restorer automatically and fail if runtime dependencies cannot be restored. The cache is project-local under `.cache/runtime/`. Android SDK and JDK must still be available. Signing keys are local or provided via CI secrets; otherwise a project-local key is generated. Application tags run `.github/workflows/release.yml`; `runtime-` tags host dependency assets and skip application publishing.
 
 ## License
 
