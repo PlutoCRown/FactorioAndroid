@@ -53,8 +53,7 @@ android {
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1")
     }
     sourceSets.getByName("test") {
-        java.srcDirs(rootProject.file("tests"), rootProject.file("tests/host-stubs"))
-        java.exclude("device/**", "host-stubs/**", "ArchiveInventory.java")
+        java.setSrcDirs(listOf(layout.buildDirectory.dir("generated/host-tests").get().asFile))
     }
     testOptions.unitTests.isReturnDefaultValues = true
 }
@@ -78,3 +77,13 @@ val restoreRuntime by tasks.registering(Exec::class) {
     commandLine(javaBin.absolutePath, rootProject.file("scripts/RestoreRuntime.java").absolutePath)
 }
 tasks.named("preBuild") { dependsOn(restoreRuntime) }
+
+// Stage only host tests: device injectors and inventory utilities are not tests.
+val stageHostTests by tasks.registering(Sync::class) {
+    from(rootProject.file("tests")) { include("*.java"); exclude("ArchiveInventory.java") }
+    from(rootProject.file("tests/host-stubs"))
+    into(layout.buildDirectory.dir("generated/host-tests"))
+}
+tasks.configureEach {
+    if (name.endsWith("UnitTestJavaWithJavac") || name.endsWith("UnitTestKotlin")) dependsOn(stageHostTests)
+}

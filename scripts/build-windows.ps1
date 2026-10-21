@@ -19,5 +19,7 @@ $env:PATH=(Join-Path $Jdk 'bin')+';'+$env:PATH
 Set-Location $taskRoot
 $taskArgs=@((Join-Path $taskRoot 'scripts\BuildLauncher.java'),'--root',$taskRoot)
 if($PerformancePackage){$taskArgs+='--performance-package'}
-& (Join-Path $Jdk 'bin\java.exe') @taskArgs
-if($LASTEXITCODE -ne 0){throw ('Gradle launcher build failed: '+$LASTEXITCODE)}
+$taskSaved=$ErrorActionPreference;$ErrorActionPreference='Continue'
+& (Join-Path $Jdk 'bin\java.exe') @taskArgs | Out-Host
+$taskCode=$LASTEXITCODE;$ErrorActionPreference=$taskSaved
+if($taskCode -ne 0){throw ('Gradle launcher build failed: '+$taskCode)}

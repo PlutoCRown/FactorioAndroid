@@ -1,0 +1,15 @@
+{
+  "jdk": {
+    "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_x64_windows_hotspot_17.0.20.1_1.zip",
+    "checksumType": "sha256",
+    "checksum": "e53a79c3c3d86865bd7e787903884331068e71321714ffd44f145785affc7cb0",
+    "bytes": 190817615,
+    "version": "jdk-17.0.20.1+1"
+  },
+  "commandlineTools": {
+    "url": "https://dl.google.com/android/repository/commandlinetools-win-12266719_latest.zip",
+    "checksumType": "sha1",
+    "checksum": "32787c10f55911fd109848906b1275723e79f659",
+    "bytes": 143481958
+  }
+}
