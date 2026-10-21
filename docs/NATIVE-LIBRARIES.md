@@ -10,7 +10,7 @@
 
 放在 `jniLibs` 中不表示这些库都通过 JNI 加载到 Java 进程。glibc、Mesa 等运行在独立的游戏进程中；`libXlorie.so` 和画面接收器运行在 Android 侧。打包时有些库改用了私有名称，例如 `librea_glibc.so` 对应原始的 `libc.so.6`；启动时会建立游戏需要的文件名别名。文件名前缀不代表该组件由本项目原创。
 
-Compose还会通过AndroidX依赖额外带入`libandroidx.graphics.path.so`，其获取方式见第6节。安卓软键盘接入还会从启动器源码编译`librea_ime_opener.so`和`librea_ime_hint.so`，分别负责接收请求，以及维持SDL键盘开关、回传UTF-8确认文字和编辑命令，因此当前APK共包含55个原生文件。它们的用途和完整获取步骤见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
+Compose还会通过AndroidX依赖额外带入`libandroidx.graphics.path.so`，其获取方式见第6节。安卓软键盘接入还会从启动器源码编译`librea_ime_opener.so`和`librea_ime_hint.so`，分别负责接收请求，以及维持SDL键盘开关、回传UTF-8确认文字、编辑命令和键盘可见状态，因此当前APK共包含55个原生文件。它们的用途和完整获取步骤见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
 
 ```text
 Linux ARM64 Factorio
