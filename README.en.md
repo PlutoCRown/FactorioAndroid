@@ -57,7 +57,7 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library. See [Android keyboard integration (Chinese)](docs/ANDROID-KEYBOARD.md) for request routing, Unicode commits and helper build instructions.
 
-The 2026-10-21 Windows local 0.3.3 standard APK is 31,392,361 bytes (31.39 MB), 5,272 bytes above 0.3.2. All 214 host checks, signature, alignment and payload verification pass. Launch settings offer a separate sprite loading thread limit: 1, 2, 4, 8, 16, 32, or follow the existing game setting. The default is 1 to reduce loading memory peaks; this does not cap gameplay threads. All managed graphics presets use high-quality texture compression.
+The 2026-10-21 Windows local 0.3.5 standard APK is 31,400,495 bytes (31.40 MB), 5,236 bytes above 0.3.4. All 223 host checks, signature, alignment and payload verification pass. Launch settings offer a separate sprite loading thread limit: 1, 2, 4, 8, 16, 32, or follow the existing game setting. The default is 1 to reduce loading memory peaks; this does not cap gameplay threads. All managed graphics presets use high-quality texture compression.
 
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 

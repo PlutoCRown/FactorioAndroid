@@ -3,6 +3,7 @@ package org.factorio.local.launcher;
 import android.content.Context;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
+import android.net.LocalSocketAddress;
 import android.os.Process;
 import org.json.JSONObject;
 import java.io.*;
@@ -15,13 +16,19 @@ public final class KeyboardBridge implements AutoCloseable {
     private final LocalServerSocket server;
     private final String token=UUID.randomUUID().toString();
     private final String socketName="factorio-ime-"+Process.myPid()+"-"+UUID.randomUUID();
+    private final String inputSocketName=socketName+"-text";
     private final String binDirectory;
+    private final boolean directText;
     private volatile boolean running=true;
     private volatile LocalSocket active;
     private volatile int requests,rejected;
+    private volatile int inputEdits,inputKeys,inputFailures;
+    private volatile String inputError;
     private volatile String error;
     public KeyboardBridge(Context context,Listener listener) throws Exception {
         Properties manifest=new Properties();try(InputStream in=context.getAssets().open("ime-native.properties")){manifest.load(in);}
+        JSONObject game=GameImporter.current(context);
+        directText=game!=null&&game.optString("engineSha256").equals(manifest.getProperty("hint.engineSha256"));
         File library=new File(context.getApplicationInfo().nativeLibraryDir,"librea_ime_opener.so");
         if(!"librea_ime_opener.so".equals(manifest.getProperty("name"))||library.length()!=Long.parseLong(manifest.getProperty("bytes"))||
             !RuntimeLibraries.digest(library).equals(manifest.getProperty("sha256")))throw new IOException("Keyboard helper verification failed");
@@ -37,9 +44,43 @@ public final class KeyboardBridge implements AutoCloseable {
     }
     public Map<String,String> environment() {
         Map<String,String> result=new HashMap<>();result.put("REA_IME_SOCKET",socketName);result.put("REA_IME_TOKEN",token);
+        result.put("REA_IME_TEXT_SOCKET",inputSocketName);
         result.put("PATH",binDirectory+":/system/bin");
         result.put("SDL_ENABLE_STEAM_SCREEN_KEYBOARD","1");result.put("SDL_ENABLE_SCREEN_KEYBOARD","1");
         return result;
+    }
+    /** Optional, exact-interface SDL adapter. Other engine versions still launch. */
+    static String hintAdapter(Context context,String engineSha256) throws Exception {
+        Properties manifest=new Properties();try(InputStream in=context.getAssets().open("ime-native.properties")){manifest.load(in);}
+        if(!engineSha256.equals(manifest.getProperty("hint.engineSha256")))return null;
+        if(!"librea_ime_hint.so".equals(manifest.getProperty("hint.name")))throw new IOException("Keyboard hint manifest invalid");
+        File library=new File(context.getApplicationInfo().nativeLibraryDir,"librea_ime_hint.so");
+        if(library.length()!=Long.parseLong(manifest.getProperty("hint.bytes"))||!RuntimeLibraries.digest(library).equals(manifest.getProperty("hint.sha256")))
+            throw new IOException("Keyboard hint adapter verification failed");
+        return library.getAbsolutePath();
+    }
+    public boolean hasDirectText(){return directText;}
+    public boolean edit(int moveBefore,int deleteBefore,String text,int moveAfter) {
+        if(!directText||!running||text==null||Math.abs((long)moveBefore)>2048||deleteBefore<0||deleteBefore>2048||Math.abs((long)moveAfter)>2048)return false;
+        byte[] bytes=text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        if(bytes.length>65536||text.indexOf('\0')>=0)return false;
+        boolean accepted=sendInput(1,moveBefore,deleteBefore,bytes,moveAfter);if(accepted)inputEdits++;return accepted;
+    }
+    public boolean key(int androidCode) {
+        boolean accepted=sendInput(2,androidCode,0,new byte[0],0);if(accepted)inputKeys++;return accepted;
+    }
+    private synchronized boolean sendInput(int kind,int a,int b,byte[] bytes,int d) {
+        if(!directText||!running)return false;
+        try(LocalSocket client=new LocalSocket()) {
+            client.connect(new LocalSocketAddress(inputSocketName,LocalSocketAddress.Namespace.ABSTRACT));client.setSoTimeout(1500);
+            if(client.getPeerCredentials().getUid()!=Process.myUid())throw new IOException("Input peer rejected");
+            DataOutputStream output=new DataOutputStream(client.getOutputStream());
+            output.writeInt(0x52495431);output.writeInt(kind);output.writeInt(a);output.writeInt(b);output.writeInt(bytes.length);output.writeInt(d);
+            output.write(token.getBytes(java.nio.charset.StandardCharsets.US_ASCII));output.write(bytes);output.flush();
+            DataInputStream input=new DataInputStream(client.getInputStream());
+            if(input.readByte()!='O'||input.readByte()!='K'||input.readByte()!='\n')throw new IOException("Input not accepted");
+            return true;
+        }catch(Exception failure){inputFailures++;inputError=failure.getClass().getSimpleName();return false;}
     }
     private void run(Listener listener) {
         while(running) {
@@ -59,7 +100,9 @@ public final class KeyboardBridge implements AutoCloseable {
     }
     public JSONObject report() throws Exception {
         return new JSONObject().put("requests",requests).put("rejected",rejected).put("running",running)
-            .put("lastError",error==null?JSONObject.NULL:error).put("gameFileModified",false);
+            .put("lastError",error==null?JSONObject.NULL:error).put("gameFileModified",false)
+            .put("directTextSelected",directText).put("inputEdits",inputEdits).put("inputKeys",inputKeys).put("inputFailures",inputFailures)
+            .put("lastInputError",inputError==null?JSONObject.NULL:inputError);
     }
     @Override public void close() {
         running=false;try{if(active!=null)active.close();}catch(IOException ignored){}try{server.close();}catch(IOException ignored){}

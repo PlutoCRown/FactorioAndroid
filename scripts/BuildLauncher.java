@@ -68,10 +68,15 @@ class BuildLauncher {
             byte[] packedManifest=zip.getInputStream(zip.getEntry("assets/ime-native.properties")).readAllBytes();
             if(!Arrays.equals(packedManifest,Files.readAllBytes(root.resolve("app/build/generated/ime/assets/ime-native.properties"))))throw new IOException("Keyboard helper manifest differs");
             count++;
+            ZipEntry hint=zip.getEntry("lib/arm64-v8a/"+ime.getProperty("hint.name"));
+            if(hint==null)throw new IOException("APK missing keyboard hint adapter");
+            byte[] hintData=zip.getInputStream(hint).readAllBytes();
+            if(hintData.length!=Long.parseLong(ime.getProperty("hint.bytes"))||!sha(hintData).equals(ime.getProperty("hint.sha256")))throw new IOException("Keyboard hint adapter differs");
+            count++;
             long actual=zip.stream().filter(x->x.getName().startsWith("lib/")&&x.getName().endsWith(".so")).count();
             if(actual!=count)throw new IOException("Unexpected native payload count: "+actual);
         }
-        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" additional native libraries (AndroidX + keyboard helper) + XKB");
+        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" additional native libraries (AndroidX + keyboard helper + hint adapter) + XKB");
     }
     public static void main(String[] args)throws Exception {
         if(Runtime.version().feature()<17)throw new IOException("JDK 17+ required for Kotlin/Compose/AGP");
@@ -111,7 +116,7 @@ class BuildLauncher {
             if(!badge.contains("package: name='"+id+"'")||!badge.contains("launchable-activity: name='org.factorio.local.launcher.MainActivity'")||badge.contains("application-debuggable"))throw new IOException("APK identity or release mode incorrect");
             packages.add("{\"apk\":"+quote(apk.toString())+",\"bytes\":"+Files.size(apk)+",\"sha256\":"+quote(sha(Files.readAllBytes(apk)))+",\"package\":"+quote(id)+",\"performancePackage\":"+perf+"}");
         }
-        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
+        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"keyboardHintAdaptersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
         Files.writeString(artifacts.resolve("build-result.json"),result+"\n");System.out.println("__FACTORIO_REPORT__"+result);
     }
 }

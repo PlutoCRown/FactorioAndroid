@@ -98,6 +98,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         return down&&up;
     }
     public boolean forwardKeyboardEvent(KeyEvent event) {
+        if((event.getFlags()&KeyEvent.FLAG_SOFT_KEYBOARD)!=0)return false;
         if(pointer==0||!isConnected()||!event.isFromSource(InputDevice.SOURCE_KEYBOARD)||
             event.isFromSource(InputDevice.SOURCE_GAMEPAD))return false;
         int code=event.getKeyCode(),scan=event.getScanCode(),action=event.getAction();
@@ -173,11 +174,11 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         if(!keyboardRequested)return null;
         if(imeConnection!=null)imeConnection.discard();
         info.inputType=keyboardMode==3?InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_SIGNED:
-            InputType.TYPE_CLASS_TEXT|(keyboardMode==2?InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)|
+            InputType.TYPE_CLASS_TEXT|(keyboardMode==2?InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:0)|
             (keyboardMode==1?InputType.TYPE_TEXT_FLAG_MULTI_LINE:0);
         info.imeOptions=EditorInfo.IME_FLAG_NO_FULLSCREEN|EditorInfo.IME_FLAG_NO_EXTRACT_UI|
             (keyboardMode==1?EditorInfo.IME_ACTION_NONE:EditorInfo.IME_ACTION_DONE);
-        info.initialSelStart=-1;info.initialSelEnd=-1;
+        info.initialSelStart=0;info.initialSelEnd=0;
         imeConnection=new GameImeConnection(this);return imeConnection;
     }
     @Override public boolean onKeyPreIme(int code,KeyEvent event) {
@@ -185,12 +186,24 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         return super.onKeyPreIme(code,event);
     }
     boolean commitImeText(String text) {
+        return applyImeEdit(0,0,text,0);
+    }
+    boolean applyImeEdit(int before,int deletes,String text,int after) {
         if(!acceptsIme()||text.length()>65536)return false;
-        if(!text.isEmpty()){sendTextEvent(pointer,text.getBytes(StandardCharsets.UTF_8));imeCommits++;imeCodePoints+=text.codePointCount(0,text.length());}
-        return true;
+        boolean ok=true;
+        if(activity.hasDirectImeText())ok=activity.sendImeEdit(before,deletes,text,after);
+        else {
+            for(int i=0;i<Math.abs(before);i++)ok=imeKey(before<0?KeyEvent.KEYCODE_DPAD_LEFT:KeyEvent.KEYCODE_DPAD_RIGHT)&&ok;
+            for(int i=0;i<deletes;i++)ok=imeKey(KeyEvent.KEYCODE_DEL)&&ok;
+            if(ok&&!text.isEmpty())sendTextEvent(pointer,text.getBytes(StandardCharsets.UTF_8));
+            for(int i=0;i<Math.abs(after);i++)ok=imeKey(after<0?KeyEvent.KEYCODE_DPAD_LEFT:KeyEvent.KEYCODE_DPAD_RIGHT)&&ok;
+        }
+        if(ok&&!text.isEmpty()){imeCommits++;imeCodePoints+=text.codePointCount(0,text.length());}
+        return ok;
     }
     boolean imeKey(int code) {
         if(!acceptsIme())return false;
+        if(activity.hasDirectImeText())return activity.sendImeKey(code);
         int scan;
         switch(code){case KeyEvent.KEYCODE_DEL:scan=14;break;case KeyEvent.KEYCODE_FORWARD_DEL:scan=111;break;
             case KeyEvent.KEYCODE_ENTER:scan=28;break;case KeyEvent.KEYCODE_TAB:scan=15;break;

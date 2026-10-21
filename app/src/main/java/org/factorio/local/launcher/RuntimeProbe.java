@@ -317,6 +317,13 @@ public final class RuntimeProbe {
                 if(progress!=null)progress.update("gamepadRelayReady",result);
             }
             if(manual)windowEnvironment.putAll(control.keyboardEnvironment());
+            String hintAdapter=manual?KeyboardBridge.hintAdapter(context,engineHash):null;
+            result.put("keyboardHintAdapterAvailable",hintAdapter!=null);
+            if(hintAdapter!=null) {
+                String existing=windowEnvironment.get("LD_PRELOAD");
+                windowEnvironment.put("LD_PRELOAD",existing==null?hintAdapter:existing+":"+hintAdapter);
+                windowEnvironment.put("REA_IME_HINT_ENGINE_SHA256",engineHash);
+            }
             AudioDiskBridge audioBridge=AudioDiskBridge.create(context);
             try {
             if(audioBridge!=null) {

@@ -45,6 +45,12 @@ class BuildImeNative {
         Path out=nativeDir.resolve("librea_ime_opener.so");
         run(root,List.of(zig.toString(),"cc","-target","aarch64-linux-musl","-std=c11","-O2","-static","-s","-Wall","-Wextra","-Werror","-Wl,-z,max-page-size=16384","-Wl,--build-id=sha1",source.toString(),"-o",out.toString()));
         String value="name=librea_ime_opener.so\nbytes="+Files.size(out)+"\nsha256="+sha(out)+"\nsourceSha256="+sha(source)+"\n";
+        Path guardSource=root.resolve("native-input/ime/sdl-hint-guard.c"),guardHeader=root.resolve("native-input/ime/sdl-hint-interfaces.h");
+        Path guard=nativeDir.resolve("librea_ime_hint.so");
+        run(root,List.of(zig.toString(),"cc","-target","aarch64-linux-gnu.2.38","-std=c11","-O2","-shared","-fPIC","-s",
+            "-Wall","-Wextra","-Werror","-Wl,-z,max-page-size=16384","-Wl,--build-id=sha1",guardSource.toString(),"-o",guard.toString(),"-ldl","-pthread"));
+        value+="hint.name=librea_ime_hint.so\nhint.bytes="+Files.size(guard)+"\nhint.sha256="+sha(guard)+"\nhint.sourceSha256="+sha(guardSource)+"\nhint.headerSha256="+sha(guardHeader)+"\n";
+        value+="hint.engineSha256=ebe1914b13c3ff45766d75001dda1ae87ae1a6f170feaf86973d782aa2e69de0\n";
         Files.writeString(assets.resolve("ime-native.properties"),value);
         System.out.println("Compiled keyboard helper: "+Files.size(out)+" bytes");
     }
