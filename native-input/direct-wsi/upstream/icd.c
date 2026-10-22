@@ -78,26 +78,14 @@ static void initialize_hal(void)
         return;
     }
 
-    /* Android normally implements surface/swapchain operations in its loader.
-     * Desktop WSI belongs to this adapter. Reject driver-owned WSI rather than
-     * pretending its surface representation matches the desktop ICD contract. */
+    /* Desktop presentation belongs to this adapter on every GPU. Mali's HAL
+     * leaves surface extensions to Android's loader. Adreno and other vendor
+     * HALs advertise their own. Both are usable: driver presentation names are
+     * omitted when this ICD reports extensions, and the HAL is not rejected. */
     uint32_t count = 0;
     VkResult vr = candidate->EnumerateInstanceExtensionProperties(NULL, &count, NULL);
-    if (vr != VK_SUCCESS)
-        return;
-    VkExtensionProperties *extensions = count ? calloc(count, sizeof(*extensions)) : NULL;
-    if (count && !extensions)
-        return;
-    vr = candidate->EnumerateInstanceExtensionProperties(NULL, &count, extensions);
-    int has_wsi = 0;
-    for (uint32_t i = 0; vr == VK_SUCCESS && i < count; ++i) {
-        if (!strcmp(extensions[i].extensionName, "VK_KHR_surface") ||
-            !strcmp(extensions[i].extensionName, "VK_KHR_display"))
-            has_wsi = 1;
-    }
-    free(extensions);
-    if (vr != VK_SUCCESS || has_wsi) {
-        fprintf(stderr, "hybris ICD: HAL extension discovery failed or needs unsupported driver-owned WSI\n");
+    if (vr != VK_SUCCESS) {
+        fprintf(stderr, "hybris ICD: HAL extension discovery failed (%d)\n", (int)vr);
         return;
     }
     /* Some vendor drivers inspect Android's instance dispatch metadata when

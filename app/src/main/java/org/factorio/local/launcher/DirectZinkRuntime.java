@@ -26,7 +26,7 @@ final class DirectZinkRuntime {
             for(int j=0;j<expected.length;j++){if(!expected[j].equals(aliases.getString(j)))throw new IOException("Direct alias mismatch");int slash=expected[j].lastIndexOf('/');File parent=slash<0?directory:new File(directory,expected[j].substring(0,slash));if(!parent.isDirectory()&&!parent.mkdirs())throw new IOException("Cannot create direct module directory");RuntimeLibraries.alias(parent,expected[j].substring(slash+1),installed);}
         }
         File vendor=new File(directory,"mesa-vendor.json");try(FileOutputStream out=new FileOutputStream(vendor)){out.write(new JSONObject().put("file_format_version","1.0.0").put("ICD",new JSONObject().put("library_path",new File(directory,"libEGL_mesa.so.0").getAbsolutePath())).toString().getBytes(StandardCharsets.UTF_8));}
-        File icd=new File(directory,"mali-icd.json");try(FileOutputStream out=new FileOutputStream(icd)){out.write(new JSONObject().put("file_format_version","1.0.0").put("ICD",new JSONObject().put("library_path",new File(directory,"librea_direct_icd.so").getAbsolutePath()).put("api_version","1.4.0")).toString().getBytes(StandardCharsets.UTF_8));}
+        File icd=new File(directory,"direct-icd.json");try(FileOutputStream out=new FileOutputStream(icd)){out.write(new JSONObject().put("file_format_version","1.0.0").put("ICD",new JSONObject().put("library_path",new File(directory,"librea_direct_icd.so").getAbsolutePath()).put("api_version","1.4.0")).toString().getBytes(StandardCharsets.UTF_8));}
         // Wait only for our Surface receiver's Unix socket, never for a capability probe.
         File socket=new File(context.getFilesDir(),"direct-present.sock");long until=android.os.SystemClock.uptimeMillis()+15000;
         while(!socket.exists()&&android.os.SystemClock.uptimeMillis()<until)Thread.sleep(50);
@@ -38,6 +38,14 @@ final class DirectZinkRuntime {
         env.put("GALLIUM_DRIVER","zink");env.put("MESA_LOADER_DRIVER_OVERRIDE","zink");env.put("LIBGL_ALWAYS_SOFTWARE","0");env.remove("LIBGL_DRI3_DISABLE");env.put("LIBGL_KOPPER_DRI2","true");env.remove("LIBGL_KOPPER_DISABLE");
         env.put("VK_DRIVER_FILES",runtime.getString("icdFile"));env.put("VK_ICD_FILENAMES",runtime.getString("icdFile"));env.put("REA_DIRECT_SOCKET",runtime.getString("surfaceSocket"));
         env.put("HYBRIS_LINKER_DIR",runtime.getString("linkerDirectory"));env.put("HYBRIS_ANDROID_SDK_VERSION","29");env.put("HYBRIS_LD_LIBRARY_PATH","/system/lib64:/vendor/lib64:/apex/com.android.runtime/lib64:/apex/com.android.runtime/lib64/bionic");env.put("LIBVULKAN","/system/lib64/libvulkan.so");
-        for(String key:Arrays.asList("HYBRIS_MALI_MMUD_SKIP_LOADER_CHECK","HYBRIS_VULKAN_COMPAT_SCALED_VERTEX","HYBRIS_VULKAN_COMPAT_PACKED_VERTEX","HYBRIS_BC_TEXTURES","HYBRIS_VULKAN_COMPAT_UNUSED_BUILTINS","HYBRIS_VULKAN_COMPAT_POINT_SIZE","HYBRIS_VULKAN_COMPAT_INOUT","HYBRIS_VULKAN_COMPAT_VERTEX_STORES"))env.put(key,"0");
+        if(maliGlesPresent())env.put("HYBRIS_MALI_MMUD_SKIP_LOADER_CHECK","0");
+    }
+    /** The property hook lives inside libGLES_mali.so. Other GPUs do not load it. */
+    private static boolean maliGlesPresent() {
+        String[] paths={"/vendor/lib64/egl/libGLES_mali.so","/vendor/lib/egl/libGLES_mali.so",
+            "/vendor/lib64/libGLES_mali.so","/vendor/lib/libGLES_mali.so",
+            "/system/vendor/lib64/egl/libGLES_mali.so","/odm/lib64/egl/libGLES_mali.so"};
+        for(String path:paths)if(new File(path).isFile())return true;
+        return false;
     }
 }

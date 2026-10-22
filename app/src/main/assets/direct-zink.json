@@ -103,8 +103,8 @@
       "aliases": [
         "librea_direct_icd.so"
       ],
-      "bytes": 359992,
-      "sha256": "d1171a4d85c96a2ebd35dc0dd0ab66f9e11cc578b4c604898409f682a2c8fa0f"
+      "bytes": 360400,
+      "sha256": "12c262c892b9ba6a08eaf9e4cb944e2b94f05b3084a361734cd7776c5bef1f5a"
     },
     {
       "packagedName": "librea_direct_mesa_glx.so",

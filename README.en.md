@@ -76,13 +76,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 JDK/SDK tools go under `tools/`, and downloads/Gradle state under `.cache/`. No system installation or persistent environment changes. To reuse compatible existing tools, pass `-Jdk` and `-Sdk` to the build script instead.
 
-On Linux x86_64 with an existing JDK/SDK:
+On Linux x86_64 or macOS with JDK 17+ and an Android SDK:
 
 ```bash
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-This project does not install Android tools on the author's Mac; development builds use Windows or GitHub Actions. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB, the additional AndroidX path library and the keyboard request helper inside each APK. The compile-only JNI annotation stub is not packaged. Verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The small keyboard helper is compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
+Zig 0.15.2 for the keyboard helper downloads automatically on Linux x86_64 and macOS. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB, the additional AndroidX path library and the keyboard request helper inside each APK. The compile-only JNI annotation stub is not packaged. Verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The small keyboard helper is compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
 
 Both entry points restore the pinned runtime automatically. To restore separately (JDK 11+):
 
