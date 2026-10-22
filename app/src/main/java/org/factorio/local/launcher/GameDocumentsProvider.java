@@ -45,7 +45,7 @@ public final class GameDocumentsProvider extends DocumentsProvider {
         }catch(IOException error){throw failure(error);}
         if(GameImporter.current(getContext())==null)return cursor;
         try {
-            // Capture the profile once so both roots refer to the same import.
+            // Saves and mods use the same shared profile as the running game.
             String profile=GameSession.profileDirectory(getContext()).getName();
             for(String root:new String[]{"saves","mods"}) {
                 GameDocumentIds.Id id=GameDocumentIds.root(profile,root);File dir=files(id).directory(root);

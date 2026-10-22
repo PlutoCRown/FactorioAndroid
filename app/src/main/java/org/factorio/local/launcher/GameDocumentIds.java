@@ -3,7 +3,7 @@ package org.factorio.local.launcher;
 import java.io.*;
 import java.nio.file.Files;
 
-/** Persisted SAF grants name a fixed release/content profile, never the active import. */
+/** Persisted SAF grants refer to the shared writable profile. */
 final class GameDocumentIds {
     static final class Id {
         final String profile,local;
@@ -23,23 +23,16 @@ final class GameDocumentIds {
     static Id parse(String document) throws IOException {
         if(document==null)throw new IOException("Missing document identifier");
         int separator=document.indexOf('|');
-        // Unscoped old document/tree grants must not follow a replacement game.
-        // Logical Root IDs (saves/mods) are retained by the provider separately.
-        if(separator<0||separator!=document.lastIndexOf('|'))throw new IOException("Unscoped document identifier");
+        if(separator<0||separator!=document.lastIndexOf('|'))throw new IOException("Invalid document identifier");
         String profile=document.substring(0,separator),local=document.substring(separator+1);
-        boolean expansion=profile.endsWith("-space-age");String suffix=expansion?"-space-age":"-base";
-        if(!profile.startsWith("factorio-")||!profile.endsWith(suffix)||profile.length()<="factorio-".length()+suffix.length()||profile.length()>128)
-            throw new IOException("Invalid document profile");
-        String version=profile.substring("factorio-".length(),profile.length()-suffix.length());
-        if(!GameProfiles.id(version,expansion).equals(profile))throw new IOException("Invalid document profile");
+        if(!GameProfiles.ID.equals(profile))throw new IOException("Invalid document profile");
         int colon=local.indexOf(':');String root=colon<0?local:local.substring(0,colon);
         if(!root.equals("saves")&&!root.equals("mods"))throw new IOException("Unknown document root");
         if(colon>=0)for(String part:local.substring(colon+1).split("/",-1))GameFiles.checkName(part);
         return new Id(profile,local);
     }
     static File directory(File files,String profile) throws IOException {
-        // Validate identifiers even for direct helper callers. Never manufacture
-        // a missing historical profile merely because a stale URI names it.
+        // Validate identifiers without creating directories for a document lookup.
         root(profile,"saves");
         File profiles=new File(files.getCanonicalFile(),"profiles"),target=new File(profiles,profile);
         if(!profiles.isDirectory()||!target.isDirectory()||Files.isSymbolicLink(profiles.toPath())||Files.isSymbolicLink(target.toPath())

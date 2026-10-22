@@ -83,9 +83,7 @@ public final class GameSession implements AutoCloseable {
         }
     }
     static File profileDirectory(Context context) throws Exception {
-        JSONObject game=GameImporter.current(context);
-        String id=game==null?"unassigned":GameProfiles.id(game.getString("version"),game.optBoolean("spaceAge"));
-        return GameProfiles.directory(context.getFilesDir(),id,game!=null);
+        return GameProfiles.directory(context.getFilesDir());
     }
     static File prepareProfile(Context context,File gameDirectory,String preset,int loadingLimit) throws Exception {
         File profile=profileDirectory(context),userdata=new File(profile,"userdata");
