@@ -728,6 +728,27 @@ VkResult hybris_icd_enumerate_device_extensions(VkPhysicalDevice physical, const
     uint32_t hal_count = 0;
     VkResult result = enumerate(physical, NULL, &hal_count, NULL);
     if (result != VK_SUCCESS) return result;
+    VkExtensionProperties *hal_props = hal_count ? calloc(hal_count, sizeof(*hal_props)) : NULL;
+    if (hal_count && !hal_props) return VK_ERROR_OUT_OF_HOST_MEMORY;
+    uint32_t query = hal_count;
+    if (hal_count) {
+        result = enumerate(physical, NULL, &query, hal_props);
+        if (result != VK_SUCCESS && result != VK_INCOMPLETE) {
+            free(hal_props);
+            return result;
+        }
+    }
+    /* A vendor that implements Android swapchain still must not advertise it
+     * here. This adapter publishes one swapchain, backed by the driver's
+     * Android hardware-buffer import. */
+    if (query > hal_count) query = hal_count;
+    uint32_t kept = 0;
+    for (uint32_t i = 0; i < query; ++i) {
+        const char *name = hal_props[i].extensionName;
+        if (!strcmp(name, "VK_KHR_swapchain") || !strcmp(name, "VK_KHR_display_swapchain"))
+            continue;
+        hal_props[kept++] = hal_props[i];
+    }
 #ifdef WANT_WAYLAND
     int extra = hybris_icd_physical_has_native_buffer(physical);
     static const VkExtensionProperties swapchain = {
@@ -735,26 +756,16 @@ VkResult hybris_icd_enumerate_device_extensions(VkPhysicalDevice physical, const
 #else
     const int extra = 0;
 #endif
-    uint32_t total = hal_count + (extra ? 1u : 0u);
+    uint32_t total = kept + (extra ? 1u : 0u);
     if (!properties) {
         *count = total;
+        free(hal_props);
         return VK_SUCCESS;
     }
     uint32_t space = *count;
-    uint32_t written = 0;
-    if (hal_count) {
-        VkExtensionProperties *hal_props = calloc(hal_count, sizeof(*hal_props));
-        if (!hal_props) return VK_ERROR_OUT_OF_HOST_MEMORY;
-        uint32_t query = hal_count;
-        result = enumerate(physical, NULL, &query, hal_props);
-        if (result != VK_SUCCESS && result != VK_INCOMPLETE) {
-            free(hal_props);
-            return result;
-        }
-        written = space < query ? space : query;
-        if (written) memcpy(properties, hal_props, written * sizeof(*properties));
-        free(hal_props);
-    }
+    uint32_t written = space < kept ? space : kept;
+    if (written) memcpy(properties, hal_props, written * sizeof(*properties));
+    free(hal_props);
 #ifdef WANT_WAYLAND
     if (extra && written < space) properties[written++] = swapchain;
 #endif

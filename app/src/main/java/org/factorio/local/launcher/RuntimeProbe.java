@@ -115,6 +115,13 @@ public final class RuntimeProbe {
                 int ticks=0;
                 while(!(exited=process.waitFor(1,TimeUnit.SECONDS))&&!session.stopping()) {
                     result.put("lifecycle",session.lifecycleState());
+                    if(++ticks%2==0) {
+                        String tail=outputTail.get();
+                        if(tail!=null&&!tail.isEmpty()) {
+                            result.put("outputTail",tail);
+                            if(progress!=null)progress.update("engineOutput",result);
+                        }
+                    }
                     if(audioBridge!=null&&++ticks%5==0) {
                         result.put("liveGraphics",new JSONObject(liveGraphics.snapshot()));
                         result.put("audioBridge",audioBridge.report());
@@ -302,6 +309,12 @@ public final class RuntimeProbe {
                 windowEnvironment.put("SDL_VIDEO_DRIVER","x11");
                 windowEnvironment.put("XDG_RUNTIME_DIR",serverTemp.getAbsolutePath());
             }
+            File mesaLog=new File(context.getFilesDir(),"mesa.log");
+            if(mesaLog.isFile()&&!mesaLog.delete())mesaLog=new File(context.getFilesDir(),"mesa-"+System.currentTimeMillis()+".log");
+            windowEnvironment.put("MESA_LOG_FILE",mesaLog.getAbsolutePath());
+            windowEnvironment.put("MESA_DEBUG","flush");
+            windowEnvironment.put("MESA_LOG_LEVEL","debug");
+            windowEnvironment.put("LIBGL_DEBUG","verbose");
             windowEnvironment.put("__GLX_VENDOR_LIBRARY_NAME","mesa");
             windowEnvironment.put("SDL_EGL_LIBRARY",new File(dependencies.getString("directory"),"libEGL.so.1").getAbsolutePath());
             windowEnvironment.put("SDL_VIDEO_FORCE_EGL","1");

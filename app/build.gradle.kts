@@ -39,6 +39,10 @@ android {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("localRelease")
         }
+        getByName("debug") {
+            // Same identity as release so a test install keeps the imported game.
+            signingConfig = signingConfigs.getByName("localRelease")
+        }
     }
     buildFeatures { compose = true }
     compileOptions {

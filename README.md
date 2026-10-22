@@ -76,13 +76,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 
 
 JDK/SDK 放在 `tools/`，下载与 Gradle 缓存放在 `.cache/`；不安装到系统、不永久修改环境。复用现有兼容工具时，直接给构建脚本传 `-Jdk`、`-Sdk`。
 
-Linux x86_64 已有兼容工具时：
+Linux x86_64 或 macOS 已有 JDK 17+ 和 Android SDK 时：
 
 ```bash
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-本项目开发仍遵守 Mac 不安装安卓工具链：本机编辑源码，Windows 或 GitHub Actions 构建。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（原有检查及键盘请求/组合文字检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB、1个AndroidX路径库及键盘请求程序的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验的第三方运行库；小型键盘请求程序随构建从源码编译，需要工程内 Zig 0.15.2，准备方式见键盘说明。
+键盘辅助程序用的 Zig 0.15.2 在 Linux x86_64 与 macOS 上会按主机自动下载。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（原有检查及键盘请求/组合文字检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB、1个AndroidX路径库及键盘请求程序的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验的第三方运行库；小型键盘请求程序随构建从源码编译，需要工程内 Zig 0.15.2，准备方式见键盘说明。
 
 两个入口均自动恢复固定运行库；也可单独执行（此恢复命令只需JDK11+）：
 

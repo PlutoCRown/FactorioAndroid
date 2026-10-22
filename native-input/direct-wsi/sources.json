@@ -64,6 +64,7 @@
   },
   "patches": [
     "wsi.c: remove Wayland from advertised extensions; this app provides only XCB/Xlib native Surface transport",
+    "icd.c and wsi.c: accept any vendor Vulkan HAL. Driver surface and swapchain names are omitted; this adapter presents through its own X11 surface.",
     "native-window-surface.c: replace TAWC-DRI native-window transport with private AHB socket, retained release fence + receiver completion acknowledgement"
   ],
   "compiledInputs": [

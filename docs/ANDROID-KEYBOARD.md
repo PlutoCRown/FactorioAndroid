@@ -26,6 +26,7 @@
 
 - Windows x86_64：[zig-x86_64-windows-0.15.2.zip](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip)。解压到工程 `tools/`，使 `tools/zig-x86_64-windows-0.15.2/zig.exe` 存在。构建脚本会核对编译器身份。
 - Linux x86_64：[zig-x86_64-linux-0.15.2.tar.xz](https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz)。构建时按固定 URL 自动下载到工程 `.cache/`、校验并解压到 `tools/`。
+- macOS Apple Silicon：[zig-aarch64-macos-0.15.2.tar.xz](https://ziglang.org/download/0.15.2/zig-aarch64-macos-0.15.2.tar.xz)。Intel Mac 使用 [zig-x86_64-macos-0.15.2.tar.xz](https://ziglang.org/download/0.15.2/zig-x86_64-macos-0.15.2.tar.xz)。构建时按本机 CPU 自动下载、校验并解压。
 
 版本、下载校验和编译器校验集中在 [ime-compiler.properties](../scripts/ime-compiler.properties)。运行普通构建入口时 Gradle 自动执行 [BuildImeNative.java](../scripts/BuildImeNative.java)，等价的核心编译参数是：
 

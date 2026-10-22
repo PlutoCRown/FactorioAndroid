@@ -93,6 +93,24 @@ static struct surface_state *find_surface(VkSurfaceKHR surface)
 
 #endif
 
+/* Vendor HALs may advertise the surface they implement for Android. This
+ * process presents through the adapter's own X11 surface, so those names are
+ * not forwarded. The check is by extension name, not by GPU vendor. */
+static int hal_owned_presentation(const char *name)
+{
+    static const char *const names[] = {
+        "VK_KHR_surface", "VK_KHR_display", "VK_KHR_android_surface",
+        "VK_KHR_wayland_surface", "VK_KHR_xcb_surface", "VK_KHR_xlib_surface",
+        "VK_KHR_win32_surface", "VK_EXT_headless_surface", "VK_EXT_metal_surface",
+        "VK_EXT_directfb_surface", "VK_MVK_macos_surface",
+        "VK_FUCHSIA_imagepipe_surface", "VK_GGP_stream_descriptor_surface",
+        "VK_NN_vi_surface", "VK_QNX_screen_surface"};
+    if (!name) return 0;
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i)
+        if (!strcmp(name, names[i])) return 1;
+    return 0;
+}
+
 VkResult hybris_icd_wsi_enumerate(hwvulkan_device_t *hal, const char *layer,
     uint32_t *count, VkExtensionProperties *properties)
 {
@@ -102,31 +120,36 @@ VkResult hybris_icd_wsi_enumerate(hwvulkan_device_t *hal, const char *layer,
     uint32_t hal_count = 0;
     VkResult result = hal->EnumerateInstanceExtensionProperties(NULL, &hal_count, NULL);
     if (result != VK_SUCCESS) return result;
-#ifdef WANT_WAYLAND
-    const uint32_t extra = sizeof(local_wsi) / sizeof(local_wsi[0]);
-#else
-    const uint32_t extra = 0;
-#endif
-    uint32_t total = hal_count + extra;
-    if (!properties) {
-        *count = total;
-        return VK_SUCCESS;
-    }
-    uint32_t space = *count;
-    uint32_t written = 0;
+    VkExtensionProperties *hal_props = hal_count ? calloc(hal_count, sizeof(*hal_props)) : NULL;
+    if (hal_count && !hal_props) return VK_ERROR_OUT_OF_HOST_MEMORY;
+    uint32_t query = hal_count;
     if (hal_count) {
-        VkExtensionProperties *hal_props = calloc(hal_count, sizeof(*hal_props));
-        if (!hal_props) return VK_ERROR_OUT_OF_HOST_MEMORY;
-        uint32_t query = hal_count;
         result = hal->EnumerateInstanceExtensionProperties(NULL, &query, hal_props);
         if (result != VK_SUCCESS && result != VK_INCOMPLETE) {
             free(hal_props);
             return result;
         }
-        written = space < query ? space : query;
-        if (written) memcpy(properties, hal_props, written * sizeof(*properties));
-        free(hal_props);
     }
+    if (query > hal_count) query = hal_count;
+    uint32_t kept = 0;
+    for (uint32_t i = 0; i < query; ++i)
+        if (!hal_owned_presentation(hal_props[i].extensionName))
+            hal_props[kept++] = hal_props[i];
+#ifdef WANT_WAYLAND
+    const uint32_t extra = sizeof(local_wsi) / sizeof(local_wsi[0]);
+#else
+    const uint32_t extra = 0;
+#endif
+    uint32_t total = kept + extra;
+    if (!properties) {
+        *count = total;
+        free(hal_props);
+        return VK_SUCCESS;
+    }
+    uint32_t space = *count;
+    uint32_t written = space < kept ? space : kept;
+    if (written) memcpy(properties, hal_props, written * sizeof(*properties));
+    free(hal_props);
 #ifdef WANT_WAYLAND
     for (uint32_t i = 0; i < extra && written < space; ++i)
         properties[written++] = local_wsi[i];
