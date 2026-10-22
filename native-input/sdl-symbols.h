@@ -70,9 +70,26 @@ static inline void *rea_symbols_find(const struct rea_symbols *s,const char *nam
     }
     return NULL;
 }
-static inline void **rea_video_pointer(const struct rea_symbols *s) {
-    if(!s->data||!rea_symbols_find(s,"SDL_ScreenKeyboardShown"))return NULL;
-    const Elf64_Ehdr *h=(const Elf64_Ehdr *)s->data;uintptr_t result=0;
+/* SDL_VideoDevice begins with its driver name in SDL3. Use the public
+ * current-driver pointer to distinguish LTO-renamed video state from unrelated
+ * SDL input/audio globals named _this. No compiler suffix or byte offset is fixed.
+ * Prefer SDL_GetVideoDevice when that internal accessor is retained instead. */
+static inline bool rea_readable_pointer(const void *address) {
+    uintptr_t value=(uintptr_t)address;if(!value||value>UINTPTR_MAX-sizeof(void *))return false;
+    FILE *maps=fopen("/proc/self/maps","re");if(!maps)return false;
+    char line[1024],permissions[5];unsigned long begin,end;bool found=false;
+    while(fgets(line,sizeof(line),maps)) {
+        if(sscanf(line,"%lx-%lx %4s",&begin,&end,permissions)==3&&permissions[0]=='r'&&value>=begin&&value+sizeof(void *)<=end){found=true;break;}
+    }
+    fclose(maps);return found;
+}
+static inline bool rea_device_symbol_name(const char *name,size_t length) {
+    if(length==5)return !memcmp(name,"_this",5);
+    return length>=7&&!memcmp(name,"_this.",6);
+}
+static inline void *rea_video_device(const struct rea_symbols *s,const char *driver) {
+    if(!s->data||!driver||!rea_symbols_find(s,"SDL_ScreenKeyboardShown"))return NULL;
+    const Elf64_Ehdr *h=(const Elf64_Ehdr *)s->data;void *result=NULL;
     for(unsigned i=0;i<h->e_shnum;i++) {
         Elf64_Shdr tab;memcpy(&tab,s->data+h->e_shoff+(uint64_t)i*sizeof(tab),sizeof(tab));
         if(tab.sh_type!=SHT_SYMTAB||tab.sh_entsize!=sizeof(Elf64_Sym)||tab.sh_link>=h->e_shnum||!rea_range(s->size,tab.sh_offset,tab.sh_size))continue;
@@ -82,28 +99,27 @@ static inline void **rea_video_pointer(const struct rea_symbols *s) {
             Elf64_Sym sym;memcpy(&sym,s->data+tab.sh_offset+j*sizeof(sym),sizeof(sym));
             if(!sym.st_shndx||ELF64_ST_TYPE(sym.st_info)!=STT_OBJECT||sym.st_size!=sizeof(void *)||sym.st_name>=strings.sh_size)continue;
             const char *name=(const char *)s->data+strings.sh_offset+sym.st_name;
-            if(strnlen(name,(size_t)(strings.sh_size-sym.st_name))!=5||memcmp(name,"_this",5))continue;
-            if(sym.st_value>UINTPTR_MAX-s->base)return NULL;
-            uintptr_t address=s->base+(uintptr_t)sym.st_value;
-            if(result&&result!=address)return NULL;
-            // The symbol must occupy readable mapped data, not a guessed structure offset.
-            if(h->e_phentsize!=sizeof(Elf64_Phdr)||!rea_range(s->size,h->e_phoff,(uint64_t)h->e_phnum*sizeof(Elf64_Phdr)))return NULL;
-            for(unsigned k=0;k<h->e_phnum;k++) {
-                Elf64_Phdr p;memcpy(&p,s->data+h->e_phoff+(uint64_t)k*sizeof(p),sizeof(p));
-                if(p.p_type==PT_LOAD&&(p.p_flags&PF_R)&&sym.st_value>=p.p_vaddr&&p.p_memsz>=sizeof(void *)&&sym.st_value-p.p_vaddr<=p.p_memsz-sizeof(void *))result=address;
-            }
+            size_t available=(size_t)(strings.sh_size-sym.st_name),length=strnlen(name,available);
+            if(length==available||!rea_device_symbol_name(name,length)||sym.st_value>UINTPTR_MAX-s->base)continue;
+            void *slot=(void *)(s->base+(uintptr_t)sym.st_value),*device=NULL;const char *identity=NULL;
+            if(!rea_readable_pointer(slot))continue;memcpy(&device,slot,sizeof(device));
+            if(!rea_readable_pointer(device))continue;memcpy(&identity,device,sizeof(identity));
+            if(identity!=driver)continue;
+            if(result&&result!=device)return NULL;
+            result=device;
         }
     }
-    return (void **)result;
+    return result;
 }
+struct rea_video_query {const char *driver;void *device;};
 static inline int rea_find_video(struct dl_phdr_info *info,size_t size,void *userdata) {
-    (void)size;void ***result=userdata;struct rea_symbols symbols;
+    (void)size;struct rea_video_query *query=userdata;struct rea_symbols symbols;
     const char *path=info->dlpi_name&&*info->dlpi_name?info->dlpi_name:getenv("REA_ENGINE_PATH");
     if(!path||!*path)path="/proc/self/exe";
-    if(rea_symbols_open(&symbols,path,info->dlpi_addr)) {*result=rea_video_pointer(&symbols);rea_symbols_close(&symbols);}
-    return *result!=NULL;
+    if(rea_symbols_open(&symbols,path,info->dlpi_addr)) {query->device=rea_video_device(&symbols,query->driver);rea_symbols_close(&symbols);}
+    return query->device!=NULL;
 }
-static inline void **rea_sdl_video_pointer(void) {void **result=NULL;dl_iterate_phdr(rea_find_video,&result);return result;}
+static inline void *rea_sdl_video_device(const char *driver) {struct rea_video_query query={driver,NULL};dl_iterate_phdr(rea_find_video,&query);return query.device;}
 struct rea_query {const char *name;void *value;};
 static inline int rea_find_module(struct dl_phdr_info *info,size_t size,void *userdata) {
     (void)size;struct rea_query *q=userdata;struct rea_symbols symbols;
@@ -114,11 +130,15 @@ static inline int rea_find_module(struct dl_phdr_info *info,size_t size,void *us
     }
     return q->value!=NULL;
 }
-static inline void *rea_sdl_symbol(const char *name) {
+static inline void *rea_sdl_optional_symbol(const char *name) {
     void *p=dlsym(RTLD_DEFAULT,name);if(p)return p;
     struct rea_query q={name,NULL};dl_iterate_phdr(rea_find_module,&q);
-    if(!q.value)fprintf(stderr,"REA_SDL missing_interface=%s\n",name);
     return q.value;
+}
+static inline void *rea_sdl_symbol(const char *name) {
+    void *value=rea_sdl_optional_symbol(name);
+    if(!value)fprintf(stderr,"REA_SDL missing_interface=%s\n",name);
+    return value;
 }
 static inline bool rea_sdl3(void) {
     int (*version)(void)=(int (*)(void))rea_sdl_symbol("SDL_GetVersion");

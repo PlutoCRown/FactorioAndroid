@@ -36,7 +36,8 @@ static void *(*keyboard_focus)(void);
 static bool (*text_active)(void *);
 static bool (*screen_shown)(void *);
 static void (*show_screen)(void *,void *,unsigned),(*hide_screen)(void *,void *);
-static void **video_device;
+static void *(*get_video_device)(void);
+static const char *(*current_video_driver)(void);
 static void *(*get_environment)(void);
 static bool (*set_environment)(void *,const char *,const char *,bool),(*unset_environment)(void *,const char *);
 static char input_socket[91],input_token[37];
@@ -63,14 +64,15 @@ static bool bind_interfaces(void) {
     BIND(screen_shown,bool (*)(void *),"SDL_ScreenKeyboardShown");
     BIND(show_screen,void (*)(void *,void *,unsigned),"X11_ShowScreenKeyboard");
     BIND(hide_screen,void (*)(void *,void *),"X11_HideScreenKeyboard");
-    video_device=rea_sdl_video_pointer();if(!video_device)return false;
+    BIND(current_video_driver,const char *(*)(void),"SDL_GetCurrentVideoDriver");
+    get_video_device=(void *(*)(void))rea_sdl_optional_symbol("SDL_GetVideoDevice");
     BIND(get_environment,void *(*)(void),"SDL_GetEnvironment");
     BIND(set_environment,bool (*)(void *,const char *,const char *,bool),"SDL_SetEnvironmentVariable");
     BIND(unset_environment,bool (*)(void *,const char *),"SDL_UnsetEnvironmentVariable");
 #undef BIND
     return true;
 }
-struct input_command {int kind,a,b,d;char *text;bool accepted;};
+struct input_command {int kind,a,b,d;char *text;bool accepted;const char *failure;};
 static int editing_scancode(int android_code) {
     switch(android_code){case 67:return 42;case 112:return 76;case 66:return 40;case 61:return 43;
         case 21:return 80;case 22:return 79;case 19:return 82;case 20:return 81;default:return 0;}
@@ -87,20 +89,28 @@ static bool key_pair(int scancode) {
 static bool cursor_move(int distance) {int scan=distance<0?80:79;for(int i=0;i<abs(distance);i++)if(!key_pair(scan))return false;return true;}
 static void apply_input(void *userdata) {
     struct input_command *c=userdata;void *window=keyboard_focus();
-    if(!window)return;
+    if(!window){c->failure="no-keyboard-focus";return;}
     if(c->kind==3) {
-        if(c->a&&!text_active(window))return;
-        void *device=*video_device;
-        if(!device)return;
+        if(c->a&&!text_active(window)){c->failure="text-input-inactive";return;}
+        void *device=get_video_device?get_video_device():rea_sdl_video_device(current_video_driver());
+        if(!device){c->failure="no-video-device";return;}
         if(screen_shown(window)!=(bool)c->a) {
             /* The backend emits a URL and a visibility event. Mark its child
              * as an echo so Android keeps the active editor and input mode. */
             void *environment=get_environment();
-            if(!environment||!set_environment(environment,"REA_IME_VISIBILITY_ECHO","1",true))return;
+            if(!environment||!set_environment(environment,"REA_IME_VISIBILITY_ECHO","1",true)){c->failure="echo-environment";return;}
+            /* SDL may populate a fresh child environment from libc instead of
+             * its cached environment. Tag both, then restore the private key. */
+            const char *prior=getenv("REA_IME_VISIBILITY_ECHO");char *saved=prior?strdup(prior):NULL;
+            if((prior&&!saved)||setenv("REA_IME_VISIBILITY_ECHO","1",1)) {
+                free(saved);unset_environment(environment,"REA_IME_VISIBILITY_ECHO");c->failure="child-echo-environment";return;
+            }
             if(c->a)show_screen(device,window,0);else hide_screen(device,window);
-            if(!unset_environment(environment,"REA_IME_VISIBILITY_ECHO"))return;
+            bool restored=saved?setenv("REA_IME_VISIBILITY_ECHO",saved,1)==0:unsetenv("REA_IME_VISIBILITY_ECHO")==0;
+            free(saved);
+            if(!unset_environment(environment,"REA_IME_VISIBILITY_ECHO")||!restored){c->failure="echo-cleanup";return;}
         }
-        c->accepted=screen_shown(window)==(bool)c->a;return;
+        c->accepted=screen_shown(window)==(bool)c->a;if(!c->accepted)c->failure="backend-state-unchanged";return;
     }
     if(!text_active(window))return;
     if(c->kind==2){c->accepted=key_pair(editing_scancode(c->a));return;}
@@ -152,6 +162,7 @@ static void *input_worker(void *unused) {
         text=malloc((size_t)header[4]+1);if(!text||!read_exact(client,text,header[4])||!valid_utf8((const unsigned char *)text,header[4]))goto done;
         text[header[4]]='\0';command.text=text;
         accepted=run_main(apply_input,&command,true)&&command.accepted;
+        if(command.kind==3&&!accepted)fprintf(stderr,"REA_IME visibility_rejected=%s requested=%d\n",command.failure?command.failure:"main-thread-dispatch",command.a);
 done:
         send(client,accepted?"OK\n":"NO\n",3,MSG_NOSIGNAL);free(text);close(client);
     }
