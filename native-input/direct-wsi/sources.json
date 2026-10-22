@@ -206,7 +206,7 @@
     },
     {
       "path": "upstream/icd.c",
-      "sha256": "a851dcfdc49e7e79179089f5ff71231a660b6189e1b4997b465b68cd779efa02"
+      "sha256": "05084bb5062bb46d1b47600bab4129fb0294e692779ed2aaf8065af55f029497"
     },
     {
       "path": "upstream/instance.c",
@@ -226,7 +226,7 @@
     },
     {
       "path": "upstream/swapchain.c",
-      "sha256": "978136f096d3f125a5b2353ec0c89512ca8879e338c83dc418e4fd7a297b9a41"
+      "sha256": "47a61656699d9b64d72e58d94e9a10d1cde4bb3c991aac4a83b76dff640f0b9e"
     },
     {
       "path": "upstream/swapchain.h",
@@ -238,15 +238,19 @@
     },
     {
       "path": "upstream/wsi.c",
-      "sha256": "fb5d1e5f6d8a7e9aae69421c8b71103964ef07153d60cd407751cd49605b8b03"
+      "sha256": "9e4ad69110275204aeaa27fb0704c48e25b747806c9c5c2c4200df7ebd3309c0"
     },
     {
       "path": "upstream/wsi.h",
       "sha256": "6c6f3284d2df162e7984b59b0718bdb5db02c35328dffe9f606b1ee13210a854"
+    },
+    {
+      "path": "include/android/dlext.h",
+      "sha256": "346c633e9903d1dfcb7dda603f4e0618f010a343bb9e85d5507909bbe4c50e18"
     }
   ],
   "notes": [
-    "No Vulkan HAL/instance/device dispatch header patches. Standard GNU loader owns its own dispatch.",
+    "GNU-to-Android ICD dispatch retains upstream instance/device handling; local HAL loading and extension filtering changes are described in patches.",
     "Private AHB delivery replaces upstream TAWC-DRI provider; release fences and consumer completion wait retained.",
     "Lazy socket connect on actual present; temporary format-query surfaces allocate no transport connection."
   ]

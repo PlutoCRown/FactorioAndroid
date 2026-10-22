@@ -1,4 +1,4 @@
-/* Fixed-version SDL input relay. Calls existing SDL APIs; never patches the engine. */
+/* SDL3 input relay, resolved from the loaded engine; never patches the engine. */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -16,10 +16,10 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <poll.h>
-#include "sdl-interface-offsets.h"
+#include "sdl-symbols.h"
 
 #if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
-#error This bridge targets the pinned little-endian AArch64 engine only
+#error This bridge targets a little-endian SDL3 ABI
 #endif
 
 /* Public SDL3 virtual descriptor ABI; all optional callbacks remain null. */
@@ -48,7 +48,6 @@ _Static_assert(sizeof(struct packet) == 32, "Input packet ABI mismatch");
 _Static_assert(sizeof(struct ack) == 16, "Input acknowledgement ABI mismatch");
 
 static char socket_path[sizeof(((struct sockaddr_un *)0)->sun_path)];
-static uintptr_t engine_base;
 static uint32_t instance;
 static void *joystick;
 static bool recognized;
@@ -62,39 +61,18 @@ static bool (*detach_virtual)(uint32_t);
 static void (*close_joystick)(void *);
 static const char *(*get_error)(void);
 
-static bool executable_address(const struct dl_phdr_info *info, uintptr_t offset) {
-    for (unsigned i=0; i<info->dlpi_phnum; ++i) {
-        const ElfW(Phdr) *p=&info->dlpi_phdr[i];
-        if (p->p_type==PT_LOAD && (p->p_flags&(PF_X|PF_R))==(PF_X|PF_R) && offset>=p->p_vaddr && offset<p->p_vaddr+p->p_memsz) return true;
-    }
-    return false;
-}
-static int locate_engine(struct dl_phdr_info *info, size_t size, void *data) {
-    (void)size; (void)data;
-    const char *name=info->dlpi_name ? info->dlpi_name : "";
-    const char *base=strrchr(name,'/'); base=base ? base+1 : name;
-    if (*name && strcmp(base,"factorio")) return 0;
-    const uintptr_t offsets[]={REA_SDL_VERSION,REA_SDL_WAS_INIT,REA_SDL_ATTACH,REA_SDL_OPEN,REA_SDL_AXIS,REA_SDL_BUTTON,REA_SDL_IS_GAMEPAD,REA_SDL_DETACH,REA_SDL_CLOSE,REA_SDL_ERROR};
-    for (unsigned i=0; i<sizeof(offsets)/sizeof(offsets[0]); ++i) if (!executable_address(info,offsets[i])) return 0;
-    const unsigned char expected[]={0xc0,0xcd,0x9a,0x52,0xa0,0x05,0xa0,0x72,0xc0,0x03,0x5f,0xd6};
-    if (memcmp((const void *)(info->dlpi_addr+REA_SDL_VERSION),expected,sizeof(expected))) return 0;
-    int (*version)(void)=(int (*)(void))(info->dlpi_addr+REA_SDL_VERSION);
-    if (version()!=REA_SDL_VERSION_NUMBER) return 0;
-    engine_base=info->dlpi_addr;
-    return 1;
-}
 static bool bind_interfaces(void) {
-    if (!dl_iterate_phdr(locate_engine,NULL)) return false;
-#define BIND(variable, type, offset) variable=(type)(engine_base+(offset))
-    BIND(was_init,uint32_t (*)(uint32_t),REA_SDL_WAS_INIT);
-    BIND(attach_virtual,uint32_t (*)(const struct virtual_desc *),REA_SDL_ATTACH);
-    BIND(open_joystick,void *(*)(uint32_t),REA_SDL_OPEN);
-    BIND(set_axis,bool (*)(void *,int,int16_t),REA_SDL_AXIS);
-    BIND(set_button,bool (*)(void *,int,bool),REA_SDL_BUTTON);
-    BIND(is_gamepad,bool (*)(uint32_t),REA_SDL_IS_GAMEPAD);
-    BIND(detach_virtual,bool (*)(uint32_t),REA_SDL_DETACH);
-    BIND(close_joystick,void (*)(void *),REA_SDL_CLOSE);
-    BIND(get_error,const char *(*)(void),REA_SDL_ERROR);
+    if(!rea_sdl3())return false;
+#define BIND(variable, type, name) do { variable=(type)rea_sdl_symbol(name);if(!variable)return false; } while(0)
+    BIND(was_init,uint32_t (*)(uint32_t),"SDL_WasInit");
+    BIND(attach_virtual,uint32_t (*)(const struct virtual_desc *),"SDL_AttachVirtualJoystick");
+    BIND(open_joystick,void *(*)(uint32_t),"SDL_OpenJoystick");
+    BIND(set_axis,bool (*)(void *,int,int16_t),"SDL_SetJoystickVirtualAxis");
+    BIND(set_button,bool (*)(void *,int,bool),"SDL_SetJoystickVirtualButton");
+    BIND(is_gamepad,bool (*)(uint32_t),"SDL_IsGamepad");
+    BIND(detach_virtual,bool (*)(uint32_t),"SDL_DetachVirtualJoystick");
+    BIND(close_joystick,void (*)(void *),"SDL_CloseJoystick");
+    BIND(get_error,const char *(*)(void),"SDL_GetError");
 #undef BIND
     return true;
 }
@@ -153,8 +131,8 @@ static void serve_peer(int fd) {
 }
 static void *relay_thread(void *ignored) {
     (void)ignored;
-    if (!bind_interfaces()) { fprintf(stderr,"REA_PAD fixed-engine interface validation failed\n"); return NULL; }
-    fprintf(stderr,"REA_PAD ABI verified SDL=3.4.14 fixed_engine=2.1.22\n");
+    if (!bind_interfaces()) { fprintf(stderr,"REA_PAD required SDL3 interfaces unavailable\n"); return NULL; }
+    fprintf(stderr,"REA_PAD SDL3 interfaces resolved from loaded modules\n");
     struct stat existing;
     if (!lstat(socket_path,&existing)) {
         if (!S_ISSOCK(existing.st_mode) || existing.st_uid!=getuid()) { fprintf(stderr,"REA_PAD unexpected existing socket path\n"); return NULL; }
@@ -175,10 +153,12 @@ static void *relay_thread(void *ignored) {
     close(server); unlink(socket_path); return NULL;
 }
 __attribute__((constructor)) static void initialize_relay(void) {
-    const char *path=getenv("REA_GAMEPAD_SOCKET"), *hash=getenv("REA_ENGINE_SHA256");
-    const char *prefix="/data/user/0/org.factorio.local.launcher/cache/x11/pad-";
-    if (!path || !hash || strcmp(hash,REA_ENGINE_SHA) || strncmp(path,prefix,strlen(prefix)) || strlen(path)>=sizeof(socket_path)) return;
-    if (strlen(path)<5 || strcmp(path+strlen(path)-5,".sock")) return;
+    const char *path=getenv("REA_GAMEPAD_SOCKET");
+    if(!path||path[0]!='/'||strlen(path)>=sizeof(socket_path))return;
+    char parent[sizeof(socket_path)];strcpy(parent,path);char *slash=strrchr(parent,'/');
+    if(!slash||strncmp(slash+1,"pad-",4)||strlen(path)<5||strcmp(path+strlen(path)-5,".sock"))return;
+    *slash='\0';struct stat directory;
+    if(stat(parent,&directory)||!S_ISDIR(directory.st_mode)||directory.st_uid!=getuid())return;
     memcpy(socket_path,path,strlen(path)+1);
     pthread_t worker;
     int error=pthread_create(&worker,NULL,relay_thread,NULL);

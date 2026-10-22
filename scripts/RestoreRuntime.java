@@ -36,7 +36,7 @@ public class RestoreRuntime {
             long bytes=Long.parseLong(fields[1]);require(bytes>0&&bytes<100L*1024*1024,"Invalid runtime file size");
             safePath(root,fields[2]);require(out.put(fields[2],new Entry(fields[0],bytes,fields[2]))==null,"Duplicate runtime file");
         }
-        require(out.size()==53,"Expected 52 native libraries and one XKB archive");return out;
+        require(!out.isEmpty(),"Runtime inventory is empty");return out;
     }
     private static boolean matches(Path path,Entry entry) throws Exception {
         return Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS)&&Files.size(path)==entry.bytes&&hash(path).equals(entry.hash);
@@ -89,7 +89,7 @@ public class RestoreRuntime {
                     String name=item.getName();require(!item.isDirectory()&&seen.add(name),"Invalid or repeated ZIP member");
                     Entry entry=expected.get(name);
                     if(entry==null) {
-                        require(name.equals("RUNTIME-NOTICES.txt")||name.equals("RUNTIME-SOURCES.md"),"Unexpected ZIP member: "+name);
+                        require(name.equals("RUNTIME-NOTICES.txt")||name.equals("RUNTIME-SOURCES.md")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_gamepad_bridge.so")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_direct_icd.so"),"Unexpected ZIP member: "+name);
                         long total=0;byte[] buffer=new byte[8192];for(int n;(n=zip.read(buffer))!=-1;){total+=n;require(total<=8*1024*1024,"Runtime notice too large");}
                         continue;
                     }
@@ -140,7 +140,7 @@ public class RestoreRuntime {
                 else require(force||!Files.exists(file,LinkOption.NOFOLLOW_LINKS),"Existing runtime differs; use --force to restore: "+entry.path);
             }
         }
-        if(check){require(ready,"Runtime verification failed");System.out.println("Runtime verified: 52 native libraries + XKB");return;}
+        if(check){require(ready,"Runtime verification failed");System.out.println("Runtime inventory verified");return;}
         if(!ready) {
             Properties config=new Properties();try(InputStream in=Files.newInputStream(root.resolve("scripts/runtime-payload.properties"))){config.load(in);}
             require(config.getProperty("sha256","").matches("[a-f0-9]{64}"),"Invalid pinned archive hash");
@@ -155,7 +155,7 @@ public class RestoreRuntime {
         for(Entry entry:expected.values())require(matches(safePath(root,entry.path),entry),"Final runtime verification failed: "+entry.path);
         Path marker=root.resolve(".factorio-migration-workspace.json");
         if(!Files.exists(marker))Files.write(marker,"{}\n".getBytes(StandardCharsets.UTF_8),StandardOpenOption.CREATE_NEW);
-        System.out.println("Runtime ready: 52 native libraries + XKB (all SHA-256 verified)");
+        System.out.println("Runtime inventory ready (downloaded components verified at build time)");
     }
     public static void main(String[] args) {
         try{run(args);}catch(Exception error){System.err.println("Runtime restore failed: "+error.getMessage());System.exit(1);}

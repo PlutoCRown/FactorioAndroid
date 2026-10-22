@@ -15,9 +15,9 @@ public final class GameProfileConfigTests {
         check(!mapped.contains("/old/")&&mapped.contains("read-data=/game/data\nwrite-data=/profile/userdata\n"),"paths updated");
         check(mapped.equals(GameProfileConfig.mapPaths(mapped,"/game/data","/profile/userdata")),"restart idempotence");
         check(GameProfileConfig.mapPaths("; version=13\n[graphics]\nquality=low\n","/data","/user").endsWith("[path]\nread-data=/data\nwrite-data=/user\n"),"missing path section");
-        try {GameProfileConfig.mapPaths("; version=14\n[path]\n","/data","/user");throw new AssertionError("unsupported version accepted");}catch(IOException expected) {}
+        check(GameProfileConfig.mapPaths("; version=14\n[path]\n","/data","/user").contains("; version=14\n[path]\nread-data=/data\nwrite-data=/user\n"),"future config version paths mapped without rewriting header");
         try {GameProfileConfig.mapPaths("; version=13\n[path]\n[path]\n","/data","/user");throw new AssertionError("duplicate path sections accepted");}catch(IOException expected) {}
-        checks+=2; // Existing unsupported-version and duplicate-path checks above.
+        checks++;
         String chinese="; version=13\n[general]\nlocale=zh-CN\n[path]\nread-data=/old\n";
         check("zh-CN".equals(GameProfileConfig.readLocale(chinese)),"Chinese locale");
         check("zh-CN".equals(GameProfileConfig.readLocale("; version=13\r\n[general]\r\nlocale = zh-CN\r\n")),"CRLF locale");
@@ -29,9 +29,8 @@ public final class GameProfileConfigTests {
         rejectLocale("; version=13\n[general]\nlocale=zh-CN\nlocale=en\n","duplicate locale");
         rejectLocale("; version=13\n[general]\nlocale=zh-CN\nlocale=zh-CN\n","duplicate same locale");
         rejectLocale("; version=13\n[general]\nlocale=zh-CN\n[general]\nlocale=en\n","duplicate general section");
-        String unsupported="; version=14\n[general]\nlocale=zh-CN\n";
-        rejectLocale(unsupported,"unknown config version");
-        rejectLocale("[general]\nlocale=zh-CN\n","missing config version");
+        check("zh-CN".equals(GameProfileConfig.readLocale("; version=14\n[general]\nlocale=zh-CN\n")),"future config version locale");
+        check("zh-CN".equals(GameProfileConfig.readLocale("[general]\nlocale=zh-CN\n")),"versionless config locale");
         rejectLocale("; version=13\n[general]\nlocale=zh CN\n","invalid locale whitespace");
         rejectLocale("; version=13\n[general]\nlocale=../zh-CN\n","invalid locale path");
         rejectLocale("; version=13\n[general]\nlocale=\n","empty locale");
@@ -43,7 +42,7 @@ public final class GameProfileConfigTests {
         check(GameProfileConfig.applyGraphicsPreset(saved,"game").equals(saved),"game preset keeps exact original bytes");
         String compat=GameProfileConfig.applyGraphicsPreset(saved,"compat");
         check(compat.contains("graphics-quality=medium\n")&&compat.contains("max-texture-size=4096\n")&&!compat.contains("max-texture-size=16384"),"compat limits texture size without duplicate active value");
-        check(compat.contains("gpu-accelerated-compression=false\n")&&compat.contains("gpu-accelerated-mipmap-compression=false\n"),"failed asset compression paths disabled");
+        check(!compat.contains("gpu-accelerated-compression=")&&!compat.contains("gpu-accelerated-mipmap-compression="),"preset leaves GPU acceleration to game capability detection");
         check(compat.contains("texture-compression-level=high-quality\n"),"compat sprites use the direct renderer compressed texture path");
         check(compat.contains("locale=zh-CN\n")&&compat.contains("[controls]\nmove-up=W\n")&&compat.contains("show-clouds=false\n"),"locale controls and unrelated graphics retained");
         check(compat.contains("[path]\nread-data=/game/data\nwrite-data=/profile/userdata\n"),"preset retains game and save paths");
@@ -76,7 +75,7 @@ public final class GameProfileConfigTests {
         for(String bad:new String[]{"unknown","compat\n[path]"}) {
             try {GameProfileConfig.applyGraphicsPreset(saved,bad);throw new AssertionError("unknown preset accepted");}catch(IOException expected){checks++;}
         }
-        for(String bad:new String[]{"; version=13\n[graphics]\n[graphics]\n","; version=13\n[graphics]\nmax-texture-size=4096\nmax-texture-size=8192\n","; version=14\n[graphics]\n"}) {
+        for(String bad:new String[]{"; version=13\n[graphics]\n[graphics]\n","; version=13\n[graphics]\nmax-texture-size=4096\nmax-texture-size=8192\n"}) {
             try {GameProfileConfig.applyGraphicsPreset(bad,"compat");throw new AssertionError("ambiguous config accepted");}catch(IOException expected){checks++;}
         }
         String fresh=GameProfileConfig.initializeLocale(original,"zh-CN");
@@ -93,6 +92,60 @@ public final class GameProfileConfigTests {
         check("en".equals(GameProfileConfig.readLocale(seeded))&&seeded.contains("; locale=auto"),"commented default with existing general section");
         try{GameProfileConfig.initializeLocale(original,"en\n[path]");throw new AssertionError("locale injection accepted");}catch(IOException expected){checks++;}
         try{GameProfileConfig.initializeLocale("; version=13\n[general]\n[general]\n","en");throw new AssertionError("duplicate section seeded");}catch(IOException expected){checks++;}
+        genericConfigurations();
+        gpuPolicy();
         System.out.println(checks+" persistent profile configuration and locale checks passed");
+    }
+
+    private static void genericConfigurations() throws Exception {
+        for(String header:new String[]{"","; version=14\n","# version=999\n","\ufeff; version=999\n","\ufeff"}) {
+            String source=header+"[general] # user language\nlocale = de ; retain chosen language\n"
+                +"[path] ; imported paths\n; read-data=__PATH__executable__/../../data\nread-data = /old/data # relocated\nwrite-data=/old/user\n"
+                +"[graphics] # future settings\n; graphics-quality=low\nfuture-render-setting=experimental\n"
+                +"[controls]\ncustom-key=retained # user binding\n";
+            String paths=GameProfileConfig.mapPaths(source,"/new/data","/new/user");
+            check("de".equals(GameProfileConfig.readLocale(paths)),"locale accepted with generic header "+header);
+            check(paths.startsWith(header+"[general] # user language\n"),"header and section comment retained "+header);
+            check(paths.contains("; read-data=__PATH__executable__/../../data\n")&&!paths.contains("/old/"),"commented defaults retained and active paths replaced "+header);
+            check(paths.contains("read-data=/new/data\nwrite-data=/new/user\n"),"commented path header recognized "+header);
+            check(paths.equals(GameProfileConfig.initializeLocale(paths,"zh-CN")),"generic config retains user locale byte for byte "+header);
+            String preset=GameProfileConfig.applyGraphicsPreset(paths,"balanced");
+            check(preset.contains("[graphics] # future settings\n; graphics-quality=low\nfuture-render-setting=experimental\n"),"future setting and comments retained "+header);
+            check(preset.contains("[controls]\ncustom-key=retained # user binding\n")&&"de".equals(GameProfileConfig.readLocale(preset)),"controls and language survive preset "+header);
+            check(preset.contains("max-texture-size=8192\n"),"generic config accepts requested preset "+header);
+            String limited=GameProfileConfig.applySpriteLoadingLimit(preset,4);
+            check(limited.contains("max-sprite-loading-threads=4\n")&&limited.startsWith(header),"generic config accepts independent loading limit "+header);
+            check(limited.equals(GameProfileConfig.mapPaths(limited,"/new/data","/new/user")),"generic paths remain idempotent "+header);
+        }
+        String bom="\ufeff[general] # no version header\r\n; locale=auto\r\n[graphics]\r\nunknown-setting=true\r\n";
+        String seeded=GameProfileConfig.initializeLocale(bom,"zh-CN");
+        check(seeded.startsWith("\ufeff[general] # no version header\nlocale=zh-CN\n"),"BOM first section can seed locale without losing header");
+        check("zh-CN".equals(GameProfileConfig.readLocale(seeded))&&seeded.contains("; locale=auto\n")&&seeded.contains("unknown-setting=true\n"),"BOM seeding preserves unrelated comments and user settings");
+        for(String bad:new String[]{"/data\n[general]","/data\rwrite-data=other"}) {
+            try{GameProfileConfig.mapPaths("[path]\n",bad,"/user");throw new AssertionError("read path injection accepted");}catch(IOException expected){checks++;}
+            try{GameProfileConfig.mapPaths("[path]\n","/data",bad);throw new AssertionError("write path injection accepted");}catch(IOException expected){checks++;}
+        }
+    }
+
+    private static void gpuPolicy() throws Exception {
+        String explicit="\ufeff# version=999\n[graphics] # saved game choices\n"
+            +"gpu-accelerated-compression=true # game capability result\n"
+            +"gpu-accelerated-mipmap-compression=false ; user choice\nfuture-option=keep\n[general]\nlocale=fr\n";
+        for(String preset:new String[]{"game","compat","balanced","quality"}) {
+            String result=GameProfileConfig.applyGraphicsPreset(explicit,preset);
+            check(result.contains("gpu-accelerated-compression=true # game capability result\n")
+                &&result.contains("gpu-accelerated-mipmap-compression=false ; user choice\n"),"preset preserves explicit game GPU choices: "+preset);
+            check(result.contains("future-option=keep\n")&&"fr".equals(GameProfileConfig.readLocale(result)),"preset preserves future option and locale: "+preset);
+            String defaults=GameProfileConfig.applyGraphicsPreset("[graphics]\n",preset);
+            check(!defaults.contains("gpu-accelerated-"),"preset does not impose either GPU acceleration setting: "+preset);
+        }
+        String legacy="; version=14\n[graphics] # former launcher policy\n"
+            +"; gpu-accelerated-compression=false\ngpu-accelerated-compression = false # old override\n"
+            +"gpu-accelerated-mipmap-compression=false ; old override\nfuture-option=keep\n"
+            +"[general]\nlocale=de\ngpu-accelerated-compression=false\n";
+        String released=GameProfileConfig.releaseLegacyGpuOverrides(legacy);
+        check(released.contains("; gpu-accelerated-compression=false\n")&&!released.contains("# old override")&&!released.contains("; old override"),"policy migration removes only active former graphics overrides");
+        check(released.contains("future-option=keep\n")&&released.contains("[general]\nlocale=de\ngpu-accelerated-compression=false\n"),"policy migration preserves unrelated settings and other sections");
+        check(GameProfileConfig.releaseLegacyGpuOverrides(explicit).contains("gpu-accelerated-compression=true # game capability result\n"),"policy migration retains a true capability result");
     }
 }

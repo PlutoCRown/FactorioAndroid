@@ -10,7 +10,10 @@ public final class HostRegressionTest {
         }
     }
     @Test public void archive() throws Exception {run("ArchiveTests");}
-    @Test public void config() throws Exception {run("org.factorio.local.launcher.GameProfileConfigTests");}
+    @Test public void config() throws Exception {
+        run("org.factorio.local.launcher.GameProfileConfigTests");
+        run("org.factorio.local.launcher.GameProfilesTests");run("org.factorio.local.launcher.GameDocumentIdsTests");
+    }
     @Test public void graphics() throws Exception {run("org.factorio.local.launcher.LiveGraphicsTests");}
     @Test public void touch() throws Exception {run("com.termux.x11.TouchMouseStateTests");}
     @Test public void gameFiles() throws Exception {run("org.factorio.local.launcher.GameFilesTests");}

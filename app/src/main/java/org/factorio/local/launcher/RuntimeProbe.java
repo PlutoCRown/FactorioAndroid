@@ -6,24 +6,12 @@ import org.json.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
 
-/** Bounded engine diagnostics using an APK-installed, hash-pinned loader. */
+/** Engine execution with an APK-installed GNU loader and explicit session ownership. */
 public final class RuntimeProbe {
     public interface Progress {void update(String phase,JSONObject detail) throws Exception;}
-    private static String digest(File file) throws Exception {
-        MessageDigest sha=MessageDigest.getInstance("SHA-256");
-        try(InputStream input=new FileInputStream(file)) {
-            byte[] buffer=new byte[65536];
-            for(int n;(n=input.read(buffer))!=-1;) {
-                if(Thread.currentThread().isInterrupted()) throw new InterruptedIOException("验证已取消");
-                sha.update(buffer,0,n);
-            }
-        }
-        return GameImporter.hex(sha.digest());
-    }
     static void signalOwnChild(java.lang.Process child,int signal) throws Exception {
         if(!child.isAlive())return;
         java.util.regex.Matcher match=java.util.regex.Pattern.compile("pid=(\\d+)").matcher(child.toString());
@@ -181,12 +169,10 @@ public final class RuntimeProbe {
         File gameDirectory=new File(context.getFilesDir(),relative).getCanonicalFile();
         File engine=new File(gameDirectory,"bin/arm64/factorio");
         if(progress!=null)progress.update("verifyEngine",result);
-        String engineHash=digest(engine);
-        result.put("engineSha256",engineHash).put("gameVersion",game.optString("version"));
-        // Engine identity is diagnostic data. Optional native adapters select their
-        // own compatible engine; they must never prevent another version launching.
-        controller=manual&&GamepadRuntime.supportsEngine(engineHash);
-        result.put("nativeGamepadAdapterAvailable",controller);
+        RuntimeLibraries.requireLibrary(engine);
+        result.put("gameVersion",game.optString("version"));
+        controller=manual;
+        result.put("nativeGamepadAdapterSelected",controller);
         File nativeDirectory=new File(context.getApplicationInfo().nativeLibraryDir);
         result.put("nativeLibraryDirectory",nativeDirectory.getAbsolutePath());
         JSONObject manifest;
@@ -198,9 +184,9 @@ public final class RuntimeProbe {
             }
             manifest=new JSONObject(new String(out.toByteArray(),StandardCharsets.UTF_8));
         }
-        String runtimeId=manifest.optString("id","glibc-2.41");
+        String runtimeId="gnu";
         if(!runtimeId.matches("[A-Za-z0-9_.-]+")||runtimeId.equals(".")||runtimeId.equals("..")) throw new IOException("运行库版本标识无效");
-        result.put("glibcVersion",manifest.getString("version")).put("runtimeVendor",manifest.optString("vendor","Debian"));
+        result.put("glibcVersion",manifest.getString("version")).put("runtimeVendor",manifest.optString("vendor","unknown"));
         File aliases=new File(context.getFilesDir(),"runtime/"+runtimeId);
         if(!aliases.isDirectory()&&!aliases.mkdirs()) throw new IOException("无法创建运行库引用目录");
         JSONArray libraries=manifest.getJSONArray("libraries"),verified=new JSONArray();
@@ -211,13 +197,12 @@ public final class RuntimeProbe {
             String name=library.getString("name"),packaged=library.getString("packagedName");
             if(!expected.remove(name)||!packaged.matches("librea_[a-z]+\\.so")) throw new IOException("运行库清单无效");
             File installed=new File(nativeDirectory,packaged);
-            String sha=digest(installed);
-            if(!sha.equals(library.getString("sha256"))) throw new IOException("已安装运行库校验失败: "+name);
+            RuntimeLibraries.requireLibrary(installed);
             Path alias=new File(aliases,name).toPath();
             if(Files.isSymbolicLink(alias)) Files.delete(alias);
             else if(Files.exists(alias)) throw new IOException("运行库引用位置有意外文件");
             Files.createSymbolicLink(alias,installed.toPath());
-            verified.put(new JSONObject().put("name",name).put("sha256",sha).put("installed",installed.getAbsolutePath()));
+            verified.put(new JSONObject().put("name",name).put("installed",installed.getAbsolutePath()));
             if(name.equals("ld-linux-aarch64.so.1")) loader=installed;
         }
         if(!expected.isEmpty()||loader==null) throw new IOException("运行库不完整");
@@ -258,7 +243,7 @@ public final class RuntimeProbe {
             if(!user.isDirectory()&&!user.mkdirs()) throw new IOException("无法创建图形验证数据目录");
             File config=new File(session,"config.ini");
             // Existing persistent configuration format; this marker is not a game version gate.
-            String settings="; version=13\n[path]\nread-data="+new File(gameDirectory,"data").getAbsolutePath()+
+            String settings="[path]\nread-data="+new File(gameDirectory,"data").getAbsolutePath()+
                 "\nwrite-data="+user.getAbsolutePath()+"\n";
             if(!manual) {
                 File formalConfig=new File(GameSession.profileDirectory(context),"config.ini");
@@ -312,30 +297,26 @@ public final class RuntimeProbe {
             File mesaLog=new File(context.getFilesDir(),"mesa.log");
             if(mesaLog.isFile()&&!mesaLog.delete())mesaLog=new File(context.getFilesDir(),"mesa-"+System.currentTimeMillis()+".log");
             windowEnvironment.put("MESA_LOG_FILE",mesaLog.getAbsolutePath());
-            windowEnvironment.put("MESA_DEBUG","flush");
-            windowEnvironment.put("MESA_LOG_LEVEL","debug");
-            windowEnvironment.put("LIBGL_DEBUG","verbose");
             windowEnvironment.put("__GLX_VENDOR_LIBRARY_NAME","mesa");
             windowEnvironment.put("SDL_EGL_LIBRARY",new File(dependencies.getString("directory"),"libEGL.so.1").getAbsolutePath());
             windowEnvironment.put("SDL_VIDEO_FORCE_EGL","1");
             windowEnvironment.put("EGL_PLATFORM","x11");
             result.put("contextBackendRequested","EGL");
             DirectZinkRuntime.environment(directRuntime,windowEnvironment);
+            windowEnvironment.put("REA_ENGINE_PATH",engine.getCanonicalPath());
             if(controller) {
                 JSONObject pad=GamepadRuntime.prepare(context);
                 result.put("gamepadRuntime",pad).put("gamepadSocket",pad.getString("gamepadSocket"));
                 windowEnvironment.put("LD_PRELOAD",pad.getString("library"));
-                windowEnvironment.put("REA_ENGINE_SHA256",pad.getString("engineSha256"));
                 windowEnvironment.put("REA_GAMEPAD_SOCKET",pad.getString("gamepadSocket"));
                 if(progress!=null)progress.update("gamepadRelayReady",result);
             }
             if(manual)windowEnvironment.putAll(control.keyboardEnvironment());
-            String hintAdapter=manual?KeyboardBridge.hintAdapter(context,engineHash):null;
+            String hintAdapter=manual?KeyboardBridge.hintAdapter(context):null;
             result.put("keyboardHintAdapterAvailable",hintAdapter!=null);
             if(hintAdapter!=null) {
                 String existing=windowEnvironment.get("LD_PRELOAD");
                 windowEnvironment.put("LD_PRELOAD",existing==null?hintAdapter:existing+":"+hintAdapter);
-                windowEnvironment.put("REA_IME_HINT_ENGINE_SHA256",engineHash);
             }
             AudioDiskBridge audioBridge=AudioDiskBridge.create(context);
             try {

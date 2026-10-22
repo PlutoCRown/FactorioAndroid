@@ -1,5 +1,5 @@
 {
-  "id": "direct-zink-hybris-game-trial-1",
+  "id": "direct-zink",
   "libraries": [
     {
       "packagedName": "librea_hybris_common.so",
@@ -103,8 +103,7 @@
       "aliases": [
         "librea_direct_icd.so"
       ],
-      "bytes": 360400,
-      "sha256": "12c262c892b9ba6a08eaf9e4cb944e2b94f05b3084a361734cd7776c5bef1f5a"
+      "sourceBuilt": true
     },
     {
       "packagedName": "librea_direct_mesa_glx.so",
@@ -116,5 +115,6 @@
     }
   ],
   "scope": "Sole supported game renderer: GNU Zink, native GPU AHB Android Surface; no legacy renderer service",
-  "desktopMesa": "26.3.0-devel (pinned upstream component)"
+  "desktopMesa": "26.3.0-devel (pinned upstream component)",
+  "schema": 1
 }

@@ -12,7 +12,7 @@ import org.json.*;
 final class DeviceProbe {
     static JSONObject collect(Context context) throws Exception {
         JSONObject root=new JSONObject();
-        root.put("schema",1); root.put("probeVersion","0.1.0-preflight");
+        root.put("schema",1);
         root.put("model",Build.MODEL); root.put("manufacturer",Build.MANUFACTURER);
         root.put("device",Build.DEVICE); root.put("androidRelease",Build.VERSION.RELEASE);
         root.put("sdkInt",Build.VERSION.SDK_INT); root.put("displayBuild",Build.DISPLAY);
@@ -31,12 +31,12 @@ final class DeviceProbe {
         root.put("vulkanLimit","Package-manager declarations only; no Vulkan device/context was created.");
         root.put("graphics",graphics());
         root.put("factorioLaunched",false);
-        root.put("runtimeStatus","Linux/glibc execution and desktop GL translation not integrated yet.");
+        root.put("runtimeStatus","This probe checks Android EGL/GLES; engine and desktop renderer capabilities are established by the running session.");
         return root;
     }
     private static JSONObject graphics() throws Exception {
         JSONObject report=new JSONObject();
-        report.put("scope","Android system EGL/GLES, offscreen pbuffer; not Factorio or Amethyst renderer.");
+        report.put("scope","Android system EGL/GLES offscreen pbuffer; engine renderer capabilities are reported separately.");
         EGLDisplay display=EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
         EGLContext context=EGL14.EGL_NO_CONTEXT; EGLSurface surface=EGL14.EGL_NO_SURFACE;
         try {

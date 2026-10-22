@@ -19,7 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 
-/** Debug-only, separate-process embedded X-server/Surface diagnostic. */
+/** Separate-process game window, input bridge and explicitly requested diagnostics. */
 public final class MainActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private JSONObject report;
@@ -46,6 +46,8 @@ public final class MainActivity extends Activity {
         // without dismissing it or accessing any other application's screen.
         if(!manualSession&&Build.VERSION.SDK_INT>=27) {setShowWhenLocked(true);setTurnScreenOn(true);}
         WindowPolicy.apply(this);
+        if(Build.VERSION.SDK_INT>=33)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+            android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,this::handleGameBack);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         FrameLayout layout=new FrameLayout(this);layout.setBackgroundColor(android.graphics.Color.BLACK);
         status=new TextView(this);status.setText(manualSession?getString(R.string.window_preparing):getIntent().getBooleanExtra("windowGraphics",false)?getString(R.string.window_probe_start):getString(R.string.window_probe_only));
@@ -340,13 +342,14 @@ public final class MainActivity extends Activity {
             .setPositiveButton(getString(R.string.end_and_return),(d,w)-> {if(gameSession!=null)gameSession.close();returnToLauncher(getString(R.string.session_ended));})
             .setNegativeButton(getString(R.string.continue_game),null).show();
     }
-    @Override public void onBackPressed() {
+    @Override public void onBackPressed() {handleGameBack();}
+    private void handleGameBack() {
         if(view!=null&&view.hideGameKeyboard())return;
         if(graphicsStarted&&view!=null&&view.forwardEscape()) {
             try {record("androidBackForwardedAsEscape");}catch(Exception e){fail(e);}
             return;
         }
-        if(manualSession)askStop();else super.onBackPressed();
+        if(manualSession)askStop();else finish();
     }
     @Override protected void onDestroy() {
         if(manualSession&&report!=null)try {report.put("activityClosed",true);record("closing");}catch(Exception ignored) {}

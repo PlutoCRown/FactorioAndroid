@@ -7,18 +7,34 @@ import java.util.Map;
 
 /** Path mapping and explicitly selected graphics options; preserve other settings. */
 final class GameProfileConfig {
-    private static void validateVersion(String original) throws IOException {
-        if(original==null||original.length()>1024*1024||!original.split("\\r?\\n",2)[0].equals("; version=13"))
-            throw new IOException("游戏配置格式不受支持，已保留原文件，请导出诊断");
+    private static void validateConfig(String original) throws IOException {
+        if(original==null||original.length()>1024*1024||original.indexOf('\0')>=0)
+            throw new IOException("游戏配置内容无效或过大，已保留原文件");
+    }
+    private static String effective(String raw) {
+        if(raw.startsWith("\ufeff"))raw=raw.substring(1);
+        int semi=raw.indexOf(';'),hash=raw.indexOf('#');
+        int comment=semi<0?hash:hash<0?semi:Math.min(semi,hash);
+        return (comment<0?raw:raw.substring(0,comment)).trim();
+    }
+    /** Undo only the launcher's former global overrides during a policy migration. */
+    static String releaseLegacyGpuOverrides(String original) throws IOException {
+        validateConfig(original);StringBuilder out=new StringBuilder();boolean graphics=false;
+        for(String raw:original.split("\\r?\\n",-1)) {
+            String line=effective(raw);
+            if(line.startsWith("["))graphics=line.equals("[graphics]");
+            if(graphics&&line.matches("gpu-accelerated-(?:mipmap-)?compression\\s*=\\s*false"))continue;
+            out.append(raw).append('\n');
+        }
+        return out.toString();
     }
 
     /** Reads only a single locale from supported config text; never modifies the source. */
     static String readLocale(String original) throws IOException {
-        validateVersion(original);
+        validateConfig(original);
         String locale=null;boolean general=false,foundGeneral=false,foundLocale=false;
         for(String raw:original.split("\\r?\\n",-1)) {
-            int comment=raw.indexOf(';');
-            String line=(comment<0?raw:raw.substring(0,comment)).trim();
+            String line=effective(raw);
             if(line.isEmpty())continue;
             if(line.startsWith("[")) {
                 if(!line.endsWith("]"))throw new IOException("配置区段格式不受支持，已保留原文件");
@@ -45,7 +61,7 @@ final class GameProfileConfig {
         StringBuilder out=new StringBuilder();boolean inserted=false;
         for(String raw:original.split("\\r?\\n",-1)) {
             out.append(raw).append('\n');
-            int comment=raw.indexOf(';');String effective=(comment<0?raw:raw.substring(0,comment)).trim();
+            String effective=effective(raw);
             if(effective.equals("[general]")){out.append("locale=").append(fallback).append('\n');inserted=true;}
         }
         if(!inserted)out.append("[general]\nlocale=").append(fallback).append('\n');
@@ -53,14 +69,14 @@ final class GameProfileConfig {
     }
 
     static String mapPaths(String original,String read,String write) throws IOException {
-        validateVersion(original);
+        validateConfig(original);
         if(read.indexOf('\n')>=0||write.indexOf('\n')>=0||read.indexOf('\r')>=0||write.indexOf('\r')>=0)
             throw new IOException("游戏数据路径包含无效字符");
         StringBuilder updated=new StringBuilder();boolean path=false,found=false;
         String[] lines=original.split("\\r?\\n",-1);int count=lines.length;
         if(count>0&&lines[count-1].isEmpty())count--;
         for(int i=0;i<count;i++) {
-            String line=lines[i],trimmed=line.trim();
+            String line=lines[i],trimmed=effective(line);
             if(trimmed.startsWith("[")&&trimmed.endsWith("]")) {
                 if(path)appendPaths(updated,read,write);
                 path=trimmed.equals("[path]");
@@ -81,7 +97,7 @@ final class GameProfileConfig {
     }
 
     static String applyGraphicsPreset(String original,String preset) throws IOException {
-        validateVersion(original);
+        validateConfig(original);
         if("game".equals(preset))return original;
         Map<String,String> options=new LinkedHashMap<>();
         if("compat".equals(preset)) {
@@ -91,12 +107,8 @@ final class GameProfileConfig {
         } else if("quality".equals(preset)) {
             options.put("graphics-quality","high");options.put("max-texture-size","16384");options.put("video-memory-usage","all");
         } else throw new IOException("未知画质预设，配置未修改");
-        // Observed Mali/Zink compression self-test failed. CPU preparation of
-        // texture assets does not change the GPU used to render game frames.
-        options.put("gpu-accelerated-compression","false");
-        options.put("gpu-accelerated-mipmap-compression","false");
-        // Space Age also exceeded memory with uncompressed medium sprites.
-        // Compressed medium sprites passed initialization and map creation.
+        // The preset selects asset compression quality. GPU acceleration remains
+        // the game's own capability/self-test decision on each device.
         options.put("texture-compression-level","high-quality");
         return applyGraphicsOptions(original,options);
     }
@@ -105,7 +117,7 @@ final class GameProfileConfig {
     }
     /** Zero follows the existing game configuration, including its commented default. */
     static String applySpriteLoadingLimit(String original,int limit) throws IOException {
-        validateVersion(original);
+        validateConfig(original);
         if(!validSpriteLoadingLimit(limit))throw new IOException("未知贴图加载线程上限，配置未修改");
         if(limit==0)return original;
         Map<String,String> options=new LinkedHashMap<>();
@@ -118,8 +130,7 @@ final class GameProfileConfig {
         String[] lines=original.split("\\r?\\n",-1);int count=lines.length;
         if(count>0&&lines[count-1].isEmpty())count--;
         for(int i=0;i<count;i++) {
-            String raw=lines[i];int comment=raw.indexOf(';');
-            String effective=(comment<0?raw:raw.substring(0,comment)).trim();
+            String raw=lines[i];String effective=effective(raw);
             if(effective.startsWith("[")) {
                 if(!effective.endsWith("]"))throw new IOException("配置区段格式不受支持，配置未修改");
                 if(graphics)appendOptions(out,options);

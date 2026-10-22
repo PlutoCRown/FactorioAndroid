@@ -12,8 +12,8 @@ android {
         applicationId = "dev.plutocrown.factorio"
         minSdk = 26
         ndk { abiFilters += "arm64-v8a" }
-        // Keep runtime/storage/lifecycle behavior unchanged during the UI migration.
-        targetSdk = 33
+        // Target the SDK used to compile the app; window/back behavior is handled explicitly.
+        targetSdk = 36
         versionCode = providers.gradleProperty("factorioVersionCode").get().toInt()
         versionName = providers.gradleProperty("factorioVersionName").get()
     }
@@ -89,7 +89,7 @@ val buildImeNative by tasks.registering(Exec::class) {
     workingDir(rootProject.projectDir)
     val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
     commandLine(javaBin.absolutePath, rootProject.file("scripts/BuildImeNative.java").absolutePath)
-    inputs.files(rootProject.file("native-input/ime/keyboard-opener.c"), rootProject.file("native-input/ime/sdl-hint-guard.c"), rootProject.file("native-input/ime/sdl-hint-interfaces.h"), rootProject.file("scripts/BuildImeNative.java"), rootProject.file("scripts/ime-compiler.properties"))
+    inputs.files(rootProject.fileTree("native-input/direct-wsi"), rootProject.file("native-input/ime/keyboard-opener.c"), rootProject.file("native-input/ime/sdl-hint-guard.c"), rootProject.file("native-input/sdl-symbols.h"), rootProject.file("native-input/gamepad-bridge.c"), rootProject.file("scripts/BuildImeNative.java"), rootProject.file("scripts/ime-compiler.properties"))
     outputs.dir(layout.buildDirectory.dir("generated/ime"))
 }
 tasks.named("preBuild") { dependsOn(restoreRuntime, buildImeNative) }

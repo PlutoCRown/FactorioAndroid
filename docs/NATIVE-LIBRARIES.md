@@ -4,13 +4,13 @@
 
 ## 1. 这些文件的作用
 
-`app/src/main/jniLibs/arm64-v8a/` 中的 52 个 `.so` 组成游戏所需的原生运行环境。其中 48 个取自开源组件的预编译包，4 个由本项目编译或适配后编译。它们提供 Linux 基础运行库、图形转换、窗口、输入和 Android 呈现功能。
+运行环境包括固定版本的预编译依赖和随 APK 构建生成的原生组件。恢复工具向 `app/src/main/jniLibs/arm64-v8a/` 提供 50 个 `.so`：48 个来自下列开源组件预编译包，2 个是运行库归档中保存的本项目编译／适配组件。普通构建另从源码生成 Vulkan ICD、手柄适配器和两个输入法程序。它们提供 Linux 基础运行库、图形转换、窗口、输入和 Android 呈现功能。
 
 启动器的 Kotlin/Java 代码负责界面、导入、设置和会话管理；真正的 Factorio 引擎与游戏数据来自用户自行导入的官方 Linux ARM64 安装包。
 
 放在 `jniLibs` 中不表示这些库都通过 JNI 加载到 Java 进程。glibc、Mesa 等运行在独立的游戏进程中；`libXlorie.so` 和画面接收器运行在 Android 侧。打包时有些库改用了私有名称，例如 `librea_glibc.so` 对应原始的 `libc.so.6`；启动时会建立游戏需要的文件名别名。文件名前缀不代表该组件由本项目原创。
 
-Compose还会通过AndroidX依赖额外带入`libandroidx.graphics.path.so`，其获取方式见第6节。安卓软键盘接入还会从启动器源码编译`librea_ime_opener.so`和`librea_ime_hint.so`，分别负责接收请求，以及维持SDL键盘开关、回传UTF-8确认文字、编辑命令和键盘可见状态，因此当前APK共包含55个原生文件。它们的用途和完整获取步骤见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
+Compose还会通过AndroidX依赖额外带入`libandroidx.graphics.path.so`，其获取方式见第6节。构建还从源码生成 `librea_direct_icd.so`、`librea_gamepad_bridge.so`、`librea_ime_opener.so` 和 `librea_ime_hint.so`。两个输入法组件分别负责接收请求，以及维持 SDL 键盘开关、回传 UTF-8 确认文字、编辑命令和键盘可见状态；加上 AndroidX 库，APK 共包含 55 个原生文件。它们的用途和完整获取步骤见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
 
 ```text
 Linux ARM64 Factorio
@@ -32,7 +32,7 @@ java scripts/RestoreRuntime.java
 java scripts/RestoreRuntime.java --check
 ```
 
-构建入口也会自动调用恢复工具。下载内容包括 52 个 `.so` 和键盘布局数据 `window-xkb.zip`，不含游戏引擎、游戏资源或设备 GPU 驱动。
+构建入口也会自动调用恢复工具。下载内容包括当前清单中的 50 个 `.so` 和键盘布局数据 `window-xkb.zip`，不含游戏引擎、游戏资源或设备 GPU 驱动。
 
 也可以[下载运行库 ZIP](https://github.com/PlutoCRown/FactorioAndroid/releases/download/runtime-20261021-v1/factorio-android-runtime-arm64-20261021-v1.zip)，然后离线恢复：
 
@@ -44,6 +44,8 @@ java scripts/RestoreRuntime.java --check
 下载需要身份验证时，可以登录后手动取得 ZIP；自动下载支持读取环境变量 `GITHUB_TOKEN` 或 `GH_TOKEN`。需要的权限是 Contents: read，不要把访问令牌写进源码。
 
 恢复工具会验证压缩包及每个文件，已存在但内容不同的文件默认不会覆盖。确需恢复到指定版本时添加 `--force`。网络不佳时可以先用支持续传的下载工具取得完整 ZIP，再离线恢复。
+
+固定版本与摘要用于可复现的依赖下载、构建和 APK 产物核验。应用运行时检查原生文件存在和 ELF 架构，不以这些摘要限制导入游戏的版本或选择输入适配器。
 
 下载配置见 [runtime-payload.properties](../scripts/runtime-payload.properties)，完整校验清单见 [runtime-files.tsv](../scripts/runtime-files.tsv)，工具实现见 [RestoreRuntime.java](../scripts/RestoreRuntime.java)。
 
@@ -213,20 +215,20 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 | `librea_xrandr.so` | `libxrandr-glibc` | `data/data/com.termux/files/usr/glibc/lib/libXrandr.so.2.2.0` | XRandR 尺寸/显示扩展接口 |
 | `librea_xrender.so` | `libxrender-glibc` | `data/data/com.termux/files/usr/glibc/lib/libXrender.so.1.3.0` | XRender 扩展客户端接口 |
 
-### 4.4 本项目编译的四个库
+### 4.4 本项目维护的运行组件
 
 | APK 内库名 | 来源 ID / 取得方式 | 原包成员或源码位置 | 用途 |
 | --- | --- | --- | --- |
 | `librea_direct_icd.so` | `本项目编译` | `native-input/direct-wsi/（公开 ICD 核心 + 自有 native-window-surface.c）` | 公开 Vulkan ICD + 自有 AHB 窗口提供者，连接系统 Vulkan 与私有呈现通道 |
 | `librea_direct_present.so` | `本项目编译` | `native-input/direct-present-server.c` | Android/Bionic 侧接收 AHardwareBuffer，经 GLES 绘制到 Android Surface |
-| `librea_gamepad_bridge.so` | `本项目编译` | `native-input/gamepad-bridge.c + sdl-interface-offsets.h` | 独立 GNU 引擎进程内的 SDL 虚拟手柄/输入转发 |
+| `librea_gamepad_bridge.so` | `本项目编译` | `native-input/gamepad-bridge.c + sdl-symbols.h` | 独立 GNU 引擎进程内的 SDL 虚拟手柄/输入转发 |
 | `librea_gnu_tls.so` | `本项目编译` | 基于 libhybris 的 TLS 代码适配后编译 | GNU 启动时预加载 TLS 适配层，为 Bionic GPU 库预留 16 KiB 静态 TLS |
 
 清单中保留某个 X11 或 Wayland 配套依赖，并不表示当前画面通过该协议传输；它们也可能是其他图形组件的加载依赖。
 
 ## 5. 本项目编译或适配的组件
 
-普通 APK 构建会恢复这些库的预编译文件，不会自动从原生源码重新编译。以下说明其代码来源与编译入口；完整源码重建还需要准备相应头文件和链接输入。
+普通 APK 构建从源码生成 `librea_direct_icd.so` 和 `librea_gamepad_bridge.so`，以及第 1 节列出的两个输入法程序。`librea_direct_present.so` 和 `librea_gnu_tls.so` 仍由运行库归档恢复。以下分别说明来源与重建范围。
 
 ### librea_direct_icd.so
 
@@ -234,7 +236,7 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 
 核心修改是用 `native-window-surface.c` 建立 AHardwareBuffer 传输通道，并调整支持的窗口接口。它负责把 GNU 图形栈连接到 Android Vulkan，保留缓冲区同步和接收完成确认。
 
-编译入口为 [build-direct-wsi.ps1](../scripts/build-direct-wsi.ps1)。
+普通构建由 [BuildImeNative.java](../scripts/BuildImeNative.java) 编译此源码；独立开发入口为 [build-direct-wsi.ps1](../scripts/build-direct-wsi.ps1)。构建所用头文件与来源说明保存在源码目录。
 
 ### librea_direct_present.so
 
@@ -244,7 +246,9 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 
 ### librea_gamepad_bridge.so
 
-源码是 [gamepad-bridge.c](../native-input/gamepad-bridge.c) 和 [sdl-interface-offsets.h](../native-input/sdl-interface-offsets.h)，用于将手柄输入交给游戏的 SDL 接口。目前适配目标为 Linux ARM64 Factorio 2.1.22。
+源码是 [gamepad-bridge.c](../native-input/gamepad-bridge.c) 和 [sdl-symbols.h](../native-input/sdl-symbols.h)，由 [BuildImeNative.java](../scripts/BuildImeNative.java) 在普通构建时编译，用于将手柄输入交给游戏的 SDL3 虚拟手柄接口。
+
+解析器先查询动态符号，再检查已加载 ELF 模块的 `.dynsym`／`.symtab`，支持接口静态链接在引擎中的情况。它检查 SDL 大版本，不使用引擎摘要、固定函数地址或指令前缀。必要接口缺失时输出缺失符号和适配失败状态；符号存在仍不保证未来 SDL 接口 ABI 和行为兼容，因此不能承诺所有客户端版本均可使用手柄。输入法适配器共用这个解析器，具体限制见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
 
 ### librea_gnu_tls.so
 
@@ -254,9 +258,9 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 
 ### 编译工具与复现范围
 
-原生组件使用 [Zig 0.15.2 Windows 版](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip) 交叉编译。GNU 侧目标为 `aarch64-linux-gnu.2.38`，Android 呈现接收器目标为 `aarch64-linux-android.26`。
+源码构建使用固定版本 Zig 0.15.2，各主机下载位置见[安卓软键盘接入](ANDROID-KEYBOARD.md)。Windows 下载：[zig-x86_64-windows-0.15.2.zip](https://ziglang.org/download/0.15.2/zig-x86_64-windows-0.15.2.zip)。GNU 侧目标为 `aarch64-linux-gnu.2.38`，Android 呈现接收器目标为 `aarch64-linux-android.26`。
 
-头文件包括 Vulkan、Android 和 GNU 侧接口声明；部分 Android 头文件来自 [ndk-sysroot 30 软件包](https://packages.termux.dev/apt/termux-main/pool/main/n/ndk-sysroot/ndk-sysroot_30_aarch64.deb)。两个现有编译脚本还需要相应链接输入，不能仅凭 C 文件直接构建全部库。需要构建启动器时，使用第 2 节预编译恢复即可。
+头文件包括 Vulkan、Android 和 GNU 侧接口声明；部分 Android 头文件来自 [ndk-sysroot 30 软件包](https://packages.termux.dev/apt/termux-main/pool/main/n/ndk-sysroot/ndk-sysroot_30_aarch64.deb)。独立开发脚本还需要相应链接输入。普通启动器构建会准备清单内依赖并生成所需原生组件；这不等于全部第三方组件都已提供完整源码重建流程。
 
 ## 6. Compose 的 AndroidX 路径库
 
@@ -279,6 +283,6 @@ AAR 也是 ZIP，所需文件位于 `jni/arm64-v8a/libandroidx.graphics.path.so`
 
 - 要获取启动器当前使用的文件，执行运行库恢复命令；它会自动验证内容。
 - 要核对上游来源，按具体软件包版本和归档成员路径提取，再执行 `--check`。下载页面可能更新或移除旧文件。
-- 恢复预编译库与从源码重新编译是两种流程。目前可恢复全部运行库，全部组件的源码重建流程仍未完整提供。
+- 恢复预编译库与从源码重新编译是两种流程。目前可恢复清单内运行库并编译上述四个组件，全部组件的源码重建流程仍未完整提供。
 
 各组件的许可证见 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) 和 `app/src/main/assets/*COPYRIGHT.txt`。

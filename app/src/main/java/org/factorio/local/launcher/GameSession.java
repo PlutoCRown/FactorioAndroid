@@ -83,16 +83,24 @@ public final class GameSession implements AutoCloseable {
         }
     }
     static File profileDirectory(Context context) throws Exception {
-        File root=new File(context.getFilesDir(),"profiles/default-2.1.22");
-        if(!root.isDirectory()&&!root.mkdirs())throw new IOException("无法创建游戏档案目录");
-        return root;
+        JSONObject game=GameImporter.current(context);
+        String id=game==null?"unassigned":GameProfiles.id(game.getString("version"),game.optBoolean("spaceAge"));
+        return GameProfiles.directory(context.getFilesDir(),id,game!=null);
     }
     static File prepareProfile(Context context,File gameDirectory,String preset,int loadingLimit) throws Exception {
         File profile=profileDirectory(context),userdata=new File(profile,"userdata");
         if(!userdata.isDirectory()&&!userdata.mkdirs())throw new IOException("无法创建持久游戏数据目录");
         File config=new File(profile,"config.ini");
         if(config.length()>1024*1024)throw new IOException("配置文件过大，已保留原文件");
-        String original=config.isFile()?new String(Files.readAllBytes(config.toPath()),StandardCharsets.UTF_8):"; version=13\n[path]\n";
+        File template=new File(gameDirectory,"config/config.ini");
+        String original=config.isFile()?new String(Files.readAllBytes(config.toPath()),StandardCharsets.UTF_8):
+            template.isFile()&&template.length()<=1024*1024?new String(Files.readAllBytes(template.toPath()),StandardCharsets.UTF_8):"[path]\n";
+        File descriptor=new File(profile,"profile.json");
+        if(descriptor.isFile()) {
+            JSONObject old=GameImporter.readJson(descriptor);
+            if(old.optInt("graphicsPolicyVersion",0)<2&&!"game".equals(old.optString("graphicsPreset")))
+                original=GameProfileConfig.releaseLegacyGpuOverrides(original);
+        }
         String read=new File(gameDirectory,"data").getCanonicalPath(),write=userdata.getCanonicalPath();
         String updated=GameProfileConfig.mapPaths(original,read,write);
         updated=GameProfileConfig.initializeLocale(updated,AppLanguage.gameLocale(context));
@@ -104,7 +112,7 @@ public final class GameSession implements AutoCloseable {
         Path pending=new File(profile,"config.ini.pending").toPath();
         Files.write(pending,updated.getBytes(StandardCharsets.UTF_8));
         Files.move(pending,config.toPath(),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
-        JSONObject metadata=new JSONObject().put("schema",1).put("id","default-2.1.22")
+        JSONObject metadata=new JSONObject().put("schema",1).put("id",profile.getName()).put("graphicsPolicyVersion",2)
             .put("graphicsPreset",preset).put("spriteLoadingLimit",loadingLimit).put("graphicsBackup",graphicsBackup.isFile()?graphicsBackup.getAbsolutePath():JSONObject.NULL)
             .put("locale",GameProfileConfig.readLocale(updated)).put("initialLocaleFallback",AppLanguage.gameLocale(context))
             .put("readData",read).put("writeData",write).put("configuration",config.getAbsolutePath())

@@ -11,61 +11,56 @@ Run your own official Linux ARM64 Factorio on Android. This is an unofficial lau
 
 ### Introduction
 
-The launcher presents the game through Mesa Zink and Vulkan onto an Android Surface, so it runs natively on an Android device. This project does not include or distribute Factorio game files. Download and keep your own legitimate copy from the official site, preferably purchased and downloaded with your own account. The launcher can import, start, and play the game only when you have an official game package.
+The launcher runs the official Linux ARM64 graphical client through a GNU/Linux runtime, Mesa Zink and the device’s Vulkan driver, presenting its output on an Android Surface. This project does not include or distribute Factorio game files. Download and keep your own legitimate copy from the official site, preferably purchased and downloaded with your own account. The launcher can import, start, and play the game only when you have an official game package.
 
 ### Features
 
-| Feature                            | Status |
-| ---------------------------------- | ------ |
-| Base game runs                     | ✅     |
-| Save import                        | ✅     |
-| Gamepad, keyboard, and mouse input | ✅     |
-| Touchscreen mouse                  | ✅     |
+- Import your own official Linux ARM64 full graphical client.
+- Import ZIP saves and access the active game profile’s save and mod folders through the system file manager.
+- Forward keyboard, mouse and touch mouse input, and connect gamepads and Android input methods through SDL3 interfaces.
+- Keep configuration, saves and mods in separate profiles for each game release and base game / Space Age content set.
 
-A complete game has been played on a real device. The home screen imports ZIP saves and opens the save and mod folders through the system file manager. Keyboard, mouse, and SDL gamepad events are delivered to the game. Touch currently holds the left button and drags with one finger; a fuller touch mouse is still being finished.
+These features depend on the game interfaces and device runtime. Missing native interfaces and runtime failures are reported. Importing a package does not guarantee that release will run on every device.
 
 ## How to play
 
-1. Open [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases), download this app, and install it. The standard package is `FactorioLauncher-0.2.0.apk`.
+1. Open [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases), download this app, and install it. Choose the standard APK for the launcher release you want.
 2. Sign in at [factorio.com](https://factorio.com/). If the game was bought on Steam, link that account from the [official FAQ](https://factorio.com/support/faq).
 3. On the [download page](https://factorio.com/download), choose the **Linux ARM64 graphical full client `.tar.xz`**. If that version is not listed, switch to the experimental channel beside it. For Space Age, download only the Space Age package; you do not need to download the base game as well.
 4. Put the original archive somewhere the Android file picker can open. On the launcher home screen, choose **Select game package**. Do not unpack it first.
 5. Choose **Launch game**.
 
-Game import opens the archive, extracts files, verifies the engine and checksums, then switches the active package and removes the previous copy. During extraction, the launcher shows compressed-package read progress, extracted size, file count, and elapsed time. If the document provider does not supply a total size, it shows the bytes read instead. This is not an overall time estimate: verification and cleanup follow extraction. On the current test tablet, the base game took about 2 minutes and Space Age about 5 minutes; either can take longer. Keep the app open.
+Game import opens the archive, extracts files, checks the package structure and ARM64 engine, then switches the active package and removes the previous copy. During extraction, the launcher shows compressed-package read progress, extracted size, file count, and elapsed time. If the document provider does not supply a total size, it shows the bytes read instead. This is not an overall time estimate: verification and cleanup follow extraction. Duration depends on package size, the document provider and device storage performance. Keep the app open.
 
 The home screen offers **Open saves**, **Import save**, and **Open mods**. Select an original `.zip` save without extracting it. Existing saves are preserved and duplicate names receive a numeric suffix. Save and end the game session before editing saves or mods.
 
 Saves created inside the game live in the app's private directory:
 
 ```text
-files/profiles/default-2.1.22/userdata/saves/
+files/profiles/factorio-<version>-<base or space-age>/userdata/saves/
 ```
 
-Installing a newer APK over the old one keeps the imported game, settings, and saves. Uninstalling the app or clearing its data deletes those files.
+Base game and Space Age packages use separate profiles, even for the same release. A different game release also gets its own profile. On the first upgrade to this layout, the launcher migrates the former shared profile to the release/content profile of the game already imported, preserving settings, saves and mods. Save and end the game session first. Replacing the game package does not automatically copy saves or mods to other release profiles.
 
-Import and launch do not use a game-version or engine-hash allowlist. Use a full Linux ARM64 graphical client. Engine digests serve diagnostics and optional adapter selection. The native gamepad adapter activates only for an engine with matching interfaces; other versions still launch with touch or keyboard/mouse input.
+Installing a newer APK with the same package name and signature keeps the imported game, settings and saves. Uninstalling the app or clearing its data deletes those files.
 
-## Requirements and tested devices
+Import and launch do not use a game-version or engine-hash allowlist. Gamepad and input-method adapters resolve SDL3 symbols from loaded modules, including interfaces statically linked in the engine’s ELF `.symtab`; they use no fixed engine addresses. Missing symbols, a different SDL major version or incompatible interface behavior are observable in diagnostics and may make the corresponding input feature unavailable. Pinned component digests verify downloads and build outputs; they do not decide compatibility at application startup.
 
-A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
+The launcher maps runtime paths and applies the configuration options you select. Initial configuration uses a template from the imported package when available, and the game handles its own INI schema version. The game also decides whether to use GPU-accelerated texture compression through its capability checks and self-test, without a forced device-model policy.
 
-- Memory: reserve 4 GB for low quality and 8 GB for high quality. When choosing a device, leave another 4 GB beyond that.
-- Storage: reserve 4 GB for the base game and 8 GB for Space Age.
+## Requirements
 
-| Device               | Model                                       | Result                                                                                                                          |
-| -------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Xiaomi Pad 9 Pro Max | XRing O3, Mali-G2-Ultra-NX MC16, Android 17 | 3408×2272 at full high quality, startup about 15 s, new save render 10 ms and update 0.1 ms; exact figures still to be measured |
+A 64-bit ARM Android device running at least Android 8.0 (API 26), with a Vulkan driver suitable for Mesa Zink, is required. The OS version and CPU architecture are basic conditions; GPU drivers and runtime components must also be compatible.
+
+Leave room for the original archive, extracted game, temporary import copy, saves and mods. Memory requirements depend on base game / Space Age content, maps, mods, texture quality and loading concurrency. Launch settings expose texture levels, render resolution and a loading thread limit. See [Loading speed and memory (Chinese)](docs/LOADING-MEMORY.md).
 
 ## Development
 
 See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library. See [Android keyboard integration (Chinese)](docs/ANDROID-KEYBOARD.md) for request routing, Unicode commits and helper build instructions.
 
-The 2026-10-22 Windows local 0.3.8 standard APK is 31,422,295 bytes (31.42 MB), 11,468 bytes above 0.3.7. All 229 host checks, signature, alignment and payload verification pass. The home page focuses on the game and files; touch mouse simulation now lives in launch settings. Texture levels are 4K, 8K and 16K, with a separate loading thread limit and an explanation of exit code 137 when memory is insufficient. The sidebar uses local Lucide vector icons. Primary buttons follow the website’s green background, inset shadows and pressed states; secondary buttons and selectors share its gray button style. Import progress, ZIP save import and Android keyboard visibility fixes remain included. The loading thread limit defaults to 1 and does not cap gameplay threads; all managed texture levels use high-quality compression.
-
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 
-Build requirements: JDK 17+, SDK platform 36 and Build Tools 36.0.0. AGP 9.0.1 supplies Kotlin 2.2.10; Gradle 9.1.0 and Compose BOM 2026.01.00 are pinned. The wrapper JAR and Gradle distribution have fixed SHA-256 checksums. Android minSdk 26 and targetSdk 33 stay unchanged for this UI migration.
+Build requirements: JDK 17+, SDK platform 36 and Build Tools 36.0.0. AGP 9.0.1 supplies Kotlin 2.2.10; Gradle 9.1.0 and Compose BOM 2026.01.00 are pinned. The wrapper JAR and Gradle distribution have fixed SHA-256 checksums. The app uses minSdk 26 and targetSdk 36.
 
 On Windows, prepare a project-local toolchain if the existing JDK/SDK is too old:
 
@@ -82,7 +77,7 @@ On Linux x86_64 or macOS with JDK 17+ and an Android SDK:
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-Zig 0.15.2 for the keyboard helper downloads automatically on Linux x86_64 and macOS. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB, the additional AndroidX path library and the keyboard request helper inside each APK. The compile-only JNI annotation stub is not packaged. Verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The small keyboard helper is compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
+Zig 0.15.2 for input adapters downloads automatically on Linux x86_64 and macOS. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, the pinned runtime libraries, XKB, the AndroidX path library and the native components generated from source inside each APK. The compile-only JNI annotation stub is not packaged. Verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The Vulkan ICD, keyboard request helper, SDL input-method adapter and gamepad adapter are compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
 
 Both entry points restore the pinned runtime automatically. To restore separately (JDK 11+):
 
@@ -90,7 +85,7 @@ Both entry points restore the pinned runtime automatically. To restore separatel
 java scripts/RestoreRuntime.java
 ```
 
-For a private repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Contents: read access. No token belongs in source or logs. Offline: `java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`. Use `--check` to verify existing files, `--force` to explicitly replace changed files. Binaries stay outside Git; the restorer checks the archive and all 53 files. This restores prebuilt dependencies rather than rebuilding all upstream components.
+For a private repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Contents: read access. No token belongs in source or logs. Offline: `java scripts/RestoreRuntime.java --archive /path/to/factorio-android-runtime-arm64-20261021-v1.zip`. Use `--check` to verify existing files, `--force` to explicitly replace changed files. Binaries stay outside Git; the restorer checks the archive and every manifest entry. These versions and digests make dependency downloads, builds and artifact checks reproducible; they do not restrict game compatibility at application startup. This restores prebuilt dependencies rather than rebuilding all upstream components.
 
 Signing uses the existing project-local key or CI secrets; a key is generated if none is configured. Keep the same signing key for future upgrades. Application tags build and publish APKs to Releases; `runtime-` tags are reserved for pinned dependencies. To publish manually, use Actions → Release → Run workflow and fill `release_tag` with the new application version. Leave it empty to only build Actions artifacts. Existing tags are not moved.
 

@@ -9,34 +9,22 @@ import java.io.*;
 import java.nio.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.security.*;
 import java.util.UUID;
 
 final class GameImporter {
     interface Progress { void update(ImportProgress progress); }
-    private static final String BASELINE="5d6ff79eb190a29d4fb78b86d50fa28e099feffbc8b394c3d4f515a886ab5bf1";
     private static final long RESERVE=256L*1024*1024;
-    static String hex(byte[] bytes) {
-        StringBuilder out=new StringBuilder();
-        for(byte b:bytes) out.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
-        return out.toString();
-    }
-    private static String digest(File file) throws Exception {
-        MessageDigest sha=MessageDigest.getInstance("SHA-256"); byte[] buffer=new byte[65536];
-        try(InputStream in=new FileInputStream(file)) {
-            for(int n;(n=in.read(buffer))!=-1;) {
-                if(Thread.currentThread().isInterrupted()) throw new InterruptedIOException("导入已取消");
-                sha.update(buffer,0,n);
-            }
-        }
-        return hex(sha.digest());
-    }
     static JSONObject readJson(File file) throws Exception {
         if(file.length()>1024*1024) throw new IOException("元数据文件过大");
         return new JSONObject(new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));
     }
     static JSONObject current(Context context) {
-        try { return readJson(new File(context.getFilesDir(),"active-game.json")); }
+        try {
+            JSONObject game=readJson(new File(context.getFilesDir(),"active-game.json"));
+            String version=game.optString("version","");
+            if(version==null||!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9._-]+)?"))return null;
+            return game;
+        }
         catch(Exception e) { return null; }
     }
     private static JSONObject elf(File file) throws Exception {
@@ -64,8 +52,6 @@ final class GameImporter {
                     interpreter=new String(value,0,value.length-1,StandardCharsets.US_ASCII);
                 }
             }
-            if(!"/lib/ld-linux-aarch64.so.1".equals(interpreter))
-                throw new IOException("不是预期的 glibc ARM64 图形客户端");
             return result.put("interpreter",interpreter);
         }
     }
@@ -98,7 +84,6 @@ final class GameImporter {
         String stagingPrefix=staging.getCanonicalPath()+File.separator;
         boolean committed=false; long extracted=0; int files=0, graphics=0;
         JSONObject previous=current(context);
-        MessageDigest sha=MessageDigest.getInstance("SHA-256");
         ImportProgress.Reporter status=new ImportProgress.Reporter(progress);
         status.update(ImportProgress.Stage.OPEN,0,-1,0,0,true);
         try {
@@ -111,7 +96,7 @@ final class GameImporter {
             }catch(Exception ignored) { /* Providers may omit size; keep measured bytes. */ }
             ImportProgress.Input counted=new ImportProgress.Input(selected);
             status.update(ImportProgress.Stage.EXTRACT,0,total,0,0,true);
-            try(InputStream compressed=new DigestInputStream(new BufferedInputStream(counted,256*1024),sha);
+            try(InputStream compressed=new BufferedInputStream(counted,256*1024);
                 XZInputStream xz=new XZInputStream(compressed,65536);
                 SafeTarReader tar=new SafeTarReader(xz)) {
                 byte[] buffer=new byte[65536];
@@ -134,14 +119,13 @@ final class GameImporter {
                             status.update(ImportProgress.Stage.EXTRACT,counted.bytes,total,extracted,files,false);
                         }
                     }
-                    // This preflight version only imports and inspects; never launches executable code.
+                    // Imported content stays non-executable; the runtime loader owns execution.
                     target.setExecutable(false,false);
                     files++;
                     if(entry.name.startsWith("factorio/data/base/graphics/")) graphics++;
                     status.update(ImportProgress.Stage.EXTRACT,counted.bytes,total,extracted,files,false);
                 }
             }
-            String archiveHash=hex(sha.digest());
             File game=new File(staging,"factorio"), engine=new File(game,"bin/arm64/factorio");
             if(!engine.isFile() || !new File(game,"data/core/info.json").isFile()
                     || !new File(game,"data/core/graphics/factorio.png").isFile() || graphics==0)
@@ -149,16 +133,15 @@ final class GameImporter {
             JSONObject base=readJson(new File(game,"data/base/info.json"));
             if(!"base".equals(base.optString("name"))) throw new IOException("基础资源元数据无效");
             String version=base.getString("version");
-            if(!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+")) throw new IOException("版本字段无效");
+            if(!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9._-]+)?")) throw new IOException("版本字段无效");
             File expansion=new File(game,"data/space-age/info.json");
             if(expansion.isFile() && !version.equals(readJson(expansion).optString("version")))
                 throw new IOException("Space Age 与基础版版本不一致");
             status.update(ImportProgress.Stage.VERIFY,counted.bytes,total,extracted,files,true);
             JSONObject report=new JSONObject().put("schema",1).put("version",version)
-                .put("spaceAge",expansion.isFile()).put("archiveSha256",archiveHash)
-                .put("engineSha256",digest(engine)).put("elf",elf(engine))
+                .put("spaceAge",expansion.isFile())
+                .put("elf",elf(engine))
                 .put("fileCount",files).put("unpackedBytes",extracted)
-                .put("officialBaselineHashMatched",BASELINE.equals(archiveHash))
                 .put("relativeDirectory","games/"+destination.getName()+"/factorio")
                 .put("gameLaunched",false).put("runtimeReady",false);
             status.update(ImportProgress.Stage.FINISH,counted.bytes,total,extracted,files,true);

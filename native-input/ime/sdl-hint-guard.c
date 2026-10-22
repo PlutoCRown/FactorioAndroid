@@ -17,14 +17,21 @@
 #include <sys/un.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
-#include "sdl-hint-interfaces.h"
+#include "../sdl-symbols.h"
 
 static bool (*set_hint)(const char *,const char *,int);
 static bool (*add_callback)(const char *,void (*)(void *,const char *,const char *,const char *),void *);
 static const char hint_name[]="SDL_ENABLE_STEAM_SCREEN_KEYBOARD";
 static bool (*run_main)(void (*)(void *),void *,bool);
 static void (*send_text)(const char *);
-static bool (*send_key)(uint64_t,unsigned,unsigned,int,int,bool);
+/* Stable SDL3 public event ABI; no internal six-argument keyboard function. */
+struct keyboard_event {uint32_t type,reserved;uint64_t timestamp;uint32_t window,which,scancode,key;uint16_t mod,raw;bool down,repeat;};
+union keyboard_packet {struct keyboard_event key;unsigned char padding[128];};
+_Static_assert(sizeof(union keyboard_packet)==128,"SDL3 event ABI");
+_Static_assert(offsetof(struct keyboard_event,down)==36,"SDL3 keyboard ABI");
+static bool (*push_event)(void *);
+static uint32_t (*window_id)(void *),(*key_code)(int,uint16_t,bool);
+static uint64_t (*ticks_ns)(void);
 static void *(*keyboard_focus)(void);
 static bool (*text_active)(void *);
 static bool (*screen_shown)(void *);
@@ -40,71 +47,51 @@ static void preserve_hint(void *userdata,const char *name,const char *old_value,
      * notification carries 1 and returns above, so this cannot recurse forever. */
     if(!set_hint(name,"1",2))fprintf(stderr,"REA_IME_HINT reapply_failed=true\n");
 }
-static bool executable(const struct dl_phdr_info *info,uintptr_t address) {
-    for(unsigned i=0;i<info->dlpi_phnum;i++) {
-        const ElfW(Phdr) *p=&info->dlpi_phdr[i];
-        if(p->p_type==PT_LOAD&&(p->p_flags&(PF_R|PF_X))==(PF_R|PF_X)&&
-            address>=p->p_vaddr&&address+16<=p->p_vaddr+p->p_memsz)return true;
-    }
-    return false;
-}
-static int bind_engine(struct dl_phdr_info *info,size_t size,void *userdata) {
-    (void)size;(void)userdata;
-    const char *name=info->dlpi_name?info->dlpi_name:"",*base=strrchr(name,'/');base=base?base+1:name;
-    if(*name&&strcmp(base,"factorio"))return 0;
-    const uintptr_t offsets[]={IME_SDL_ADD_HINT,IME_SDL_SET_HINT};
-    const unsigned char prefix[]={0xfd,0x7b,0xbd,0xa9,0xf5,0x0b,0x00,0xf9,0xf4,0x4f,0x02,0xa9,0xfd,0x03,0x00,0x91};
-    for(unsigned i=0;i<2;i++)if(!executable(info,offsets[i])||memcmp((const void *)(info->dlpi_addr+offsets[i]),prefix,16))return 0;
-    set_hint=(bool (*)(const char *,const char *,int))(info->dlpi_addr+IME_SDL_SET_HINT);
-    add_callback=(bool (*)(const char *,void (*)(void *,const char *,const char *,const char *),void *))(info->dlpi_addr+IME_SDL_ADD_HINT);
-    static const unsigned char p_main[]={IME_PREFIX_RUN_MAIN},p_key[]={IME_PREFIX_SEND_KEY},p_text[]={IME_PREFIX_SEND_TEXT},p_focus[]={IME_PREFIX_KEYBOARD_FOCUS},p_active[]={IME_PREFIX_TEXT_ACTIVE},p_shown[]={IME_PREFIX_SCREEN_SHOWN},p_show[]={IME_PREFIX_X11_SHOW},p_hide[]={IME_PREFIX_X11_HIDE},p_env[]={IME_PREFIX_GET_ENV},p_setenv[]={IME_PREFIX_SET_ENV},p_unsetenv[]={IME_PREFIX_UNSET_ENV};
-    const struct {uintptr_t offset;const unsigned char *prefix;size_t length;} entries[]={
-        {IME_SDL_RUN_MAIN,p_main,sizeof(p_main)},{IME_SDL_SEND_KEY,p_key,sizeof(p_key)},
-        {IME_SDL_SEND_TEXT,p_text,sizeof(p_text)},{IME_SDL_KEYBOARD_FOCUS,p_focus,sizeof(p_focus)},
-        {IME_SDL_TEXT_ACTIVE,p_active,sizeof(p_active)},{IME_SDL_SCREEN_SHOWN,p_shown,sizeof(p_shown)},
-        {IME_X11_SHOW,p_show,sizeof(p_show)},{IME_X11_HIDE,p_hide,sizeof(p_hide)},
-        {IME_SDL_GET_ENV,p_env,sizeof(p_env)},{IME_SDL_SET_ENV,p_setenv,sizeof(p_setenv)},{IME_SDL_UNSET_ENV,p_unsetenv,sizeof(p_unsetenv)}};
-    for(unsigned i=0;i<sizeof(entries)/sizeof(entries[0]);i++)
-        if(!executable(info,entries[i].offset)||memcmp((const void *)(info->dlpi_addr+entries[i].offset),entries[i].prefix,entries[i].length))return 0;
-    run_main=(bool (*)(void (*)(void *),void *,bool))(info->dlpi_addr+IME_SDL_RUN_MAIN);
-    send_text=(void (*)(const char *))(info->dlpi_addr+IME_SDL_SEND_TEXT);
-    send_key=(bool (*)(uint64_t,unsigned,unsigned,int,int,bool))(info->dlpi_addr+IME_SDL_SEND_KEY);
-    keyboard_focus=(void *(*)(void))(info->dlpi_addr+IME_SDL_KEYBOARD_FOCUS);
-    text_active=(bool (*)(void *))(info->dlpi_addr+IME_SDL_TEXT_ACTIVE);
-    screen_shown=(bool (*)(void *))(info->dlpi_addr+IME_SDL_SCREEN_SHOWN);
-    show_screen=(void (*)(void *,void *,unsigned))(info->dlpi_addr+IME_X11_SHOW);
-    hide_screen=(void (*)(void *,void *))(info->dlpi_addr+IME_X11_HIDE);
-    get_environment=(void *(*)(void))(info->dlpi_addr+IME_SDL_GET_ENV);
-    set_environment=(bool (*)(void *,const char *,const char *,bool))(info->dlpi_addr+IME_SDL_SET_ENV);
-    unset_environment=(bool (*)(void *,const char *))(info->dlpi_addr+IME_SDL_UNSET_ENV);
-    for(unsigned i=0;i<info->dlpi_phnum;i++) {
-        const ElfW(Phdr) *p=&info->dlpi_phdr[i];
-        if(p->p_type==PT_LOAD&&(p->p_flags&PF_R)&&IME_SDL_VIDEO_DEVICE>=p->p_vaddr&&IME_SDL_VIDEO_DEVICE+8<=p->p_vaddr+p->p_memsz)
-            video_device=(void **)(info->dlpi_addr+IME_SDL_VIDEO_DEVICE);
-    }
-    if(!video_device)return 0;
-    return 1;
+static bool bind_interfaces(void) {
+    if(!rea_sdl3())return false;
+#define BIND(variable, type, name) do { variable=(type)rea_sdl_symbol(name);if(!variable)return false; } while(0)
+    BIND(set_hint,bool (*)(const char *,const char *,int),"SDL_SetHintWithPriority");
+    BIND(add_callback,bool (*)(const char *,void (*)(void *,const char *,const char *,const char *),void *),"SDL_AddHintCallback");
+    BIND(run_main,bool (*)(void (*)(void *),void *,bool),"SDL_RunOnMainThread");
+    BIND(send_text,void (*)(const char *),"SDL_SendKeyboardText");
+    BIND(push_event,bool (*)(void *),"SDL_PushEvent");
+    BIND(window_id,uint32_t (*)(void *),"SDL_GetWindowID");
+    BIND(key_code,uint32_t (*)(int,uint16_t,bool),"SDL_GetKeyFromScancode");
+    BIND(ticks_ns,uint64_t (*)(void),"SDL_GetTicksNS");
+    BIND(keyboard_focus,void *(*)(void),"SDL_GetKeyboardFocus");
+    BIND(text_active,bool (*)(void *),"SDL_TextInputActive");
+    BIND(screen_shown,bool (*)(void *),"SDL_ScreenKeyboardShown");
+    BIND(show_screen,void (*)(void *,void *,unsigned),"X11_ShowScreenKeyboard");
+    BIND(hide_screen,void (*)(void *,void *),"X11_HideScreenKeyboard");
+    video_device=rea_sdl_video_pointer();if(!video_device)return false;
+    BIND(get_environment,void *(*)(void),"SDL_GetEnvironment");
+    BIND(set_environment,bool (*)(void *,const char *,const char *,bool),"SDL_SetEnvironmentVariable");
+    BIND(unset_environment,bool (*)(void *,const char *),"SDL_UnsetEnvironmentVariable");
+#undef BIND
+    return true;
 }
 struct input_command {int kind,a,b,d;char *text;bool accepted;};
 static int editing_scancode(int android_code) {
     switch(android_code){case 67:return 42;case 112:return 76;case 66:return 40;case 61:return 43;
         case 21:return 80;case 22:return 79;case 19:return 82;case 20:return 81;default:return 0;}
 }
-static void key_pair(int scancode) {
-    /* Internal six-argument ABI verified from the exact engine. Ignore held
-     * modifiers for IME editing keys; update SDL state and its normal event queue. */
-    send_key(0,9u,0,0,scancode,true);send_key(0,9u,0,0,scancode,false);
+static bool key_pair(int scancode) {
+    void *window=keyboard_focus();if(!window)return false;
+    union keyboard_packet event={0};
+    event.key.window=window_id(window);event.key.scancode=(uint32_t)scancode;
+    event.key.key=key_code(scancode,0,true);event.key.timestamp=ticks_ns();
+    event.key.type=0x300;event.key.down=true;bool down=push_event(&event);
+    event.key.type=0x301;event.key.down=false;event.key.timestamp=ticks_ns();bool up=push_event(&event);
+    return down&&up;
 }
-static void cursor_move(int distance) {int scan=distance<0?80:79;for(int i=0;i<abs(distance);i++)key_pair(scan);}
+static bool cursor_move(int distance) {int scan=distance<0?80:79;for(int i=0;i<abs(distance);i++)if(!key_pair(scan))return false;return true;}
 static void apply_input(void *userdata) {
     struct input_command *c=userdata;void *window=keyboard_focus();
     if(!window)return;
     if(c->kind==3) {
         if(c->a&&!text_active(window))return;
-        void *device=*video_device,*show=NULL,*hide=NULL;
+        void *device=*video_device;
         if(!device)return;
-        memcpy(&show,(char *)device+0x288,sizeof(show));memcpy(&hide,(char *)device+0x290,sizeof(hide));
-        if(show!=(void *)show_screen||hide!=(void *)hide_screen)return;
         if(screen_shown(window)!=(bool)c->a) {
             /* The backend emits a URL and a visibility event. Mark its child
              * as an echo so Android keeps the active editor and input mode. */
@@ -116,19 +103,19 @@ static void apply_input(void *userdata) {
         c->accepted=screen_shown(window)==(bool)c->a;return;
     }
     if(!text_active(window))return;
-    if(c->kind==2){key_pair(editing_scancode(c->a));c->accepted=true;return;}
-    cursor_move(c->a);for(int i=0;i<c->b;i++)key_pair(42);
+    if(c->kind==2){c->accepted=key_pair(editing_scancode(c->a));return;}
+    if(!cursor_move(c->a))return;for(int i=0;i<c->b;i++)if(!key_pair(42))return;
     char *start=c->text;
     for(char *p=start;;p++) {
         char value=*p;
         if(value=='\n'||value=='\r'||value=='\t'||value=='\0') {
             *p='\0';if(*start)send_text(start);*p=value;
             if(!value)break;
-            if(value!='\r'||p[1]!='\n')key_pair(value=='\t'?43:40);
+            if((value!='\r'||p[1]!='\n')&&!key_pair(value=='\t'?43:40))return;
             start=p+1;
         }
     }
-    cursor_move(c->d);c->accepted=true;
+    c->accepted=cursor_move(c->d);
 }
 static bool read_exact(int fd,void *bytes,size_t size) {
     size_t done=0;while(done<size){ssize_t n=read(fd,(char *)bytes+done,size-done);if(n<0&&errno==EINTR)continue;if(n<=0)return false;done+=(size_t)n;}return true;
@@ -159,7 +146,9 @@ static void *input_worker(void *unused) {
         if(header[0]!=0x52495431||header[4]>65536)goto done;
         if(command.kind==1){if(command.a< -2048||command.a>2048||command.b<0||command.b>2048||command.d< -2048||command.d>2048)goto done;}
         else if(command.kind==2){if(!editing_scancode(command.a)||command.b||header[4]||command.d)goto done;}
-        else if(command.kind==3){if((command.a!=0&&command.a!=1)||command.b||header[4]||command.d)goto done;}else goto done;
+        else if(command.kind==3){if((command.a!=0&&command.a!=1)||command.b||header[4]||command.d)goto done;}
+        else if(command.kind==4){if(command.a||command.b||header[4]||command.d)goto done;}else goto done;
+        if(command.kind==4){send(client,"OK\n",3,MSG_NOSIGNAL);close(client);continue;}
         text=malloc((size_t)header[4]+1);if(!text||!read_exact(client,text,header[4])||!valid_utf8((const unsigned char *)text,header[4]))goto done;
         text[header[4]]='\0';command.text=text;
         accepted=run_main(apply_input,&command,true)&&command.accepted;
@@ -169,9 +158,9 @@ done:
     close(server);return NULL;
 }
 __attribute__((constructor)) static void install_hint_guard(void) {
-    const char *identity=getenv("REA_IME_HINT_ENGINE_SHA256"),*enabled=getenv(hint_name);
-    if(!identity||strcmp(identity,IME_ENGINE_SHA256)||!enabled||strcmp(enabled,"1")||!getenv("REA_IME_TOKEN"))return;
-    if(!dl_iterate_phdr(bind_engine,NULL)){fprintf(stderr,"REA_IME_HINT interface_mismatch=true\n");return;}
+    const char *enabled=getenv(hint_name);
+    if(!enabled||strcmp(enabled,"1")||!getenv("REA_IME_TOKEN"))return;
+    if(!bind_interfaces()){fprintf(stderr,"REA_IME_HINT interface_mismatch=true\n");return;}
     bool ready=set_hint(hint_name,"1",2)&&add_callback(hint_name,preserve_hint,NULL);
     fprintf(stderr,"REA_IME_HINT callback_registered=%d engine_files_modified=false\n",ready);
     const char *socket_name=getenv("REA_IME_TEXT_SOCKET"),*token=getenv("REA_IME_TOKEN");

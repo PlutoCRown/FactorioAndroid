@@ -103,14 +103,18 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
     private void openGameFolder(String root) {
         if(busy)return;
+        Uri initial;
         try {
+            initial=GameDocumentsProvider.documentUri(this,root);
             new GameFiles(GameSession.profileDirectory(this)).directory(root);
-            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(GameDocumentsProvider.rootUri(root),"vnd.android.document/root"));
+        }catch(Exception e){fail(getString(R.string.folder_open_failed),e);return;}
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(GameDocumentsProvider.rootUri(this,root),"vnd.android.document/root"));
         }catch(ActivityNotFoundException e) {
             // OEM file managers may omit ACTION_VIEW for SAF roots. The system
             // browser can still show this exact directory as a document tree.
             Intent browser=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI,
-                android.provider.DocumentsContract.buildDocumentUri(GameDocumentsProvider.AUTHORITY,root));
+                initial);
             try{startActivityForResult(browser,12);}catch(ActivityNotFoundException missing){Toast.makeText(this,getString(R.string.folder_sidebar_hint,getString(root.equals("saves")?R.string.save_root_title:R.string.mod_root_title)),Toast.LENGTH_LONG).show();}
         }catch(Exception e){fail(getString(R.string.folder_open_failed),e);}
     }
@@ -183,7 +187,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             JSONObject report=GameImporter.importGame(getApplicationContext(),uri,progress->runOnUiThread(()-> {
                 if(!isDestroyed()){message=importProgress(progress);progressFraction=progress.fraction();applyBusy();}
             }));
-            getContentResolver().notifyChange(android.provider.DocumentsContract.buildRootsUri(GameDocumentsProvider.AUTHORITY),null);
+            getContentResolver().notifyChange(android.provider.DocumentsContract.buildRootsUri(GameDocumentsProvider.authority(this)),null);
             runOnUiThread(()-> {if(isDestroyed())return;gameReport=report;page=HOME;setBusy(false,getString(R.string.game_added));renderPage();});
         }catch(Exception e){fail(getString(R.string.game_import_failed),e);}});
     }

@@ -8,7 +8,7 @@
         android:allowBackup="false" android:supportsRtl="true"
         android:usesCleartextTraffic="false">
         <provider android:name="org.factorio.local.launcher.GameDocumentsProvider"
-            android:authorities="org.factorio.local.launcher.documents"
+            android:authorities="${applicationId}.documents"
             android:exported="true" android:grantUriPermissions="true"
             android:permission="android.permission.MANAGE_DOCUMENTS">
             <intent-filter><action android:name="android.content.action.DOCUMENTS_PROVIDER" /></intent-filter>

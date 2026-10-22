@@ -73,10 +73,20 @@ class BuildLauncher {
             byte[] hintData=zip.getInputStream(hint).readAllBytes();
             if(hintData.length!=Long.parseLong(ime.getProperty("hint.bytes"))||!sha(hintData).equals(ime.getProperty("hint.sha256")))throw new IOException("Keyboard hint adapter differs");
             count++;
+            String padPath="lib/arm64-v8a/"+ime.getProperty("gamepad.name");
+            ZipEntry pad=zip.getEntry(padPath);if(pad==null)throw new IOException("APK missing source-built gamepad relay");
+            byte[] padData=zip.getInputStream(pad).readAllBytes();
+            if(padData.length!=Long.parseLong(ime.getProperty("gamepad.bytes"))||!sha(padData).equals(ime.getProperty("gamepad.sha256")))throw new IOException("Built gamepad relay differs");
+            count++;
+            ZipEntry icd=zip.getEntry("lib/arm64-v8a/"+ime.getProperty("icd.name"));
+            if(icd==null)throw new IOException("APK missing source-built graphics adapter");
+            byte[] icdData=zip.getInputStream(icd).readAllBytes();
+            if(icdData.length!=Long.parseLong(ime.getProperty("icd.bytes"))||!sha(icdData).equals(ime.getProperty("icd.sha256")))throw new IOException("Built graphics adapter differs");
+            count++;
             long actual=zip.stream().filter(x->x.getName().startsWith("lib/")&&x.getName().endsWith(".so")).count();
             if(actual!=count)throw new IOException("Unexpected native payload count: "+actual);
         }
-        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" additional native libraries (AndroidX + keyboard helper + hint adapter) + XKB");
+        System.out.println("APK runtime payload verified: 52 game runtime (including source-built SDL relay) + "+(count-52)+" additional native libraries (AndroidX + keyboard helper + hint adapter) + XKB");
     }
     public static void main(String[] args)throws Exception {
         if(Runtime.version().feature()<17)throw new IOException("JDK 17+ required for Kotlin/Compose/AGP");

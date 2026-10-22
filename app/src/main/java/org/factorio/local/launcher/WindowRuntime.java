@@ -5,10 +5,9 @@ import org.json.JSONObject;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.security.MessageDigest;
 import java.util.zip.*;
 
-/** Private, hash-pinned resources for the embedded window diagnostic. */
+/** Private resources for the embedded X11 window backend. */
 public final class WindowRuntime {
     private static byte[] asset(Context context,String name,int limit) throws Exception {
         try(InputStream in=context.getAssets().open(name);ByteArrayOutputStream out=new ByteArrayOutputStream()) {
@@ -20,19 +19,12 @@ public final class WindowRuntime {
             return out.toByteArray();
         }
     }
-    private static String sha(byte[] bytes) throws Exception {
-        return GameImporter.hex(MessageDigest.getInstance("SHA-256").digest(bytes));
-    }
     public static JSONObject prepare(Context context) throws Exception {
         JSONObject manifest=new JSONObject(new String(asset(context,"window-runtime.json",16384),StandardCharsets.UTF_8));
-        String id=manifest.getString("id");
-        if(!id.matches("xlorie-[0-9a-f]{12}")) throw new IOException("Window runtime identity invalid");
         File library=new File(context.getApplicationInfo().nativeLibraryDir,"libXlorie.so");
-        if(library.length()!=manifest.getLong("libraryBytes") || !sha(Files.readAllBytes(library.toPath())).equals(manifest.getString("librarySha256")))
-            throw new IOException("Installed window library checksum mismatch");
+        RuntimeLibraries.requireLibrary(library);
         byte[] archive=asset(context,"window-xkb.zip",4*1024*1024);
-        if(!sha(archive).equals(manifest.getString("xkbArchiveSha256"))) throw new IOException("XKB resource checksum mismatch");
-        File root=new File(context.getFilesDir(),"window-runtime/"+id),xkb=new File(root,"xkb");
+        File root=new File(context.getFilesDir(),"window-runtime/x11"),xkb=new File(root,"xkb");
         if(!xkb.isDirectory()&&!xkb.mkdirs()) throw new IOException("Cannot create private XKB directory");
         int count=0;long total=0;
         try(ZipInputStream zip=new ZipInputStream(new ByteArrayInputStream(archive))) {
@@ -51,12 +43,11 @@ public final class WindowRuntime {
                 if(++count>1000) throw new IOException("Too many XKB members");
             }
         }
-        if(count!=manifest.getInt("xkbFiles")||total!=manifest.getLong("xkbUnpackedBytes")) throw new IOException("XKB inventory mismatch");
         return manifest.put("xkbDirectory",xkb.getAbsolutePath()).put("nativeLibrary",library.getAbsolutePath());
     }
     static File prepareClients(Context context) throws Exception {
         JSONObject manifest=new JSONObject(new String(asset(context,"window-clients.json",16384),StandardCharsets.UTF_8));
-        File directory=new File(context.getFilesDir(),"runtime/termux-x11-clients-1");
+        File directory=new File(context.getFilesDir(),"runtime/x11-clients");
         if(!directory.isDirectory()&&!directory.mkdirs())throw new IOException("Cannot create X11 library directory");
         org.json.JSONArray libraries=manifest.getJSONArray("libraries");
         java.util.Set<String> expected=new java.util.HashSet<>(java.util.Arrays.asList("libX11.so.6","libxcb.so.1","libXau.so.6","libXdmcp.so.6","libXext.so.6","libXcursor.so.1","libXfixes.so.3","libXrender.so.1","libXi.so.6","libXrandr.so.2"));
@@ -64,7 +55,7 @@ public final class WindowRuntime {
             JSONObject row=libraries.getJSONObject(i);String name=row.getString("name"),packaged=row.getString("packagedName");
             if(!expected.remove(name)||!packaged.matches("librea_[a-z0-9]+\\.so"))throw new IOException("Invalid X11 library entry");
             File installed=new File(context.getApplicationInfo().nativeLibraryDir,packaged);
-            if(installed.length()!=row.getLong("bytes")||!sha(Files.readAllBytes(installed.toPath())).equals(row.getString("sha256")))throw new IOException("Installed X11 library checksum mismatch: "+name);
+            RuntimeLibraries.requireLibrary(installed);
             Path alias=new File(directory,name).toPath();
             if(Files.isSymbolicLink(alias))Files.delete(alias);
             else if(Files.exists(alias))throw new IOException("Unexpected X11 library alias file");

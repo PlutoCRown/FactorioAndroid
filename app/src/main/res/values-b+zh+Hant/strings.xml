@@ -58,7 +58,7 @@
     <string name="save_import_retry" formatted="false">请检查所选 ZIP 存档和设备剩余空间后重试。</string>
     <string name="ok" formatted="false">知道了</string>
     <string name="get_game" formatted="false">获取游戏本体</string>
-    <string name="download_instructions" formatted="false">登录 Factorio 官网，在下载页面选择 Linux ARM64 图形完整包（.tar.xz）。Steam 用户可以先关联官网账号。\n\nSpace Age 需要对应的完整游戏包。下载完成后，回到这里选择安装包。当前验证版本为 2.1.22。</string>
+    <string name="download_instructions" formatted="false">登录 Factorio 官网，在下载页面选择 Linux ARM64 图形完整包（.tar.xz）。Steam 用户可以先关联官网账号。\n\nSpace Age 需要对应的完整游戏包。下载完成后，回到这里选择安装包。</string>
     <string name="open_website" formatted="false">打开官网</string>
     <string name="website_fallback" formatted="false">请在浏览器访问 factorio.com/download。</string>
     <string name="close" formatted="false">关闭</string>
@@ -136,13 +136,13 @@
 
     <string name="import_stage_open">1/4 · 正在打开游戏安装包…</string>
     <string name="import_stage_extract">2/4 · 正在解压游戏文件…</string>
-    <string name="import_stage_verify">3/4 · 正在核验 ARM64 引擎与文件哈希…</string>
+    <string name="import_stage_verify">3/4 · 正在檢查 ARM64 引擎與遊戲資源…</string>
     <string name="import_stage_finish">4/4 · 正在切换游戏本体并清理旧副本…</string>
     <string name="import_read_known">安装包已读取：%1$d%% · %2$.1f / %3$.1f MiB</string>
     <string name="import_read_unknown">安装包已读取：%1$.1f MiB · 无法获取总大小</string>
     <string name="import_extracted">已展开：%1$.1f MiB · %2$d 个文件</string>
     <string name="import_elapsed">已用时：%1$d 分 %2$02d 秒</string>
-    <string name="import_duration_hint">預計匯入時間：原版約 2 分鐘，太空時代約 5 分鐘，實際耗時取決於裝置效能和檔案大小。匯入期間請保持應用程式開啟；讀取完成後仍需驗證與整理檔案。</string>
+    <string name="import_duration_hint">匯入時間取決於安裝包大小、儲存速度和裝置效能。解壓縮、檢查及整理檔案期間請保持應用程式開啟。</string>
     <string name="save_import_invalid">此 ZIP 不是完整的、可识别的 Factorio 存档。请选择原始存档 ZIP，无需解压。</string>
     <string name="save_import_copy_failed">无法复制存档。请检查剩余空间及所选文件是否仍可访问，然后重试。</string>
 </resources>
