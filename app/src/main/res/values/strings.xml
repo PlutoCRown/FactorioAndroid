@@ -124,6 +124,7 @@
     <string name="folder_sidebar_hint">Open %1$s in the system file manager sidebar.</string>
     <string name="save_imported_name">Imported: %1$s</string>
     <string name="game_exit_code">Game exited unexpectedly (exit code %1$d).</string>
+    <string name="game_fatal_signal">Game ended unexpectedly (%1$s). Returned to the launcher.</string>
     <string name="show_keyboard">Show keyboard</string>
     <string name="sprite_loading_limit" formatted="false">Sprite loading thread limit</string>
     <string name="sprite_loading_limit_hint" formatted="false">Higher limits may load faster but use more resources. Insufficient device memory can cause a crash with exit code 137. This only affects texture loading, not gameplay threads.</string>
@@ -146,4 +147,13 @@
     <string name="import_duration_hint">Import time depends on package size, storage speed and device performance. Keep the app open while files are extracted, checked and organized.</string>
     <string name="save_import_invalid">This ZIP is not a complete, supported Factorio save. Select the original save ZIP without extracting it.</string>
     <string name="save_import_copy_failed">Could not copy the save. Check free storage and whether the selected file is still accessible, then try again.</string>
+    <string name="game_error_title">Game ended unexpectedly</string>
+    <string name="game_error_export_message">%1$s\n\nExport this session’s logs? You can choose where to save the ZIP file. Logs may include game or mod names and device information.</string>
+    <string name="game_error_no_log">%1$s\n\nCould not prepare the session log. Existing diagnostics remain in the app.</string>
+    <string name="export_logs">Export logs</string>
+    <string name="open_logs_folder">Open log folder</string>
+    <string name="logs_root_title">Factorio logs</string>
+    <string name="logs_exporting">Exporting logs…</string>
+    <string name="logs_exported">Logs exported</string>
+    <string name="logs_export_failed">Could not export logs</string>
 </resources>

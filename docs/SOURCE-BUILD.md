@@ -137,3 +137,21 @@ python3 scripts/build-xkb-data.py /path/xkeyboard-config-glibc_2.43_all.deb --up
 ```
 
 脚本读取 DEB 内的数据，不安装包、不执行包内脚本；生成 `app/src/main/assets/window-xkb.zip`，并更新 `window-runtime.json` 和恢复清单中的数据项。原有第三方 `.so` 的版本和清单不变。ZIP 压缩字节可随压缩库版本不同，校验应同时核对解压后的文件集合和内容。
+
+## 会话退出监督的独立设备回归
+
+`tests/device/EngineExitProbe.java` 通过反射调用 APK 中真实的进程监督代码，仅运行自己的短命 shell 子进程，不加载游戏。覆盖正常退出、快速致命异常，以及图形初始化后发生致命异常却不结束的进程。另行覆盖用户退出完成后才发生的清理故障：保留信号诊断，但标记正常退出流程已完成。它不需要独立安装测试 APK。
+
+完成普通 APK 构建后，在 Windows 使用现有 JDK/SDK 编译：
+
+```powershell
+$classes='.cache\engine-exit-probe\classes'
+New-Item -ItemType Directory -Force $classes | Out-Null
+& "$env:JAVA_HOME\bin\javac.exe" --release 8 -d $classes tests/device/EngineExitProbe.java
+$inputs=@(Get-ChildItem $classes -Filter '*.class' -Recurse | ForEach-Object FullName)
+& "$env:JAVA_HOME\bin\java.exe" -cp "$env:ANDROID_HOME\build-tools\36.0.0\lib\d8.jar" `
+  com.android.tools.r8.D8 --min-api 26 --lib "$env:ANDROID_HOME\platforms\android-36\android.jar" `
+  --output artifacts/EngineExitProbe.jar @inputs
+```
+
+将 JAR 复制到 debuggable 启动器的私有缓存并设为只读。通过 `run-as` 在应用 UID 下，以当前 APK 和 JAR 组成 `CLASSPATH`，运行 `/system/bin/app_process / EngineExitProbe CACHE_DIRECTORY`。APK 路径用 `pm path` 获取，缓存目录按实际 applicationId 取得；连接地址通过 ADB 的参数传入。成功输出 `ENGINE_EXIT_PROBE ... passed=true`。实际游戏退出仍需单独验证，发现原生崩溃时应保留原始信号和终止记录，不将监督器结束子进程产生的退出码当作原始原因。

@@ -105,6 +105,15 @@ public final class RuntimeProbe {
                 result.put("lifecycle",session.lifecycleState());
                 int ticks=0;
                 while(!(exited=process.waitFor(1,TimeUnit.SECONDS))&&!session.stopping()) {
+                    Map<String,String> live=liveGraphics.snapshot();
+                    if(live.containsKey("fatalSignal")) {
+                        result.put("fatalSignal",live.get("fatalSignal")).put("fatalLine",live.get("fatalLine"));
+                        if(progress!=null)progress.update("engineFatal",result);
+                        process.destroy();
+                        exited=process.waitFor(1,TimeUnit.SECONDS);
+                        if(!exited){result.put("fatalTermination",killOwnChild(process));exited=!process.isAlive();}
+                        break;
+                    }
                     if(startupLog!=null&&!liveGraphics.snapshot().containsKey("rendererLine")) {
                         String failure=StartupFailure.read(startupLog,logStart);
                         if(failure!=null) {
@@ -143,8 +152,12 @@ public final class RuntimeProbe {
             try { result.put("output",reader.get(3,TimeUnit.SECONDS)); }
             catch(Exception e) { result.put("outputError",e.toString()); }
             result.put("outputTail",outputTail.get());
-            if(liveGraphics!=null)result.put("liveGraphics",new JSONObject(liveGraphics.snapshot()));
-            return result.put("passed",exited && process.exitValue()==0 && !result.has("outputError"));
+            if(liveGraphics!=null) {
+                Map<String,String> live=liveGraphics.snapshot();result.put("liveGraphics",new JSONObject(live));
+                if(live.containsKey("fatalSignal"))result.put("fatalSignal",live.get("fatalSignal")).put("fatalLine",live.get("fatalLine"));
+                if(live.containsKey("normalExitCompleted"))result.put("normalExitCompleted",true);
+            }
+            return result.put("passed",exited && process.exitValue()==0 && !result.has("outputError") && !result.has("fatalSignal"));
         } finally {
             if(session!=null)session.detachEngine(process);
             if(process.isAlive()) {
@@ -348,8 +361,9 @@ public final class RuntimeProbe {
                 result.put("graphicalGameLaunched",initialized.optBoolean("started"))
                     .put("assessment","User-started persistent session; renderer and gameplay evidence are separate from process exit");
                 if(initialized.has("startupError"))result.put("error",initialized.getString("startupError"));
+                else if(initialized.has("fatalSignal")&&!initialized.optBoolean("userStopRequested")&&!initialized.optBoolean("normalExitCompleted"))result.put("error","Engine fatal signal: "+initialized.getString("fatalSignal"));
                 else if(!initialized.optBoolean("started"))result.put("error",initialized.optString("error","引擎进程未能启动"));
-                else if(!initialized.optBoolean("userStopRequested")&&initialized.optInt("exitCode",-1)!=0)
+                else if(!initialized.optBoolean("userStopRequested")&&!initialized.optBoolean("normalExitCompleted")&&initialized.optInt("exitCode",-1)!=0)
                     result.put("error","引擎异常结束，退出码 "+initialized.optInt("exitCode",-1)+"；请导出诊断报告。");
             }
             if(log.isFile()) {

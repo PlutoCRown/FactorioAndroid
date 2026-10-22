@@ -12,7 +12,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.Locale;
 
-/** SAF exposes saves/mods directly, with system-managed grants and no storage permission. */
+/** SAF exposes game folders and read-only log archives through system-managed grants. */
 public final class GameDocumentsProvider extends DocumentsProvider {
     static String authority(Context context){return context.getPackageName()+".documents";}
     private static final String[] ROOT_COLUMNS={Root.COLUMN_ROOT_ID,Root.COLUMN_DOCUMENT_ID,Root.COLUMN_TITLE,Root.COLUMN_FLAGS,Root.COLUMN_ICON,Root.COLUMN_MIME_TYPES,Root.COLUMN_AVAILABLE_BYTES};
@@ -24,6 +24,7 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     private FileNotFoundException failure(Exception e){FileNotFoundException result=new FileNotFoundException(getContext().getString(e instanceof GameFiles.BusyException?R.string.edit_game_busy:R.string.file_operation_failed));result.initCause(e);return result;}
     static Uri rootUri(Context context,String root){return DocumentsContract.buildRootUri(authority(context),root);}
     static String rootDocumentId(Context context,String root) throws Exception {
+        if("logs".equals(root))return "logs";
         if(GameImporter.current(context)==null)throw new FileNotFoundException("No imported game");
         return GameDocumentIds.root(GameSession.profileDirectory(context).getName(),root).document();
     }
@@ -35,6 +36,13 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     }
     @Override public Cursor queryRoots(String[] projection) throws FileNotFoundException {
         MatrixCursor cursor=new MatrixCursor(projection==null?ROOT_COLUMNS:projection);
+        try {
+            File logs=SessionLogs.directory(getContext().getFilesDir());
+            cursor.newRow().add(Root.COLUMN_ROOT_ID,"logs").add(Root.COLUMN_DOCUMENT_ID,"logs")
+                .add(Root.COLUMN_TITLE,getContext().getString(R.string.logs_root_title))
+                .add(Root.COLUMN_FLAGS,Root.FLAG_SUPPORTS_IS_CHILD).add(Root.COLUMN_ICON,R.mipmap.ic_launcher)
+                .add(Root.COLUMN_MIME_TYPES,"application/zip").add(Root.COLUMN_AVAILABLE_BYTES,logs.getUsableSpace());
+        }catch(IOException error){throw failure(error);}
         if(GameImporter.current(getContext())==null)return cursor;
         try {
             // Capture the profile once so both roots refer to the same import.
@@ -65,10 +73,21 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     }
     @Override public Cursor queryDocument(String document,String[] projection) throws FileNotFoundException {
         MatrixCursor cursor=new MatrixCursor(projection==null?DOC_COLUMNS:projection);
+        if(logDocument(document))try{logRow(cursor,document);return cursor;}catch(IOException error){throw failure(error);}
         try{GameDocumentIds.Id id=GameDocumentIds.parse(document);row(cursor,files(id),id);return cursor;}catch(IOException e){throw failure(e);}
     }
     @Override public Cursor queryChildDocuments(String parent,String[] projection,String sortOrder) throws FileNotFoundException {
         MatrixCursor cursor=new MatrixCursor(projection==null?DOC_COLUMNS:projection);
+        if(logDocument(parent))try {
+            if(!"logs".equals(parent))throw new IOException("Not a log directory");
+            File[] children=SessionLogs.directory(getContext().getFilesDir()).listFiles();
+            if(children==null)throw new IOException("Log directory unavailable");
+            java.util.Arrays.sort(children,java.util.Comparator.comparing(File::getName).reversed());
+            for(File child:children)if(child.getName().matches("session-[0-9]+\\.zip")) {
+                try{logRow(cursor,"logs:"+child.getName());}catch(IOException ignored){}
+            }
+            cursor.setNotificationUri(getContext().getContentResolver(),DocumentsContract.buildChildDocumentsUri(authority(getContext()),"logs"));return cursor;
+        }catch(IOException error){throw failure(error);}
         try {
             GameDocumentIds.Id id=GameDocumentIds.parse(parent);GameFiles storage=files(id);File dir=storage.resolve(id.local);File[] children=dir.listFiles();
             if(children==null)throw new IOException(getContext().getString(R.string.folder_read_failed));
@@ -80,6 +99,9 @@ public final class GameDocumentsProvider extends DocumentsProvider {
         }catch(IOException e){throw failure(e);}
     }
     @Override public boolean isChildDocument(String parent,String child) {
+        if(logDocument(parent)||logDocument(child))try {
+            return "logs".equals(parent)&&!"logs".equals(child)&&SessionLogs.resolve(getContext().getFilesDir(),child).isFile();
+        }catch(IOException error){return false;}
         try {
             GameDocumentIds.Id p=GameDocumentIds.parse(parent),c=GameDocumentIds.parse(child);
             if(!p.profile.equals(c.profile)||!p.root().equals(c.root()))return false;
@@ -88,6 +110,11 @@ public final class GameDocumentsProvider extends DocumentsProvider {
         }catch(IOException e){return false;}
     }
     @Override public ParcelFileDescriptor openDocument(String document,String mode,CancellationSignal signal) throws FileNotFoundException {
+        if(logDocument(document))try {
+            if(signal!=null)signal.throwIfCanceled();
+            if(!"r".equals(mode)||"logs".equals(document))throw new IOException("Logs are read-only files");
+            return ParcelFileDescriptor.open(SessionLogs.resolve(getContext().getFilesDir(),document),ParcelFileDescriptor.MODE_READ_ONLY);
+        }catch(IOException error){throw failure(error);}
         GameFiles.Lease lease=null;
         try {
             if(signal!=null)signal.throwIfCanceled();
@@ -104,6 +131,14 @@ public final class GameDocumentsProvider extends DocumentsProvider {
     }
     private void notifyParent(GameDocumentIds.Id id) {
         getContext().getContentResolver().notifyChange(DocumentsContract.buildChildDocumentsUri(authority(getContext()),id.parent().document()),null);
+    }
+    private static boolean logDocument(String id){return "logs".equals(id)||(id!=null&&id.startsWith("logs:"));}
+    private void logRow(MatrixCursor cursor,String id)throws IOException {
+        File file=SessionLogs.resolve(getContext().getFilesDir(),id);boolean root="logs".equals(id);
+        cursor.newRow().add(Document.COLUMN_DOCUMENT_ID,id)
+            .add(Document.COLUMN_DISPLAY_NAME,root?getContext().getString(R.string.logs_root_title):file.getName())
+            .add(Document.COLUMN_MIME_TYPE,root?Document.MIME_TYPE_DIR:"application/zip").add(Document.COLUMN_FLAGS,0)
+            .add(Document.COLUMN_SIZE,root?null:file.length()).add(Document.COLUMN_LAST_MODIFIED,file.lastModified());
     }
     @Override public String createDocument(String parent,String type,String name) throws FileNotFoundException {
         try {

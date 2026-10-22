@@ -251,6 +251,7 @@ class LauncherUi(private val host: MainActivity) {
         }
         FactoryButton(if (s.graphicsPassed == null) R.string.check_device else R.string.recheck_device, !s.busy, true) { action("probe") }
         Hint(when (s.graphicsPassed) { null -> R.string.device_check_local; true -> R.string.device_check_pass; false -> R.string.device_check_fail })
+        FactoryButton(R.string.open_logs_folder, !s.busy) { action("logs") }
     }
 
     @Composable

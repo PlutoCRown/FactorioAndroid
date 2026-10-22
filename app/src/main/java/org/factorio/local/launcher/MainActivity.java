@@ -15,7 +15,7 @@ import java.util.concurrent.*;
 
 /** Local game library, launch preferences and device information. */
 public final class MainActivity extends androidx.activity.ComponentActivity {
-    private static final int IMPORT=10, IMPORT_SAVE=11, HOME=0, SETTINGS=1, DEVICE=2;
+    private static final int IMPORT=10, IMPORT_SAVE=11, EXPORT_LOG=13, HOME=0, SETTINGS=1, DEVICE=2;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private LauncherUi ui;
     private JSONObject gameReport,deviceReport;
@@ -23,6 +23,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     private boolean busy;
     private float progressFraction=-1f;
     private String message="";
+    private File exportLog;
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         if(resumeExistingGame()){finish();return;}
@@ -31,6 +32,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         gameReport=GameImporter.current(this);
         try {deviceReport=GameImporter.readJson(new File(getFilesDir(),"device-report.json"));}catch(Exception ignored) {}
         if(state!=null)page=state.getInt("page",HOME);
+        if(state!=null&&state.containsKey("exportLog"))try{exportLog=SessionLogs.resolve(getFilesDir(),state.getString("exportLog"));}catch(Exception ignored){}
         if(page==SETTINGS&&gameReport==null)page=HOME;
         migratePreferences();
         ui=new LauncherUi(this);
@@ -75,6 +77,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             case "mods":openGameFolder("mods");break;
             case "help":downloadHelp();break;
             case "probe":probe();break;
+            case "logs":openLogs();break;
         }
     }
     public void setTouchMouseEnabled(boolean enabled) {if(!busy){getPreferences(0).edit().putBoolean("touchMouseSimulation",enabled).apply();renderPage();}}
@@ -141,6 +144,50 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             }
         });
     }
+    private void openLogs() {
+        try {
+            SessionLogs.directory(getFilesDir());
+            try{startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(GameDocumentsProvider.rootUri(this,"logs"),"vnd.android.document/root"));}
+            catch(ActivityNotFoundException missing){startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                .putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI,GameDocumentsProvider.documentUri(this,"logs")),12);}
+        }catch(Exception error){fail(getString(R.string.folder_open_failed),error);}
+    }
+    private void sessionFinished(boolean failed,String reason) {
+        worker.execute(()-> {
+            File archive=null;
+            try{SessionExitDiagnostics.collect(getApplicationContext());archive=SessionLogs.capture(getFilesDir());
+                GameDocumentsProvider.changed(this,"logs");}
+            catch(Exception error){android.util.Log.w("FactorioLauncher","Session log snapshot unavailable",error);}
+            final File ready=archive;
+            runOnUiThread(()-> {if(isFinishing()||isDestroyed()||!failed)return;
+                AlertDialog.Builder dialog=new AlertDialog.Builder(this).setTitle(R.string.game_error_title)
+                    .setMessage(getString(ready==null?R.string.game_error_no_log:R.string.game_error_export_message,reason))
+                    .setNegativeButton(R.string.close,null);
+                if(ready!=null)dialog.setPositiveButton(R.string.export_logs,(d,w)->chooseLogDestination(ready));
+                dialog.show();
+            });
+        });
+    }
+    private void chooseLogDestination(File archive) {
+        exportLog=archive;
+        try{startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+            .setType("application/zip").putExtra(Intent.EXTRA_TITLE,archive.getName()),EXPORT_LOG);}
+        catch(ActivityNotFoundException missing){Toast.makeText(this,R.string.picker_missing,Toast.LENGTH_LONG).show();}
+    }
+    private void exportLog(Uri destination) {
+        final File source=exportLog;exportLog=null;
+        if(source==null)return;
+        setBusy(true,getString(R.string.logs_exporting));
+        worker.execute(()-> {
+            try(InputStream input=new FileInputStream(SessionLogs.resolve(getFilesDir(),"logs:"+source.getName()));
+                OutputStream output=getContentResolver().openOutputStream(destination,"w")) {
+                if(output==null)throw new IOException("Destination unavailable");
+                byte[] buffer=new byte[32768];for(int n;(n=input.read(buffer))!=-1;)output.write(buffer,0,n);
+                output.flush();
+                runOnUiThread(()->{if(!isDestroyed()){setBusy(false,getString(R.string.logs_exported));Toast.makeText(this,R.string.logs_exported,Toast.LENGTH_LONG).show();}});
+            }catch(Exception error){fail(getString(R.string.logs_export_failed),error);}
+        });
+    }
     private void downloadHelp() {
         new AlertDialog.Builder(this).setTitle(getString(R.string.get_game))
             .setMessage(getString(R.string.download_instructions))
@@ -179,7 +226,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 .setPositiveButton(getString(R.string.ok),null).show();});
     }
     @Override protected void onActivityResult(int request,int result,Intent data) {
-        super.onActivityResult(request,result,data);if(result!=RESULT_OK||data==null||data.getData()==null||busy)return;
+        super.onActivityResult(request,result,data);
+        if(request==EXPORT_LOG){if(result==RESULT_OK&&data!=null&&data.getData()!=null)exportLog(data.getData());else exportLog=null;return;}
+        if(result!=RESULT_OK||data==null||data.getData()==null||busy)return;
         if(request==IMPORT_SAVE){importSave(data.getData());return;}
         if(request!=IMPORT)return;
         Uri uri=data.getData();setBusy(true,getString(R.string.game_import_progress));
@@ -222,12 +271,16 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
             int pid=r.optInt("pid",-1);if(pid>0&&new File("/proc/"+pid).exists())return;
             long epoch=r.optLong("collectedAtEpochMillis");if(epoch<=0||getPreferences(0).getLong("interruptedSessionNotified",0)==epoch)return;
             getPreferences(0).edit().putLong("interruptedSessionNotified",epoch).apply();
-            Toast.makeText(this,getString(R.string.session_interrupted),Toast.LENGTH_LONG).show();
+            sessionFinished(true,getString(R.string.session_interrupted));
         }catch(Exception ignored) {}
     }
     private void showGameExitMessage() {
         String text=getIntent().getStringExtra("gameExitMessage");getIntent().removeExtra("gameExitMessage");
-        if(text!=null&&!text.isEmpty()){android.util.Log.i("FactorioLauncher","Game exit: "+text);Toast.makeText(this,text.length()>240?text.substring(0,240):text,Toast.LENGTH_LONG).show();}
+        boolean failed=getIntent().getBooleanExtra("gameExitFailed",false);getIntent().removeExtra("gameExitFailed");
+        if(text!=null&&!text.isEmpty()){android.util.Log.i("FactorioLauncher","Game exit: "+text);
+            if(!failed)Toast.makeText(this,text.length()>240?text.substring(0,240):text,Toast.LENGTH_LONG).show();
+            sessionFinished(failed,text);
+        }
     }
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);setIntent(intent);
@@ -241,6 +294,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     @Override public void onWindowFocusChanged(boolean focus) {super.onWindowFocusChanged(focus);if(focus)WindowPolicy.apply(this);}
     @Override public void onConfigurationChanged(Configuration config) {super.onConfigurationChanged(config);WindowPolicy.apply(this);}
     @Override public void onMultiWindowModeChanged(boolean mode,Configuration config) {super.onMultiWindowModeChanged(mode,config);WindowPolicy.apply(this);}
-    @Override protected void onSaveInstanceState(Bundle state) {state.putInt("page",page);super.onSaveInstanceState(state);}
+    @Override protected void onSaveInstanceState(Bundle state) {state.putInt("page",page);if(exportLog!=null)state.putString("exportLog","logs:"+exportLog.getName());super.onSaveInstanceState(state);}
     @Override protected void onDestroy() {worker.shutdownNow();super.onDestroy();}
 }

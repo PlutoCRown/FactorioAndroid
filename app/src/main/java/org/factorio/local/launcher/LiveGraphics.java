@@ -5,6 +5,9 @@ import java.util.Map;
 
 /** Bounded evidence from this engine process only; never infer FPS from refresh rate. */
 final class LiveGraphics {
+    private static final java.util.regex.Pattern FATAL=java.util.regex.Pattern.compile(".*Error CrashHandler\\.cpp:[0-9]+: Received (SIG[A-Z0-9]+).*");
+    private static final java.util.regex.Pattern USER_QUIT=java.util.regex.Pattern.compile("\\s*[0-9]+\\.[0-9]+ Quitting: user-quit\\.\\s*");
+    private static final java.util.regex.Pattern GOODBYE=java.util.regex.Pattern.compile("\\s*[0-9]+\\.[0-9]+ Goodbye\\s*");
     private final StringBuilder pending=new StringBuilder();
     private final Map<String,String> values=new LinkedHashMap<>();
     private boolean oversizedLine;
@@ -21,8 +24,17 @@ final class LiveGraphics {
         }
     }
     private void line(String line) {
-        if(line.matches(".*Error CrashHandler\\.cpp:[0-9]+: Received SIG[A-Z0-9]+.*"))
+        // Only the ordered completion of a user-requested quit qualifies. A crash
+        // followed by shutdown output must still be reported as a gameplay failure.
+        if(!values.containsKey("fatalSignal")) {
+            if(USER_QUIT.matcher(line).matches())values.put("userQuitRequested","true");
+            if(GOODBYE.matcher(line).matches()&&values.containsKey("userQuitRequested"))values.put("normalExitCompleted","true");
+        }
+        java.util.regex.Matcher fatal=FATAL.matcher(line);
+        if(fatal.matches()&&!values.containsKey("fatalSignal")) {
             values.put("fatalLine",line.substring(0,Math.min(line.length(),1024)).trim());
+            values.put("fatalSignal",fatal.group(1));
+        }
         String[] markers={"Initialised OpenGL:","Graphics options:","Texture processor created","Factorio initialised"};
         String[] keys={"rendererLine","graphicsOptions","textureProcessor","initialized"};
         for(int i=0;i<markers.length;i++) {

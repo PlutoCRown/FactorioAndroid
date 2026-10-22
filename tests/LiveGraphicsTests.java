@@ -16,8 +16,24 @@ public final class LiveGraphicsTests {
         check("true".equals(live.snapshot().get("initialized")),"initialization marker kept");
         live.accept(" 0.380 Error CrashHandler.cpp:614: Received SIGSEGV\n");
         check(live.snapshot().get("fatalLine").contains("Received SIGSEGV"),"crash line kept");
+        check("SIGSEGV".equals(live.snapshot().get("fatalSignal")),"fatal cause is retained after graphics initialized");
+        live.accept(" 0.000 Error CrashHandler.cpp:614: Received SIGTERM\n");
+        check("SIGSEGV".equals(live.snapshot().get("fatalSignal")),"supervisor termination cannot replace the original fault");
         live.accept("FPS 60 refresh rate 120\n");
-        check(live.snapshot().size()==5,"refresh rate is not stored as a frame rate");
+        check(live.snapshot().size()==6,"refresh rate is not stored as a frame rate");
+        LiveGraphics ordinary=new LiveGraphics();ordinary.accept(" 1.000 Goodbye\n Warning: SIGSEGV example\n");
+        check(!ordinary.snapshot().containsKey("fatalSignal"),"normal goodbye and ordinary signal mentions are not a crash");
+        check(!ordinary.snapshot().containsKey("normalExitCompleted"),"goodbye without a user quit is insufficient");
+        LiveGraphics orderly=new LiveGraphics();
+        orderly.accept(" 200.100 Quitting: user-");orderly.accept("quit.\n 200.500 Goodbye\n");
+        orderly.accept(" 0.000 Error CrashHandler.cpp:614: Received SIGSEGV\n");
+        check("true".equals(orderly.snapshot().get("normalExitCompleted")),"completed user quit survives a later teardown fault");
+        check("SIGSEGV".equals(orderly.snapshot().get("fatalSignal")),"teardown fault remains in diagnostics");
+        LiveGraphics interrupted=new LiveGraphics();
+        interrupted.accept(" 1.000 Quitting: user-quit.\n 0.000 Error CrashHandler.cpp:614: Received SIGSEGV\n 1.100 Goodbye\n");
+        check(!interrupted.snapshot().containsKey("normalExitCompleted"),"fault before goodbye remains an abnormal exit");
+        LiveGraphics reversed=new LiveGraphics();reversed.accept(" 1.000 Goodbye\n 1.100 Quitting: user-quit.\n");
+        check(!reversed.snapshot().containsKey("normalExitCompleted"),"completion requires ordered exit markers");
         java.nio.file.Path log=java.nio.file.Files.createTempFile("factorio-startup-",".log");
         try {
             String failure=" 0.362 Error SDLWindow.cpp:342: Failed to create an application window. SDL_Error: Could not initialize EGL\n";

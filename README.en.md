@@ -102,3 +102,9 @@ This grant does not include the Factorio name, trademarks, engine, or game data,
 [![Star History Chart](https://api.star-history.com/svg?repos=PlutoCRown/FactorioAndroid&type=Date)](https://www.star-history.com/#PlutoCRown/FactorioAndroid&Date)
 
 For every project-owned or modified native component, source inputs, build commands and output paths are documented in [SOURCE-BUILD.md](docs/SOURCE-BUILD.md).
+
+## Game logs
+
+The launcher keeps ZIP diagnostics for the latest 20 completed or interrupted sessions. An unexpected exit prompts you to export the session log; choose **Export logs** and select a destination in the system file picker. A completed user quit does not show an error dialog. If Android ends the window process, the next launcher visit also attempts to preserve the available diagnostics.
+
+Use **Device info → Open log folder** to browse and copy the archives, including before importing a game. Each archive contains the session report, the available engine log tail (up to 1 MiB), and existing device/own-process exit reports. Saves and game assets are excluded. Logs may contain file paths, game or mod names, and device information. Android exit history may omit the separate engine child.
