@@ -89,7 +89,7 @@ public class RestoreRuntime {
                     String name=item.getName();require(!item.isDirectory()&&seen.add(name),"Invalid or repeated ZIP member");
                     Entry entry=expected.get(name);
                     if(entry==null) {
-                        require(name.equals("RUNTIME-NOTICES.txt")||name.equals("RUNTIME-SOURCES.md")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_gamepad_bridge.so")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_direct_icd.so"),"Unexpected ZIP member: "+name);
+                        require(name.equals("RUNTIME-NOTICES.txt")||name.equals("RUNTIME-SOURCES.md")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_gamepad_bridge.so")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_direct_icd.so")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_gnu_tls.so")||name.equals("app/src/main/jniLibs/arm64-v8a/librea_direct_present.so"),"Unexpected ZIP member: "+name);
                         long total=0;byte[] buffer=new byte[8192];for(int n;(n=zip.read(buffer))!=-1;){total+=n;require(total<=8*1024*1024,"Runtime notice too large");}
                         continue;
                     }

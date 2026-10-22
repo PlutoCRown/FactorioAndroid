@@ -2,15 +2,17 @@
 
 本文说明启动器附带的原生库分别来自哪里、承担什么功能，以及如何重新获取。下载版本和包内路径均列在下文；构建工具会自动完成文件校验，本文不重复罗列校验值。
 
+兼容图形运行库的源码、补丁、构建输入和缓存复用步骤见 [Mesa 兼容构建](MESA-COMPATIBILITY.md)。
+
 ## 1. 这些文件的作用
 
-运行环境包括固定版本的预编译依赖和随 APK 构建生成的原生组件。恢复工具向 `app/src/main/jniLibs/arm64-v8a/` 提供 50 个 `.so`：48 个来自下列开源组件预编译包，2 个是运行库归档中保存的本项目编译／适配组件。普通构建另从源码生成 Vulkan ICD、手柄适配器和两个输入法程序。它们提供 Linux 基础运行库、图形转换、窗口、输入和 Android 呈现功能。
+运行环境包括固定版本的预编译依赖和随 APK 构建生成的原生组件。恢复工具向 `app/src/main/jniLibs/arm64-v8a/` 提供 48 个第三方原版 `.so`。普通构建另从源码生成 Vulkan ICD、Surface 接收器、TLS 适配层、手柄适配器和两个输入法程序。它们提供 Linux 基础运行库、图形转换、窗口、输入和 Android 呈现功能。
 
 启动器的 Kotlin/Java 代码负责界面、导入、设置和会话管理；真正的 Factorio 引擎与游戏数据来自用户自行导入的官方 Linux ARM64 安装包。
 
 放在 `jniLibs` 中不表示这些库都通过 JNI 加载到 Java 进程。glibc、Mesa 等运行在独立的游戏进程中；`libXlorie.so` 和画面接收器运行在 Android 侧。打包时有些库改用了私有名称，例如 `librea_glibc.so` 对应原始的 `libc.so.6`；启动时会建立游戏需要的文件名别名。文件名前缀不代表该组件由本项目原创。
 
-Compose还会通过AndroidX依赖额外带入`libandroidx.graphics.path.so`，其获取方式见第6节。构建还从源码生成 `librea_direct_icd.so`、`librea_gamepad_bridge.so`、`librea_ime_opener.so` 和 `librea_ime_hint.so`。两个输入法组件分别负责接收请求，以及维持 SDL 键盘开关、回传 UTF-8 确认文字、编辑命令和键盘可见状态；加上 AndroidX 库，APK 共包含 55 个原生文件。它们的用途和完整获取步骤见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
+Compose还会通过AndroidX依赖额外带入`libandroidx.graphics.path.so`，其获取方式见第6节。构建还从源码生成 ICD、Surface 接收器、TLS、手柄及两个输入法组件。两个输入法组件分别负责接收请求，以及维持 SDL 键盘开关、回传 UTF-8 确认文字、编辑命令和键盘可见状态；加上 AndroidX 库，额外 8 个图形兼容组件与基线一同打包后，APK 共包含 63 个原生文件。它们的用途和完整获取步骤见[安卓软键盘接入](ANDROID-KEYBOARD.md)。
 
 ```text
 Linux ARM64 Factorio
@@ -32,7 +34,7 @@ java scripts/RestoreRuntime.java
 java scripts/RestoreRuntime.java --check
 ```
 
-构建入口也会自动调用恢复工具。下载内容包括当前清单中的 50 个 `.so` 和键盘布局数据 `window-xkb.zip`，不含游戏引擎、游戏资源或设备 GPU 驱动。
+构建入口也会自动调用恢复工具。下载内容包括当前清单中的 48 个第三方 `.so` 和键盘布局数据 `window-xkb.zip`，不含游戏引擎、游戏资源或设备 GPU 驱动。
 
 也可以[下载运行库 ZIP](https://github.com/PlutoCRown/FactorioAndroid/releases/download/runtime-20261021-v1/factorio-android-runtime-arm64-20261021-v1.zip)，然后离线恢复：
 
@@ -228,7 +230,7 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 
 ## 5. 本项目编译或适配的组件
 
-普通 APK 构建从源码生成 `librea_direct_icd.so` 和 `librea_gamepad_bridge.so`，以及第 1 节列出的两个输入法程序。`librea_direct_present.so` 和 `librea_gnu_tls.so` 仍由运行库归档恢复。以下分别说明来源与重建范围。
+普通 APK 构建从源码生成 ICD、Surface 接收器、TLS、手柄和两个输入法组件。完整源码清单、命令、工具与 APK 暂存流程见 [从源码还原自有组件](SOURCE-BUILD.md)。以下说明各组件用途。
 
 ### librea_direct_icd.so
 
@@ -240,7 +242,7 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 
 ### librea_direct_present.so
 
-源码是 [direct-present-server.c](../native-input/direct-present-server.c)，编译入口为 [build-direct-present.ps1](../scripts/build-direct-present.ps1)。它在 Android 侧接收 AHardwareBuffer，通过 EGLImage 和 GLES 将 GPU 图像绘制到 Android Surface。
+源码是 [direct-present-server.c](../native-input/direct-present-server.c)，编译入口为 [BuildAndroidReceiver.java](../scripts/BuildAndroidReceiver.java)。它在 Android 侧接收 AHardwareBuffer，通过 EGLImage 和 GLES 将 GPU 图像绘制到 Android Surface。
 
 这条路径保留一次 GPU 采样和必要同步，不需要把整帧像素搬到 CPU 后再传输。
 
@@ -254,7 +256,7 @@ Copy-Item .\work\xlorie\lib\arm64-v8a\libXlorie.so .\app\src\main\jniLibs\arm64-
 
 基于 libhybris 的 `bionic_tls.c` 等代码适配，保留上游 Apache-2.0 版权声明。它在游戏启动时预加载，为 Android 图形库预留 16 KiB 线程局部存储，并检查访问边界。
 
-这个库目前通过运行库包提供，尚无独立重建入口。直接编译上游同名源码不会自动包含本项目适配。
+实际修改源码完整保存在 [native-input/gnu-tls](../native-input/gnu-tls)，由 [BuildImeNative.java](../scripts/BuildImeNative.java) 编译。独立命令见 [源码还原说明](SOURCE-BUILD.md#tls-适配层)。不能直接用上游同名文件代替本项目适配。
 
 ### 编译工具与复现范围
 
@@ -283,6 +285,6 @@ AAR 也是 ZIP，所需文件位于 `jni/arm64-v8a/libandroidx.graphics.path.so`
 
 - 要获取启动器当前使用的文件，执行运行库恢复命令；它会自动验证内容。
 - 要核对上游来源，按具体软件包版本和归档成员路径提取，再执行 `--check`。下载页面可能更新或移除旧文件。
-- 恢复预编译库与从源码重新编译是两种流程。目前可恢复清单内运行库并编译上述四个组件，全部组件的源码重建流程仍未完整提供。
+- 第三方原版库使用上游来源；本项目自有及修改过的组件均有源码、补丁和构建入口，见 [SOURCE-BUILD.md](SOURCE-BUILD.md)。预编译兼容包是可复用的构建输出，不是缺失源码的替代品。
 
 各组件的许可证见 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) 和 `app/src/main/assets/*COPYRIGHT.txt`。

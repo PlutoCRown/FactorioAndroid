@@ -56,6 +56,8 @@ files/profiles/factorio-<版本>-<base 或 space-age>/userdata/saves/
 
 ## 开发指南
 
+图形兼容运行库的源码、补丁、构建和复用步骤见 [Mesa 兼容构建](docs/MESA-COMPATIBILITY.md)。
+
 `jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据、Compose新增AndroidX库及软键盘请求程序。安卓输入法的触发、文字回传和原生程序编译步骤见 [安卓软键盘接入](docs/ANDROID-KEYBOARD.md)。
 
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
@@ -98,3 +100,5 @@ java scripts/RestoreRuntime.java
 ## GitHub Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PlutoCRown/FactorioAndroid&type=Date)](https://www.star-history.com/#PlutoCRown/FactorioAndroid&Date)
+
+自有或修改过的原生组件如何从源码生成、构建命令和产物位置，见 [SOURCE-BUILD.md](docs/SOURCE-BUILD.md)。

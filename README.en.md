@@ -56,6 +56,8 @@ Leave room for the original archive, extracted game, temporary import copy, save
 
 ## Development
 
+See [Mesa compatibility builds](docs/MESA-COMPATIBILITY.md) for provider source, patches and build inputs.
+
 See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library. See [Android keyboard integration (Chinese)](docs/ANDROID-KEYBOARD.md) for request routing, Unicode commits and helper build instructions.
 
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
@@ -98,3 +100,5 @@ This grant does not include the Factorio name, trademarks, engine, or game data,
 ## GitHub Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PlutoCRown/FactorioAndroid&type=Date)](https://www.star-history.com/#PlutoCRown/FactorioAndroid&Date)
+
+For every project-owned or modified native component, source inputs, build commands and output paths are documented in [SOURCE-BUILD.md](docs/SOURCE-BUILD.md).

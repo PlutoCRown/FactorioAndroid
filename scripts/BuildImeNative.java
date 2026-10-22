@@ -83,6 +83,15 @@ class BuildImeNative {
         run(root,List.of(zig.toString(),"cc","-target","aarch64-linux-gnu.2.38","-std=c11","-O2","-shared","-fPIC","-s",
             "-Wall","-Wextra","-Werror","-Wl,-z,max-page-size=16384","-Wl,--build-id=sha1",padSource.toString(),"-o",pad.toString(),"-ldl","-pthread"));
         value+="gamepad.name=librea_gamepad_bridge.so\ngamepad.bytes="+Files.size(pad)+"\ngamepad.sha256="+sha(pad)+"\ngamepad.sourceSha256="+sha(padSource)+"\n";
+        Path tlsSource=root.resolve("native-input/gnu-tls/bionic_tls.c"),tls=nativeDir.resolve("librea_gnu_tls.so");
+        run(root,List.of(zig.toString(),"cc","-target","aarch64-linux-gnu.2.38","-std=c11","-O2","-D_GNU_SOURCE","-Wall","-Wextra","-Werror","-fPIC","-shared",
+            "-Wl,-z,nodelete","-Wl,-z,max-page-size=16384",tlsSource.toString(),"-pthread","-o",tls.toString()));
+        value+="tls.name=librea_gnu_tls.so\ntls.bytes="+Files.size(tls)+"\ntls.sha256="+sha(tls)+"\n";
+        if(!Arrays.asList(args).contains("--gnu-only")) {
+            Path present=nativeDir.resolve("librea_direct_present.so");
+            run(root,List.of(Path.of(System.getProperty("java.home"),"bin",win?"java.exe":"java").toString(),root.resolve("scripts/BuildAndroidReceiver.java").toString(),present.toString()));
+            value+="present.name=librea_direct_present.so\npresent.bytes="+Files.size(present)+"\npresent.sha256="+sha(present)+"\n";
+        }
         Path icd=directIcd(root,zig,nativeDir,base);
         value+="icd.name=librea_direct_icd.so\nicd.bytes="+Files.size(icd)+"\nicd.sha256="+sha(icd)+"\n";
         Files.writeString(assets.resolve("ime-native.properties"),value);
