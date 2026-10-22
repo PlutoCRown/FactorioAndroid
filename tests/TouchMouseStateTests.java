@@ -5,18 +5,19 @@ import java.util.List;
 public final class TouchMouseStateTests {
     private static int passed;
     private static final class Events implements TouchMouseState.Sink {
-        final List<String> calls=new ArrayList<>();boolean held,right;int taps,wheel;
+        final List<String> calls=new ArrayList<>();boolean held,right;int taps;float wheel,lastWheel;
         public void move(float x,float y){calls.add("move:"+x+","+y);}
         public void leftButton(boolean down){require(!down||!right,"left and right must not overlap");held=down;calls.add(down?"down":"up");}
         public void rightButton(boolean down){require(!down||!held,"right and left must not overlap");right=down;calls.add(down?"right-down":"right-up");}
-        public void scroll(int notches){require(!held&&!right,"scroll must not hold any button");wheel+=notches;calls.add("wheel:"+notches);}
+        public void scroll(float notches){require(!held&&!right,"scroll must not hold any button");wheel+=notches;lastWheel=notches;calls.add("wheel:"+notches);}
         public void tap(float x,float y){require(!held&&!right,"tap accounting follows release");taps++;calls.add("tap");}
     }
     private static final class Case {
-        final Events events=new Events();final TouchMouseState state=new TouchMouseState(events,8,500,48);
+        final Events events=new Events();final TouchMouseState state=new TouchMouseState(events,8,500,96);
         Case(){state.viewport(100,50,1280,720);}
         void scroll(){state.down(1,200,150,0);state.beginScroll(1,200,150,2,300,150);}
     }
+    private static boolean close(double actual,double expected){return Math.abs(actual-expected)<0.000001;}
     private static void require(boolean condition,String message){if(!condition)throw new AssertionError(message);}
     private static void check(String label,Runnable body){body.run();passed++;System.out.println("PASS "+label);}
     public static void main(String[] arguments) {
@@ -102,10 +103,11 @@ public final class TouchMouseStateTests {
             Case c=new Case();c.scroll();c.state.longPress(1,1000);
             require(c.state.scrolling()&&!c.state.held()&&c.state.presses()==0&&c.state.rightPresses()==0&&c.events.wheel==0,"pending click consumed");
         });
-        check("wheel accumulates small vertical moves and reverses direction",()->{
-            Case c=new Case();c.scroll();c.state.scrollMove(1,200,130,2,300,130);require(c.events.wheel==0,"sub-notch retained");
-            c.state.scrollMove(1,200,102,2,300,102);require(c.events.wheel==-1,"up emits wheel up");
-            c.state.scrollMove(1,200,198,2,300,198);require(c.events.wheel==1&&c.state.scrollSteps()==3,"down emits two notches");
+        check("wheel sends fractional movement immediately with reversed direction",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,200,130,2,300,130);
+            require(close(c.events.wheel,20.0/96)&&c.state.scrollEvents()==1,"sub-notch movement delivered immediately");
+            c.state.scrollMove(1,200,102,2,300,102);require(close(c.events.wheel,0.5),"48 screen units emit half a notch");
+            c.state.scrollMove(1,200,198,2,300,198);require(close(c.events.wheel,-0.5)&&close(c.state.scrollNotches(),1.5),"opposite movement reverses immediately");
         });
         check("horizontal motion and centered pinch have no wheel effect",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,250,150,2,350,150);c.state.scrollMove(1,250,100,2,350,200);
@@ -113,11 +115,11 @@ public final class TouchMouseStateTests {
         });
         check("second finger releases left drag before wheel",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,250,150);c.state.beginScroll(1,250,150,2,350,150);
-            c.state.scrollMove(1,250,102,2,350,102);require(!c.events.held&&c.state.presses()==c.state.releases()&&c.events.wheel==-1,"left up precedes scroll");
+            c.state.scrollMove(1,250,102,2,350,102);require(!c.events.held&&c.state.presses()==c.state.releases()&&c.events.wheel==0.5f,"left up precedes scroll");
         });
         check("second finger releases right mining before wheel",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.longPress(1,500);c.state.beginScroll(1,200,150,2,300,150);
-            c.state.scrollMove(1,200,198,2,300,198);require(!c.events.right&&c.state.rightPresses()==c.state.rightReleases()&&c.events.wheel==1,"right up precedes scroll");
+            c.state.scrollMove(1,200,198,2,300,198);require(!c.events.right&&c.state.rightPresses()==c.state.rightReleases()&&c.events.wheel==-0.5f,"right up precedes scroll");
         });
         check("lifting one scroll finger never clicks or resumes single drag",()->{
             Case c=new Case();c.scroll();c.state.cancel();c.state.move(1,300,200);c.state.up(1,300,200,900);
@@ -133,15 +135,15 @@ public final class TouchMouseStateTests {
         });
         check("scroll cadence uses screen distance independent of render scale",()->{
             Case c=new Case();c.state.sourceSize(640,360);c.scroll();c.state.scrollMove(1,200,198,2,300,198);
-            require(c.events.wheel==1&&c.state.lastX()==75&&c.state.lastY()==50,"scaled anchor with unscaled wheel distance");
+            require(c.events.wheel==-0.5f&&c.state.lastX()==75&&c.state.lastY()==50,"scaled anchor with unscaled wheel distance");
         });
-        check("scroll resize clears residual movement",()->{
+        check("scroll resize cancels before a fresh gesture",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,200,180,2,300,180);c.state.sourceSize(3408,2272);
-            require(!c.state.scrolling()&&!c.state.held(),"resize ends scroll");c.scroll();c.state.scrollMove(1,200,170,2,300,170);require(c.events.wheel==0,"old remainder discarded");
+            require(!c.state.scrolling()&&!c.state.held(),"resize ends scroll");c.scroll();c.state.scrollMove(1,200,170,2,300,170);require(close(c.events.lastWheel,-20.0/96),"fresh gesture has no delayed movement");
         });
         check("extreme finite scroll movement cannot flood native input",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);
-            require(c.events.wheel==12,"one event bounded");c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);require(c.events.wheel==12,"no overflow remainder");
+            require(c.events.wheel==-1,"one event bounded");c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);require(c.events.wheel==-1,"no overflow remainder");
         });
         check("native tablet geometry preserves full screen",()->{
             RenderSize r=new RenderSize(3408,2272,100);require(r.width==3408&&r.height==2272,"native size");

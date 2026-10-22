@@ -30,10 +30,10 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
             public void move(float x,float y){if(pointer!=0&&isConnected())sendMouseEvent(pointer,x,y,0,false,false);}
             public void leftButton(boolean down){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,0,1,down,false);}
             public void rightButton(boolean down){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,0,3,down,false);}
-            // Pinned Xlorie ABI: detail4 is vertical wheel, 120 units per notch.
-            public void scroll(int notches){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,notches*120,4,false,true);}
+            // Xlorie accepts fractional wheel units; 120 units represent one notch.
+            public void scroll(float notches){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,notches*120f,4,false,true);}
             public void tap(float x,float y){performClick();}
-        },ViewConfiguration.get(activity).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),48*getResources().getDisplayMetrics().density);
+        },ViewConfiguration.get(activity).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),96*getResources().getDisplayMetrics().density);
         longPressCheck=()->{if(touchMouseSimulation&&pointer!=0&&isConnected())touch.longPress(touch.activePointer(),android.os.SystemClock.uptimeMillis());};
         setClickable(true);setFocusable(true);setFocusableInTouchMode(true);requestFocus();
         pointer=nativeInit();getHolder().addCallback(this);
@@ -123,7 +123,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
             .put("touchDrags",touch.drags()).put("touchCanceledGestures",touch.cancels()).put("touchLeftHeld",touch.leftHeld())
             .put("touchMouseSimulationEnabled",touchMouseSimulation).put("touchRightHeld",touch.rightHeld())
             .put("touchRightPresses",touch.rightPresses()).put("touchRightReleases",touch.rightReleases())
-            .put("touchScrollEvents",touch.scrollEvents()).put("touchScrollSteps",touch.scrollSteps()).put("touchScrolling",touch.scrolling())
+            .put("touchScrollEvents",touch.scrollEvents()).put("touchScrollNotches",touch.scrollNotches()).put("touchScrolling",touch.scrolling())
             .put("touchActivePointer",touch.activePointer()).put("lastTouchX",touch.lastX()).put("lastTouchY",touch.lastY())
             .put("keyboardEventsForwarded",keyEvents).put("androidBackEscapeEvents",escapeEvents).put("pressedKeys",pressedKeys.size()).put("nativeGamepadBridgeReady",false)
             .put("viewportX",viewportX).put("viewportY",viewportY).put("viewportWidth",viewportWidth).put("viewportHeight",viewportHeight)

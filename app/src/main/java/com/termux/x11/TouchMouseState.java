@@ -4,17 +4,18 @@ package com.termux.x11;
 public final class TouchMouseState {
     public interface Sink {
         void move(float x,float y);void leftButton(boolean down);void rightButton(boolean down);
-        void scroll(int notches);void tap(float x,float y);
+        void scroll(float notches);void tap(float x,float y);
     }
     private final Sink sink;
     private final float slopSquared,scrollDistance;
     private final long longPressTimeout;
     private int viewportX,viewportY,viewportWidth,viewportHeight,activePointer=-1,scrollPointer=-1;
     private int sourceWidth=1280,sourceHeight=720;
-    private float downX,downY,fingerX,fingerY,lastX,lastY,lastClickX,lastClickY,scrollY,scrollRemainder;
-    private long downTime,presses,moves,drags,clicks,cancels,releases,rightPresses,rightReleases,scrollEvents,scrollSteps;
+    private float downX,downY,fingerX,fingerY,lastX,lastY,lastClickX,lastClickY,scrollY;
+    private long downTime,presses,moves,drags,clicks,cancels,releases,rightPresses,rightReleases,scrollEvents;
+    private double scrollNotches;
     private boolean leftHeld,rightHeld,tapCandidate,dragging,scrolling;
-    public TouchMouseState(Sink sink,float slop,long timeout) {this(sink,slop,timeout,48);}
+    public TouchMouseState(Sink sink,float slop,long timeout) {this(sink,slop,timeout,96);}
     public TouchMouseState(Sink sink,float slop,long timeout,float scrollDistance) {
         if(slop<0||timeout<=0||scrollDistance<=0||!Float.isFinite(scrollDistance))throw new IllegalArgumentException("Invalid gesture thresholds");
         this.sink=sink;slopSquared=slop*slop;longPressTimeout=timeout;this.scrollDistance=scrollDistance;
@@ -83,20 +84,20 @@ public final class TouchMouseState {
     public void beginScroll(int first,float x,float y,int second,float x2,float y2) {
         boolean valid=activePointer==first&&!scrolling&&second>=0&&second!=first&&inside(x,y)&&inside(x2,y2);
         cancel();if(!valid)return;
-        activePointer=first;scrollPointer=second;scrolling=true;scrollY=(y+y2)/2;scrollRemainder=0;
+        activePointer=first;scrollPointer=second;scrolling=true;scrollY=y/2+y2/2;
         sendPosition((x+x2)/2,scrollY);
     }
     public void scrollMove(int first,float x,float y,int second,float x2,float y2) {
         if(!scrolling)return;
         if(first!=activePointer||second!=scrollPointer||!finite(x,y)||!finite(x2,y2)){cancel();return;}
         float center=y/2+y2/2;
-        float delta=Math.max(-12*scrollDistance,Math.min(12*scrollDistance,center-scrollY));
-        scrollRemainder+=delta;scrollY=center;
-        // Bound a single bad/coalesced jump; retain sub-notch movement and direction.
-        int steps=(int)(scrollRemainder/scrollDistance);
-        if(steps!=0){scrollRemainder-=steps*scrollDistance;steps=Math.max(-12,Math.min(12,steps));sink.scroll(steps);scrollEvents++;scrollSteps+=Math.abs(steps);}
+        // Keep fractional wheel movement, reverse the former direction, and
+        // bound a malformed/coalesced jump without a delayed remainder burst.
+        float notches=(float)Math.max(-1,Math.min(1,((double)scrollY-center)/scrollDistance));
+        scrollY=center;
+        if(notches!=0){sink.scroll(notches);scrollEvents++;scrollNotches+=Math.abs(notches);}
     }
-    private void clearGesture(){activePointer=scrollPointer=-1;tapCandidate=dragging=scrolling=false;scrollRemainder=0;}
+    private void clearGesture(){activePointer=scrollPointer=-1;tapCandidate=dragging=scrolling=false;}
     /** Multitouch end, disabling, focus loss, resize and Surface loss cancel the whole gesture. */
     public void cancel() {
         if(activePointer>=0)cancels++;
@@ -117,7 +118,7 @@ public final class TouchMouseState {
     public long rightPresses(){return rightPresses;}
     public long rightReleases(){return rightReleases;}
     public long scrollEvents(){return scrollEvents;}
-    public long scrollSteps(){return scrollSteps;}
+    public double scrollNotches(){return scrollNotches;}
     public float lastX(){return lastX;}
     public float lastY(){return lastY;}
     public float lastClickX(){return lastClickX;}
