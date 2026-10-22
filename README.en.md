@@ -87,6 +87,8 @@ Offline restore: `java scripts/RestoreRuntime.java --archive /path/to/factorio-a
 
 Signing uses the existing project-local key or CI secrets; a key is generated if none is configured. Keep the same signing key for future upgrades. Application tags build and publish APKs to Releases; `runtime-` tags are reserved for pinned dependencies. To publish manually, use Actions → Release → Run workflow and fill `release_tag` with the new application version. Leave it empty to only build Actions artifacts. Existing tags are not moved.
 
+The Release body comes from `docs/releases/<factorioVersionName>.md`. Commit the matching notes with each version update. The workflow selects the notes using the actual APK version in `gradle.properties`, rather than tag annotations. See [Versioned release notes (Chinese)](docs/releases/README.md). For how cloud builds generate and package the additional graphics libraries, see [Mesa compatibility builds (Chinese)](docs/MESA-COMPATIBILITY.md#github-actions-如何取得新增库).
+
 ## License
 
 The project-owned launcher, native adapters, tests, and build scripts are [GPL-3.0-or-later](LICENSE), Copyright (C) 2026 Pluto_CRown. Third-party components keep their own licenses. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

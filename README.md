@@ -88,6 +88,8 @@ java scripts/RestoreRuntime.java
 
 签名复用工程内密钥或CI secrets；未配置则生成项目密钥，后续升级需保留同一签名。推送应用版本标签自动构建并上传Releases，`runtime-`标签保留给依赖附件。手动发布：Actions → Release → Run workflow，`release_tag`填新应用版本；留空仅构建并保存Actions附件。已有标签不移动。
 
+Release 正文读取 `docs/releases/<factorioVersionName>.md`。更新版本时，将对应说明文件与源码一起提交；工作流按 `gradle.properties` 中的实际 APK 版本选择说明，不读取 tag 注释。完整流程见[版本发布说明](docs/releases/README.md)。云端新增图形兼容库的生成与打包路径见 [Mesa 兼容构建](docs/MESA-COMPATIBILITY.md#github-actions-如何取得新增库)。
+
 ## 许可证
 
 自有启动器、原生适配、测试和构建脚本使用 [GPL-3.0-or-later](LICENSE)，版权归 Pluto_CRown（2026）。第三方组件保持各自的原文许可证，见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。

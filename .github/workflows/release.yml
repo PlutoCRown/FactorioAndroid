@@ -32,6 +32,18 @@ jobs:
             exit 1
           fi
 
+      - name: Select versioned release notes
+        id: release_notes
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
+        run: |
+          version=$(sed -n 's/^factorioVersionName=//p' gradle.properties | tr -d '\r')
+          notes="docs/releases/${version}.md"
+          if [[ -z "$version" || ! -s "$notes" ]]; then
+            echo "Missing release notes for APK version: $version ($notes)" >&2
+            exit 1
+          fi
+          echo "path=$notes" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -80,6 +92,7 @@ jobs:
         with:
           tag_name: ${{ inputs.release_tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
+          body_path: ${{ steps.release_notes.outputs.path }}
           files: |
             artifacts/*.apk
             artifacts/build-result.json

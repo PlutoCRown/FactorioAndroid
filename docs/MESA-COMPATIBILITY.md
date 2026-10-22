@@ -25,6 +25,17 @@
 
 预编译 ZIP 只是缓存，不是必须从他处获取的输入。第三方头文件及编译工具的固定来源在构建脚本和输入清单中；Android 侧不再链接从测试设备提取的系统库。源码重建并不需要设备连接。
 
+### GitHub Actions 如何取得新增库
+
+云端 Ubuntu 构建调用 `scripts/build.sh`，通过 Gradle 的任务依赖完成下面的流程，不要求旧运行库附件包含高通兼容修复：
+
+1. `restoreRuntime` 从固定运行库附件恢复 48 个第三方原版库及 XKB 数据。
+2. `buildImeNative` 使用当前源码生成自有输入、TLS、ICD 和 Android Surface 接收器组件。
+3. `buildMesaNative` 在没有可用 provider 缓存时调用 `build-mesa-runtime.py --providers-only`，从公开 Mesa 源码和工程内补丁生成六个兼容 provider；同时将本次编译的 ICD、接收器以兼容文件名纳入输出。
+4. `stageGameRuntime` 将兼容库加入 APK 的原生库输入目录；`BuildLauncher.verifyPayload()` 检查八个兼容文件、自有组件及第三方依赖均已打包。
+
+八个兼容文件为 `librea_compat_mesa_{gallium,egl,glx,gbm,gbm_dri,dril}.so`、`librea_compat_direct_icd.so` 和 `librea_compat_direct_present.so`。它们不需要加入最初的第三方运行库附件。生成或载荷检查失败时构建会停止，不会继续发布缺少这些文件的 APK。此处描述构建源码路径，不代表某次云端构建已经成功。
+
 ## 透明混合设备回归
 
 完成一次本地构建，在已连接设备上运行 debuggable 启动器并启动游戏，再执行：
