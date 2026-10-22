@@ -58,8 +58,10 @@ android {
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1")
     }
     sourceSets.getByName("main") {
+        jniLibs.setSrcDirs(listOf(layout.buildDirectory.dir("generated/game-runtime/jni").get().asFile))
         jniLibs.srcDir(layout.buildDirectory.dir("generated/ime/jni").get().asFile)
         assets.srcDir(layout.buildDirectory.dir("generated/ime/assets").get().asFile)
+        assets.srcDir(layout.buildDirectory.dir("generated/mesa/assets").get().asFile)
     }
     sourceSets.getByName("test") {
         java.setSrcDirs(listOf(layout.buildDirectory.dir("generated/host-tests").get().asFile))
@@ -92,7 +94,19 @@ val buildImeNative by tasks.registering(Exec::class) {
     inputs.files(rootProject.file("native-input/ime/keyboard-opener.c"), rootProject.file("native-input/ime/sdl-hint-guard.c"), rootProject.file("native-input/ime/sdl-hint-interfaces.h"), rootProject.file("scripts/BuildImeNative.java"), rootProject.file("scripts/ime-compiler.properties"))
     outputs.dir(layout.buildDirectory.dir("generated/ime"))
 }
-tasks.named("preBuild") { dependsOn(restoreRuntime, buildImeNative) }
+val buildMesaNative by tasks.registering(Exec::class) {
+    dependsOn(restoreRuntime,buildImeNative)
+    workingDir(rootProject.projectDir)
+    val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
+    commandLine(javaBin.absolutePath,rootProject.file("scripts/BuildMesaNative.java").absolutePath)
+}
+val stageGameRuntime by tasks.registering(Sync::class) {
+    dependsOn(buildMesaNative)
+    from(rootProject.file("app/src/main/jniLibs"))
+    from(layout.buildDirectory.dir("generated/mesa/jni")) { include("arm64-v8a/librea_compat_*.so") }
+    into(layout.buildDirectory.dir("generated/game-runtime/jni"))
+}
+tasks.named("preBuild") { dependsOn(stageGameRuntime, buildImeNative) }
 
 // Stage only host tests: device injectors and inventory utilities are not tests.
 val stageHostTests by tasks.registering(Sync::class) {

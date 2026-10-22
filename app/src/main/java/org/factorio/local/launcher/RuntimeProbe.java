@@ -54,6 +54,9 @@ public final class RuntimeProbe {
         return command(arguments,working,temp,extraEnvironment,timeoutSeconds,session,progress,null);
     }
     private static JSONObject command(List<String> arguments,File working,File temp,Map<String,String> extraEnvironment,int timeoutSeconds,GameSession session,Progress progress,AudioDiskBridge audioBridge) throws Exception {
+        return command(arguments,working,temp,extraEnvironment,timeoutSeconds,session,progress,audioBridge,null,0);
+    }
+    private static JSONObject command(List<String> arguments,File working,File temp,Map<String,String> extraEnvironment,int timeoutSeconds,GameSession session,Progress progress,AudioDiskBridge audioBridge,File startupLog,long logStart) throws Exception {
         JSONObject result=new JSONObject().put("arguments",new JSONArray(arguments)).put("timeoutSeconds",timeoutSeconds);
         ProcessBuilder builder=new ProcessBuilder(arguments).directory(working).redirectErrorStream(true);
         Map<String,String> environment=builder.environment();
@@ -114,6 +117,16 @@ public final class RuntimeProbe {
                 result.put("lifecycle",session.lifecycleState());
                 int ticks=0;
                 while(!(exited=process.waitFor(1,TimeUnit.SECONDS))&&!session.stopping()) {
+                    if(startupLog!=null&&!liveGraphics.snapshot().containsKey("rendererLine")) {
+                        String failure=StartupFailure.read(startupLog,logStart);
+                        if(failure!=null) {
+                            result.put("startupError",failure);
+                            process.destroy();
+                            exited=process.waitFor(5,TimeUnit.SECONDS);
+                            if(!exited) {result.put("startupTermination",killOwnChild(process));exited=!process.isAlive();}
+                            break;
+                        }
+                    }
                     result.put("lifecycle",session.lifecycleState());
                     if(++ticks%2==0) {
                         String tail=outputTail.get();
@@ -122,7 +135,7 @@ public final class RuntimeProbe {
                             if(progress!=null)progress.update("engineOutput",result);
                         }
                     }
-                    if(audioBridge!=null&&++ticks%5==0) {
+                    if(audioBridge!=null&&ticks%5==0) {
                         result.put("liveGraphics",new JSONObject(liveGraphics.snapshot()));
                         result.put("audioBridge",audioBridge.report());
                         if(progress!=null)progress.update("audioStreaming",result);
@@ -346,13 +359,14 @@ public final class RuntimeProbe {
             }
             File log=new File(user,"factorio-current.log");
             long logStartBytes=log.isFile()?log.length():0;
-            JSONObject initialized=command(graphics,session,graphicsTemp,windowEnvironment,0,control,progress,audioBridge);
+            JSONObject initialized=command(graphics,session,graphicsTemp,windowEnvironment,0,control,progress,audioBridge,log,logStartBytes);
             result.put("graphicsInitialization",initialized).put("passed",false)
                 .put("assessment","Window/renderer evidence must be reviewed; an exit code alone is not graphics success");
             if(manual) {
                 result.put("graphicalGameLaunched",initialized.optBoolean("started"))
                     .put("assessment","User-started persistent session; renderer and gameplay evidence are separate from process exit");
-                if(!initialized.optBoolean("started"))result.put("error",initialized.optString("error","引擎进程未能启动"));
+                if(initialized.has("startupError"))result.put("error",initialized.getString("startupError"));
+                else if(!initialized.optBoolean("started"))result.put("error",initialized.optString("error","引擎进程未能启动"));
                 else if(!initialized.optBoolean("userStopRequested")&&initialized.optInt("exitCode",-1)!=0)
                     result.put("error","引擎异常结束，退出码 "+initialized.optInt("exitCode",-1)+"；请导出诊断报告。");
             }

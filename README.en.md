@@ -26,20 +26,20 @@ A complete game has been played on a real device. The home screen imports ZIP sa
 
 ## How to play
 
-1. Open [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases), download this app, and install it. The standard package is `FactorioLauncher-0.2.0.apk`.
+1. Open [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases), download this app, and install it. The standard package filename follows `FactorioLauncher-<version>.apk`.
 2. Sign in at [factorio.com](https://factorio.com/). If the game was bought on Steam, link that account from the [official FAQ](https://factorio.com/support/faq).
 3. On the [download page](https://factorio.com/download), choose the **Linux ARM64 graphical full client `.tar.xz`**. If that version is not listed, switch to the experimental channel beside it. For Space Age, download only the Space Age package; you do not need to download the base game as well.
 4. Put the original archive somewhere the Android file picker can open. On the launcher home screen, choose **Select game package**. Do not unpack it first.
 5. Choose **Launch game**.
 
-Game import opens the archive, extracts files, verifies the engine and checksums, then switches the active package and removes the previous copy. During extraction, the launcher shows compressed-package read progress, extracted size, file count, and elapsed time. If the document provider does not supply a total size, it shows the bytes read instead. This is not an overall time estimate: verification and cleanup follow extraction. On the current test tablet, the base game took about 2 minutes and Space Age about 5 minutes; either can take longer. Keep the app open.
+Game import opens the archive, extracts files, verifies the engine and checksums, then switches the active package and removes the previous copy. During extraction, the launcher shows compressed-package read progress, extracted size, file count, and elapsed time. If the document provider does not supply a total size, it shows the bytes read instead. This is not an overall time estimate: verification and cleanup follow extraction. Duration depends on the game package size, document provider and device storage performance. Keep the app open.
 
 The home screen offers **Open saves**, **Import save**, and **Open mods**. Select an original `.zip` save without extracting it. Existing saves are preserved and duplicate names receive a numeric suffix. Save and end the game session before editing saves or mods.
 
 Saves created inside the game live in the app's private directory:
 
 ```text
-files/profiles/default-2.1.22/userdata/saves/
+files/profiles/<profile-id>/userdata/saves/
 ```
 
 Installing a newer APK over the old one keeps the imported game, settings, and saves. Uninstalling the app or clearing its data deletes those files.
@@ -61,7 +61,7 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26) is required.
 
 See [Native library origins and download instructions (Chinese)](docs/NATIVE-LIBRARIES.md) for each packaged `.so`, its role, download location, original archive member and extraction steps. It also covers XKB data and the additional Compose/AndroidX library. See [Android keyboard integration (Chinese)](docs/ANDROID-KEYBOARD.md) for request routing, Unicode commits and helper build instructions.
 
-The 2026-10-22 Windows local 0.3.8 standard APK is 31,422,295 bytes (31.42 MB), 11,468 bytes above 0.3.7. All 229 host checks, signature, alignment and payload verification pass. The home page focuses on the game and files; touch mouse simulation now lives in launch settings. Texture levels are 4K, 8K and 16K, with a separate loading thread limit and an explanation of exit code 137 when memory is insufficient. The sidebar uses local Lucide vector icons. Primary buttons follow the website’s green background, inset shadows and pressed states; secondary buttons and selectors share its gray button style. Import progress, ZIP save import and Android keyboard visibility fixes remain included. The loading thread limit defaults to 1 and does not cap gameplay threads; all managed texture levels use high-quality compression.
+Use the generated `artifacts/build-result.json` for each build's version, size, hashes and verification results. The home page focuses on the game and files; touch mouse simulation now lives in launch settings. Texture levels are 4K, 8K and 16K, with a separate loading thread limit and an explanation of exit code 137 when memory is insufficient. The sidebar uses local Lucide vector icons. Primary buttons follow the website’s green background, inset shadows and pressed states; secondary buttons and selectors share its gray button style. Import progress, ZIP save import and Android keyboard visibility fixes remain included. The loading thread limit defaults to 1 and does not cap gameplay threads; all managed texture levels use high-quality compression.
 
 The launcher UI uses **Kotlin + Jetpack Compose + Material 3** with a Factorio color scheme. The Java import/session services and the native Zink → Android Surface path are retained. Open this folder as a standard Gradle project in Android Studio. The game window remains a separate Activity/SurfaceView.
 
@@ -82,7 +82,7 @@ On Linux x86_64 or macOS with JDK 17+ and an Android SDK:
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-Zig 0.15.2 for the keyboard helper downloads automatically on Linux x86_64 and macOS. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB, the additional AndroidX path library and the keyboard request helper inside each APK. The compile-only JNI annotation stub is not packaged. Verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The small keyboard helper is compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
+Zig 0.15.2 for the keyboard helper downloads automatically on Linux x86_64 and macOS. The standard package is `dev.plutocrown.factorio`; the optional performance package is `com.miHoYo.Yuanshen`. Both APKs and `build-result.json` are in `artifacts/`. Both scripts run Gradle unit tests (existing checks plus keyboard request/composition checks) and verify signatures, alignment, package identities, all 52 game runtime library hashes, XKB, the additional AndroidX path library and the keyboard request helper inside each APK. The compile-only JNI annotation stub is not packaged. The original 52 verified third-party runtime libraries are neither rebuilt nor stripped by Gradle. The additional Adreno compatibility providers are built from pinned sources and the project patch as described below. The small keyboard helper is compiled from source during the build using project-local Zig 0.15.2; see the keyboard instructions.
 
 Both entry points restore the pinned runtime automatically. To restore separately (JDK 11+):
 
@@ -103,3 +103,5 @@ This grant does not include the Factorio name, trademarks, engine, or game data,
 ## GitHub Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PlutoCRown/FactorioAndroid&type=Date)](https://www.star-history.com/#PlutoCRown/FactorioAndroid&Date)
+
+Graphics compatibility uses an additional Mesa provider set and source-built ICD / Surface receiver, selected by GPU driver. The baseline runtime remains available for other GPUs. macOS/Linux can build the compatibility ZIP locally; Windows builds currently require that ZIP via `FACTORIO_MESA_ARCHIVE`. See [Graphics black-screen diagnosis and Mesa compatibility builds](docs/MESA-COMPATIBILITY.md).

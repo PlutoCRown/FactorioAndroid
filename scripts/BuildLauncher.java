@@ -42,6 +42,7 @@ class BuildLauncher {
     }
     static void verifyPayload(Path apk)throws Exception {
         int count=0;
+        Properties mesa=new Properties();try(InputStream in=Files.newInputStream(root.resolve("app/build/generated/mesa/assets/mesa-native.properties"))){mesa.load(in);}
         try(ZipFile zip=new ZipFile(apk.toFile())) {
             for(String row:Files.readAllLines(root.resolve("scripts/runtime-files.tsv"))) {
                 if(row.isBlank()||row.startsWith("#"))continue;
@@ -52,6 +53,15 @@ class BuildLauncher {
                 byte[] data=zip.getInputStream(member).readAllBytes();
                 if(data.length!=Long.parseLong(parts[1])||!sha(data).equals(parts[0]))throw new IOException("APK payload changed: "+entry);
             }
+            for(String name:List.of("librea_compat_direct_present.so","librea_compat_direct_icd.so","librea_compat_mesa_gallium.so","librea_compat_mesa_egl.so","librea_compat_mesa_glx.so","librea_compat_mesa_gbm.so","librea_compat_mesa_gbm_dri.so","librea_compat_mesa_dril.so")) {
+                ZipEntry member=zip.getEntry("lib/arm64-v8a/"+name);
+                if(member==null)throw new IOException("APK missing compatible Mesa provider: "+name);
+                byte[] data=zip.getInputStream(member).readAllBytes();
+                if(data.length!=Long.parseLong(mesa.getProperty(name+".bytes"))||!sha(data).equals(mesa.getProperty(name+".sha256")))throw new IOException("Compatible Mesa provider differs: "+name);
+                count++;
+            }
+            ZipEntry mesaMetadata=zip.getEntry("assets/mesa-native.properties");
+            if(mesaMetadata==null||!Arrays.equals(zip.getInputStream(mesaMetadata).readAllBytes(),Files.readAllBytes(root.resolve("app/build/generated/mesa/assets/mesa-native.properties"))))throw new IOException("Mesa build metadata differs");
             for(String row:Files.readAllLines(root.resolve("scripts/compose-native-files.tsv"))) {
                 if(row.isBlank()||row.startsWith("#"))continue;
                 String[] parts=row.split("\t");ZipEntry member=zip.getEntry(parts[2]);
@@ -76,7 +86,7 @@ class BuildLauncher {
             long actual=zip.stream().filter(x->x.getName().startsWith("lib/")&&x.getName().endsWith(".so")).count();
             if(actual!=count)throw new IOException("Unexpected native payload count: "+actual);
         }
-        System.out.println("APK runtime payload verified: 52 game runtime + "+(count-52)+" additional native libraries (AndroidX + keyboard helper + hint adapter) + XKB");
+        System.out.println("APK runtime payload verified: 52 baseline + 8 compatibility libraries + "+(count-60)+" additional native libraries (AndroidX + keyboard helper + hint adapter) + XKB");
     }
     public static void main(String[] args)throws Exception {
         if(Runtime.version().feature()<17)throw new IOException("JDK 17+ required for Kotlin/Compose/AGP");
@@ -116,7 +126,7 @@ class BuildLauncher {
             if(!badge.contains("package: name='"+id+"'")||!badge.contains("launchable-activity: name='org.factorio.local.launcher.MainActivity'")||badge.contains("application-debuggable"))throw new IOException("APK identity or release mode incorrect");
             packages.add("{\"apk\":"+quote(apk.toString())+",\"bytes\":"+Files.size(apk)+",\"sha256\":"+quote(sha(Files.readAllBytes(apk)))+",\"package\":"+quote(id)+",\"performancePackage\":"+perf+"}");
         }
-        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"keyboardHintAdaptersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
+        String result="{\"version\":"+quote(versionName)+",\"versionCode\":"+version.getProperty("factorioVersionCode")+",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":52,\"compatibilityLibrariesVerified\":8,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"keyboardHintAdaptersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["+String.join(",",packages)+"]}";
         Files.writeString(artifacts.resolve("build-result.json"),result+"\n");System.out.println("__FACTORIO_REPORT__"+result);
     }
 }

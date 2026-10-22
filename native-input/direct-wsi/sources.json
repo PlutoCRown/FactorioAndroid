@@ -238,7 +238,7 @@
     },
     {
       "path": "upstream/wsi.c",
-      "sha256": "fb5d1e5f6d8a7e9aae69421c8b71103964ef07153d60cd407751cd49605b8b03"
+      "sha256": "9d5e61875842ca4a3ed44cd7e533f6e8567f2cc08498b3548c8699b8f85c0b8e"
     },
     {
       "path": "upstream/wsi.h",
@@ -248,6 +248,7 @@
   "notes": [
     "No Vulkan HAL/instance/device dispatch header patches. Standard GNU loader owns its own dispatch.",
     "Private AHB delivery replaces upstream TAWC-DRI provider; release fences and consumer completion wait retained.",
-    "Lazy socket connect on actual present; temporary format-query surfaces allocate no transport connection."
+    "Lazy socket connect on actual present; temporary format-query surfaces allocate no transport connection.",
+    "Compatibility ICD and receiver provide OPAQUE for both RGBA/RGBX and BGRA by forcing final Surface alpha to one. Baseline precompiled libraries are retained."
   ]
 }

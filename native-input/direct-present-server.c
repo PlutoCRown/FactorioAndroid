@@ -70,7 +70,9 @@ static void *render_worker(void *unused) {
  fprintf(log,"consumer-renderer=%s\nconsumer-version=%s\n",glGetString(0x1f01),glGetString(0x1f02));
  PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC getNative=(void*)eglGetProcAddress("eglGetNativeClientBufferANDROID");PFNEGLCREATEIMAGEKHRPROC createImage=(void*)eglGetProcAddress("eglCreateImageKHR");PFNEGLDESTROYIMAGEKHRPROC destroyImage=(void*)eglGetProcAddress("eglDestroyImageKHR");void (*imageTarget)(GLenum,void*)=(void*)eglGetProcAddress("glEGLImageTargetTexture2DOES");if(!getNative||!createImage||!destroyImage||!imageTarget)goto cleanup;
  const char *vs="#version 300 es\nprecision highp float;out vec2 uv;void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);uv=vec2(p.x,1.0-p.y);gl_Position=vec4(p*2.0-1.0,0,1);}";
- const char *fs="#version 300 es\nprecision highp float;in vec2 uv;uniform sampler2D image;out vec4 outColor;void main(){outColor=texture(image,uv);}";
+ /* Factorio's window is opaque. BGRA backing has an alpha channel even when
+  * Vulkan selected OPAQUE; ignore it just as RGBX backing does for RGBA. */
+ const char *fs="#version 300 es\nprecision highp float;in vec2 uv;uniform sampler2D image;out vec4 outColor;void main(){outColor=vec4(texture(image,uv).rgb,1.0);}";
  GLuint v=glCreateShader(0x8b31),f=glCreateShader(0x8b30);glShaderSource(v,1,&vs,NULL);glShaderSource(f,1,&fs,NULL);glCompileShader(v);glCompileShader(f);GLint compiled=0;glGetShaderiv(v,0x8b81,&compiled);if(!compiled)goto cleanup;glGetShaderiv(f,0x8b81,&compiled);if(!compiled)goto cleanup;
  GLuint program=glCreateProgram();glAttachShader(program,v);glAttachShader(program,f);glLinkProgram(program);GLint linked=0;glGetProgramiv(program,0x8b82,&linked);if(!linked)goto cleanup;glUseProgram(program);GLuint texture;glGenTextures(1,&texture);glBindTexture(0x0de1,texture);glTexParameteri(0x0de1,0x2801,0x2600);glTexParameteri(0x0de1,0x2800,0x2600);glTexParameteri(0x0de1,0x2802,0x812f);glTexParameteri(0x0de1,0x2803,0x812f);
  unsigned long frames=0;

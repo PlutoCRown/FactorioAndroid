@@ -26,20 +26,20 @@
 
 ## 食用指南
 
-1. 打开 [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases)，下载并安装本应用。标准包文件名是 `FactorioLauncher-0.2.0.apk`。
+1. 打开 [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases)，下载并安装本应用。标准包文件名格式是 `FactorioLauncher-<版本号>.apk`。
 2. 登录 [Factorio 官网](https://factorio.com/)。游戏买在 Steam 时，按[官方 FAQ](https://factorio.com/support/faq) 把 Steam 关联到官网账号。
 3. 在[官方下载页](https://factorio.com/download)选择 **Linux ARM64 图形完整客户端 `.tar.xz`**。如果没有这个版本可以切换到旁边的实验版。太空时代只需下载太空时代包即可，无需再下载原版。
 4. 把原始压缩包放到手机能用文件选择器打开的目录。在启动器主页点「选择游戏安装包」，不需要提前解压。
 5. 点「启动游戏」。
 
-导入本体会依次打开安装包、解压文件、核验引擎与哈希、切换本体并清理旧副本。解压阶段显示安装包读取百分比、已展开大小、文件数和耗时；文件提供者未返回总大小时显示已读取的数据量。读取进度不代表整体耗时，之后仍有核验与清理。在当前测试平板上，原版约需 2 分钟，太空时代约需 5 分钟，也可能更久；这是设备上的参考耗时，请保持应用打开。
+导入本体会依次打开安装包、解压文件、核验引擎与哈希、切换本体并清理旧副本。解压阶段显示安装包读取百分比、已展开大小、文件数和耗时；文件提供者未返回总大小时显示已读取的数据量。读取进度不代表整体耗时，之后仍有核验与清理。耗时取决于游戏包大小、文件提供者和设备存储性能，请保持应用打开。
 
 主页提供「打开存档文件夹」「导入存档」和「打开模组文件夹」。导入存档请选择原始 `.zip`，无需解压；同名文件自动另存，不覆盖原存档。更改存档或模组前，请保存并结束游戏会话。
 
 游戏内新建的存档在应用私有目录：
 
 ```text
-files/profiles/default-2.1.22/userdata/saves/
+files/profiles/<档案 ID>/userdata/saves/
 ```
 
 用新的 APK 覆盖安装会保留导入的游戏、设置和存档。卸载或清除数据会删掉这些文件。
@@ -61,7 +61,9 @@ files/profiles/default-2.1.22/userdata/saves/
 
 `jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据、Compose新增AndroidX库及软键盘请求程序。安卓输入法的触发、文字回传和原生程序编译步骤见 [安卓软键盘接入](docs/ANDROID-KEYBOARD.md)。
 
-2026-10-22 Windows 本地0.3.8标准APK为31,422,295字节（31.42 MB），比0.3.7增加11,468字节。229项主机检查、签名、对齐和载荷校验通过。首页保留游戏与文件入口，触屏鼠标模拟移至启动设置；贴图级别为4K、8K、16K，加载线程上限独立设置并说明内存不足时可能出现退出码137。左侧导航使用本地Lucide矢量图标；主按钮采用官网绿色按钮的背景、内阴影和按压状态，普通按钮及下拉框采用同套灰色样式。本版保留导入进度、存档ZIP导入和安卓键盘状态同步修复。
+构建产物的版本、体积、哈希和校验结果以该次生成的 `artifacts/build-result.json` 为准。首页保留游戏与文件入口，触屏鼠标模拟移至启动设置；贴图级别为4K、8K、16K，加载线程上限独立设置并说明内存不足时可能出现退出码137。左侧导航使用本地Lucide矢量图标；主按钮采用官网绿色按钮的背景、内阴影和按压状态，普通按钮及下拉框采用同套灰色样式。本版保留导入进度、存档ZIP导入和安卓键盘状态同步修复。
+
+图形兼容修复另带 6 个 Mesa provider 与 2 个自有 ICD / Surface 接收器，按 GPU 驱动选择，原运行库仍保留。macOS/Linux 首次构建会准备本地源码构建依赖；Windows 需提供兼容运行库 ZIP。重建、复用和适用范围见 [图形黑屏排查与 Mesa 兼容构建](docs/MESA-COMPATIBILITY.md)。
 
 启动器 UI 使用 **Kotlin + Jetpack Compose + Material 3**，保留 Factorio 配色。Java 导入/会话服务与原生 Zink → Android Surface 路径继续沿用，游戏窗口仍是独立 Activity/SurfaceView。此目录可作为标准 Gradle 工程在 Android Studio 中打开。
 
@@ -82,7 +84,7 @@ Linux x86_64 或 macOS 已有 JDK 17+ 和 Android SDK 时：
 JAVA_HOME=/path/to/jdk ANDROID_HOME=/path/to/sdk ./scripts/build.sh --performance-package
 ```
 
-键盘辅助程序用的 Zig 0.15.2 在 Linux x86_64 与 macOS 上会按主机自动下载。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（原有检查及键盘请求/组合文字检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB、1个AndroidX路径库及键盘请求程序的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验的第三方运行库；小型键盘请求程序随构建从源码编译，需要工程内 Zig 0.15.2，准备方式见键盘说明。
+键盘辅助程序用的 Zig 0.15.2 在 Linux x86_64 与 macOS 上会按主机自动下载。普通包 ID 为 `dev.plutocrown.factorio`；可选性能包 ID 为 `com.miHoYo.Yuanshen`。两个 APK 与 `build-result.json` 输出到 `artifacts/`。构建入口运行 Gradle 单元测试（原有检查及键盘请求/组合文字检查），再检查签名、对齐、包名，以及 APK 内52个原有运行库、XKB、1个AndroidX路径库及键盘请求程序的全部哈希。JNI注解stub仅编译期使用，不进入APK；Gradle不重建或剥离已校验的原52个第三方运行库；Adreno额外兼容库按下文说明从固定源码及补丁构建；小型键盘请求程序随构建从源码编译，需要工程内 Zig 0.15.2，准备方式见键盘说明。
 
 两个入口均自动恢复固定运行库；也可单独执行（此恢复命令只需JDK11+）：
 

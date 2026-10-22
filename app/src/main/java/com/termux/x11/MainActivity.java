@@ -201,7 +201,7 @@ public final class MainActivity extends Activity {
                         status.setText(result.has("error")?getString(R.string.game_failed_settings):getString(R.string.session_ended_data_kept));
                         JSONObject execution=result.optJSONObject("graphicsInitialization");
                         int code=execution==null?-1:execution.optInt("exitCode",-1);
-                        returnToLauncher(result.has("error")?(code>=0?getString(R.string.game_exit_code,code):getString(R.string.game_start_failed)):getString(R.string.game_exited));
+                        returnToLauncher(result.has("error")?(execution!=null&&execution.has("startupError")?execution.getString("startupError"):code>=0?getString(R.string.game_exit_code,code):getString(R.string.game_start_failed)):getString(R.string.game_exited));
                         return;
                     }
                     captureSurface("final");

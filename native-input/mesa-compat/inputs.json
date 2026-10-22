@@ -1,0 +1,189 @@
+{
+  "source": {
+    "commit": "ba042a8e79513c87006f4dd2dc15103724c26cfc",
+    "version": "26.1.0-devel",
+    "url": "https://codeload.github.com/taowen/mesa/tar.gz/ba042a8e79513c87006f4dd2dc15103724c26cfc",
+    "file": "mesa-compatible.tar.gz",
+    "sha256": "abf9bd70631c9b34e7455009f4643f0de1e80470bcbf241c6ce20bce4f187ad8"
+  },
+  "tools": [
+    {
+      "name": "pkgconf",
+      "version": "2.5.1",
+      "file": "pkgconf.tar.xz",
+      "url": "https://distfiles.ariadne.space/pkgconf/pkgconf-2.5.1.tar.xz",
+      "sha256": "cd05c9589b9f86ecf044c10a2269822bc9eb001eced2582cfffd658b0a50c243"
+    },
+    {
+      "name": "bison",
+      "version": "3.8.2",
+      "file": "bison.tar.xz",
+      "url": "https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz",
+      "sha256": "9bba0214ccf7f1079c5d59210045227bcf619519840ebfa80cd3849cff5a5bf2"
+    }
+  ],
+  "headers": [
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxrandr/libxrandr-dev_1.5.4-1+b4_arm64.deb",
+      "file": "libxrandr-dev_1.5.4-1+b4_arm64.deb",
+      "sha256": "0e827f7e8be12c7532684f177e75966fd609c2d8926ef52cca7cf99ec7c09470",
+      "bytes": 44120
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxrender/libxrender-dev_0.9.12-1_arm64.deb",
+      "file": "libxrender-dev_0.9.12-1_arm64.deb",
+      "sha256": "dc1434f847bb727248d6ef219acd814c0b3fe0f846bf7db08320c18e34d09adb",
+      "bytes": 38780
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libd/libdrm/libdrm-dev_2.4.134-3_arm64.deb",
+      "file": "libdrm-dev_2.4.134-3_arm64.deb",
+      "sha256": "542f6f92f825e3a08c3fe0b130084b17cc774bd1dce97169a431652cea107cdb",
+      "bytes": 323504
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/e/expat/libexpat1-dev_2.9.0-1~deb13u1_arm64.deb",
+      "file": "libexpat1-dev_2.9.0-1~deb13u1_arm64.deb",
+      "sha256": "d8bc76e2628931aff14bebc69fcfdc1597e0f467db56a3cabb98ce544c6dea75",
+      "bytes": 170916
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/z/zlib/zlib1g-dev_1.3.dfsg+really1.3.2-3_arm64.deb",
+      "file": "zlib1g-dev_1.3.dfsg+really1.3.2-3_arm64.deb",
+      "sha256": "e7d9da2391c011b34357b2cefcc889e6d34e790da896934a97dd52db787b742f",
+      "bytes": 915596
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb1-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb1-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "740a2bd30df6a7c3b0fd473c14973ff5ce0c2cb3cf2b86bb6a353070f40a1eda",
+      "bytes": 182464
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-dri2-0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-dri2-0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "3f1815a4820ae9f04c68e5d3e14da947629a8c65b2e0b69379fbee05eedffc4e",
+      "bytes": 108632
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-dri3-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-dri3-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "a49466413e05857258ef832b2f2e7f535e7084ac7d3ba0e394a9cf07e6665263",
+      "bytes": 108432
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-glx0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-glx0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "70bc03b0c134f1696faa70672d8c23423c2042f74b67ee2873e2f2aa4850898e",
+      "bytes": 128396
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-present-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-present-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "59ffc952e732419e796469f565526dd474d0c6d152fd40a779f14082de82ab38",
+      "bytes": 107404
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-randr0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-randr0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "ddce4ff9834aa4b7dabfc171894a110afc5d2c51a08fdfe561e0d1bbd7f155e2",
+      "bytes": 121220
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-render0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-render0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "f433ea1c6200162cee929eb5c87729d72413e7a1eabffc4be3d1d78a8af098c9",
+      "bytes": 118476
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-shape0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-shape0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "66850b6c109c1523ce88c548b68b3022c9c12576500951616b181db38311a111",
+      "bytes": 107148
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-shm0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-shm0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "37e86867a684c23eeb3816bcb0313274f2ead4700720dfd5a1816171643b870d",
+      "bytes": 108036
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-sync-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-sync-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "b123465752731edb7abe49baa70c51cd33b14c9e8df24b013001e77d874da8e7",
+      "bytes": 111000
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-xfixes0-dev_1.17.0-2+b2_arm64.deb",
+      "file": "libxcb-xfixes0-dev_1.17.0-2+b2_arm64.deb",
+      "sha256": "4539ad504ea4ad7dd77305a4114df53360e1a864105f4082eac737b9af4a8f1a",
+      "bytes": 112796
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libx11/libx11-dev_1.8.4-2+deb12u2_arm64.deb",
+      "file": "libx11-dev_1.8.4-2+deb12u2_arm64.deb",
+      "sha256": "34bfc833561de983cfb4475523fedc13abb4faee14a876300de659591779add8",
+      "bytes": 817724
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libx11/libx11-xcb-dev_1.8.4-2+deb12u2_arm64.deb",
+      "file": "libx11-xcb-dev_1.8.4-2+deb12u2_arm64.deb",
+      "sha256": "72433ed28bbff06d679f68339de1ba7ff0c8db0fba89ef717505716d3c70d841",
+      "bytes": 194596
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxext/libxext-dev_1.3.4-1+b4_arm64.deb",
+      "file": "libxext-dev_1.3.4-1+b4_arm64.deb",
+      "sha256": "6d5f3f89542dc5166e2c13d0e66fc7cacaa2145bc9b5d81f5e9c7eebbf3d83e4",
+      "bytes": 104412
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxshmfence/libxshmfence-dev_1.3.3-1_arm64.deb",
+      "file": "libxshmfence-dev_1.3.3-1_arm64.deb",
+      "sha256": "a341b9c9b2f2ec0d6fcca9ed634b47e5bc2e8ff46a48b7576a3add4d8aa1e0df",
+      "bytes": 10540
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/x/xorgproto/x11proto-dev_2025.1-1_all.deb",
+      "file": "x11proto-dev_2025.1-1_all.deb",
+      "sha256": "01362eb7d3ca1d0f40b99bc1c369aa5d5f411b0d4a64323a21e111b65d89a45f",
+      "bytes": 604564
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libg/libglvnd/libglvnd-dev_1.7.0-3+b1_arm64.deb",
+      "file": "libglvnd-dev_1.7.0-3+b1_arm64.deb",
+      "sha256": "a186ec5e9697b654be190211b2a5f34bc3dfac54d2f0134af65f14564c84f005",
+      "bytes": 4328
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libg/libglvnd/libglvnd-core-dev_1.7.0-3+b1_arm64.deb",
+      "file": "libglvnd-core-dev_1.7.0-3+b1_arm64.deb",
+      "sha256": "39e25ae216d03b461c41005142267484d5b1dec1145ec9b377397c5b289d66ef",
+      "bytes": 12544
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxxf86vm/libxxf86vm-dev_1.1.4-2+b1_arm64.deb",
+      "file": "libxxf86vm-dev_1.1.4-2+b1_arm64.deb",
+      "sha256": "d69842b43a7a5de520e0db193167278814f6fba34608e2c71eb1e1a76cedade2",
+      "bytes": 24868
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxau/libxau-dev_1.0.9-1_arm64.deb",
+      "file": "libxau-dev_1.0.9-1_arm64.deb",
+      "sha256": "21db3761a8f388fc83707c00fac645d4332737a859dd727571e1e6ede003b048",
+      "bytes": 23172
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.5-2+b1_arm64.deb",
+      "file": "libxdmcp-dev_1.1.5-2+b1_arm64.deb",
+      "sha256": "6d06a9349fc9d00aa88e900441b80cb7ce6ddcce946a535a61720e06adc8a423",
+      "bytes": 43792
+    },
+    {
+      "url": "https://deb.debian.org/debian/pool/main/x/xtrans/xtrans-dev_1.6.0-1_all.deb",
+      "file": "xtrans-dev_1.6.0-1_all.deb",
+      "sha256": "47df2a677f60cdc9a5db718304cd2788c4f9bf10c9420c44942821a46f19c23d",
+      "bytes": 93536
+    }
+  ]
+}

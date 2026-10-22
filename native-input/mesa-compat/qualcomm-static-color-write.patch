@@ -1,0 +1,16 @@
+--- a/src/gallium/drivers/zink/zink_screen.c
++++ b/src/gallium/drivers/zink/zink_screen.c
+@@ -2894,6 +2894,13 @@
+ static void
+ init_driver_workarounds(struct zink_screen *screen)
+ {
++   /* Work around destination-color loss observed with dynamic color-write enable
++    * on Qualcomm proprietary Vulkan. Use static pipeline color masks instead.
++    * Affected GPU models and driver versions have not been fully characterized.
++    */
++   if (zink_driverid(screen) == VK_DRIVER_ID_QUALCOMM_PROPRIETARY)
++      screen->info.have_EXT_color_write_enable = false;
++
+    /* enable implicit sync for all non-mesa drivers */
+    screen->driver_workarounds.implicit_sync = !zink_driver_is_venus(screen);
+    switch (zink_driverid(screen)) {

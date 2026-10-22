@@ -1,0 +1,32 @@
+package org.factorio.local.launcher;
+
+import android.content.Context;
+import org.json.*;
+import java.io.*;
+import java.util.*;
+
+/** Build-generated hashes cover the six providers as one coherent Mesa version. */
+final class MesaRuntime {
+    static final String VERSION="26.1.0-devel";
+    static final String SOURCE="ba042a8e79513c87006f4dd2dc15103724c26cfc";
+    static boolean compatibleDevice() {return new File("/vendor/lib64/hw/vulkan.adreno.so").isFile();}
+    static boolean apply(Context context,JSONObject manifest) throws Exception {
+        if(!compatibleDevice())return false;
+        Properties p=new Properties();try(InputStream input=context.getAssets().open("mesa-native.properties")){p.load(input);}
+        if(!SOURCE.equals(p.getProperty("source"))||!VERSION.equals(p.getProperty("version")))throw new IOException("Mesa build identity mismatch");
+        Set<String> expected=new HashSet<>(Arrays.asList("librea_direct_icd.so","librea_direct_mesa_gallium.so","librea_direct_mesa_egl.so",
+            "librea_direct_mesa_glx.so","librea_direct_mesa_gbm.so","librea_direct_mesa_gbm_dri.so","librea_direct_mesa_dril.so"));
+        JSONArray rows=manifest.getJSONArray("libraries");
+        for(int i=0;i<rows.length();i++) {
+            JSONObject row=rows.getJSONObject(i);String name=row.getString("packagedName");
+            if(!expected.remove(name))continue;
+            String packaged=name.equals("librea_direct_icd.so")?"librea_compat_direct_icd.so":name.replace("librea_direct_mesa_","librea_compat_mesa_");
+            String hash=p.getProperty(packaged+".sha256","");long bytes=Long.parseLong(p.getProperty(packaged+".bytes","0"));
+            if(!hash.matches("[a-f0-9]{64}")||bytes<=0||bytes>64*1024*1024)throw new IOException("Invalid Mesa provider metadata");
+            row.put("packagedName",packaged).put("sha256",hash).put("bytes",bytes);
+            if(name.equals("librea_direct_mesa_gallium.so"))row.put("aliases",new JSONArray().put("libgallium-"+VERSION+".so"));
+        }
+        if(!expected.isEmpty())throw new IOException("Incomplete Mesa providers");
+        return true;
+    }
+}
