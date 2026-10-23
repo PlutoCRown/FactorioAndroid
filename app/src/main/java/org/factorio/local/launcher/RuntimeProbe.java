@@ -158,6 +158,13 @@ public final class RuntimeProbe {
         } catch (IOException e) {
             return result.put("started", false).put("error", e.toString()).put("passed", false);
         }
+        SessionDiagnostics diagnostics = session == null ? null : session.diagnostics();
+        if (diagnostics != null) {
+            diagnostics.started(process.toString(), Process.myPid(), startupLog);
+            diagnostics.sample();
+        }
+        if (startupLog != null)
+            result.put("writeData", startupLog.getParentFile().getAbsolutePath());
         java.util.concurrent.atomic.AtomicReference<String> outputTail =
                 new java.util.concurrent.atomic.AtomicReference<>("");
         FutureTask<String> reader =
@@ -169,6 +176,7 @@ public final class RuntimeProbe {
                             boolean truncated = false;
                             try (InputStream input = process.getInputStream()) {
                                 for (int n; (n = input.read(bytes)) != -1; ) {
+                                    if (diagnostics != null) diagnostics.output(bytes, n);
                                     if (liveGraphics != null)
                                         liveGraphics.accept(
                                                 new String(bytes, 0, n, StandardCharsets.UTF_8));
@@ -218,6 +226,7 @@ public final class RuntimeProbe {
                 result.put("lifecycle", session.lifecycleState());
                 int ticks = 0;
                 while (!(exited = process.waitFor(1, TimeUnit.SECONDS)) && !session.stopping()) {
+                    if (diagnostics != null) diagnostics.sample();
                     Map<String, String> live = liveGraphics.snapshot();
                     if (live.containsKey("fatalSignal")) {
                         result.put("fatalSignal", live.get("fatalSignal"))
@@ -307,6 +316,9 @@ public final class RuntimeProbe {
                             && process.exitValue() == 0
                             && !result.has("outputError")
                             && !result.has("fatalSignal"));
+        } catch (Exception error) {
+            result.put("monitorError", error.toString());
+            throw error;
         } finally {
             if (session != null) session.detachEngine(process);
             if (process.isAlive()) {
@@ -330,6 +342,8 @@ public final class RuntimeProbe {
             } catch (IOException ignored) {
             }
             reader.cancel(true);
+            result.put("outputTail", outputTail.get());
+            if (diagnostics != null) diagnostics.finished(result);
         }
     }
 

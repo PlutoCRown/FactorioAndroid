@@ -419,16 +419,19 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         setBusy(true, getString(R.string.logs_exporting));
         worker.execute(
                 () -> {
-                    try (InputStream input =
-                                    new FileInputStream(
-                                            SessionLogs.resolve(
-                                                    getFilesDir(), "logs:" + source.getName()));
-                            OutputStream output =
-                                    getContentResolver().openOutputStream(destination, "w")) {
-                        if (output == null) throw new IOException("Destination unavailable");
-                        byte[] buffer = new byte[32768];
-                        for (int n; (n = input.read(buffer)) != -1; ) output.write(buffer, 0, n);
-                        output.flush();
+                    try {
+                        SessionExitDiagnostics.collect(getApplicationContext());
+                        File refreshed =
+                                SessionLogs.refresh(getFilesDir(), "logs:" + source.getName());
+                        try (InputStream input = new FileInputStream(refreshed);
+                                OutputStream output =
+                                        getContentResolver().openOutputStream(destination, "w")) {
+                            if (output == null) throw new IOException("Destination unavailable");
+                            byte[] buffer = new byte[32768];
+                            for (int n; (n = input.read(buffer)) != -1; )
+                                output.write(buffer, 0, n);
+                            output.flush();
+                        }
                         runOnUiThread(
                                 () -> {
                                     if (!isDestroyed()) {

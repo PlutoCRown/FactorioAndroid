@@ -228,6 +228,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                                                     : getIntent().getStringExtra("graphicsPreset"))
                                             : "diagnostic");
             if (manualSession) {
+                gameSession.setDiagnosticSession(
+                        getFilesDir(), report.getLong("collectedAtEpochMillis"));
                 controllerRelay = new ControllerRelay(this, false);
                 if (virtualGamepad)
                     virtualControls =
@@ -1021,6 +1023,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         else finish();
     }
 
+    private void terminateWindowProcess() {
+        if (gameSession != null) gameSession.recordWindowTermination();
+        android.os.Process.killProcess(android.os.Process.myPid());
+    }
+
     @Override
     protected void onDestroy() {
         if (manualSession && report != null)
@@ -1045,10 +1052,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                                     sessionThread.join();
                                 } catch (InterruptedException ignored) {
                                 }
-                                android.os.Process.killProcess(android.os.Process.myPid());
+                                terminateWindowProcess();
                             },
                             "factorio-session-cleanup")
                     .start();
-        else android.os.Process.killProcess(android.os.Process.myPid());
+        else terminateWindowProcess();
     }
 }

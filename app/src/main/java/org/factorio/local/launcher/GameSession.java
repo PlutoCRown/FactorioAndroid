@@ -12,6 +12,24 @@ public final class GameSession implements AutoCloseable {
     private volatile boolean stopRequested, backgroundPaused;
     private java.lang.Process engine;
     private AudioDiskBridge audio;
+    private SessionDiagnostics diagnostics;
+
+    public void setDiagnosticSession(File files, long epoch) {
+        try {
+            diagnostics = new SessionDiagnostics(files, epoch);
+        } catch (IOException unavailable) {
+            android.util.Log.w("FactorioLauncher", "Session diagnostics unavailable", unavailable);
+        }
+    }
+
+    SessionDiagnostics diagnostics() {
+        return diagnostics;
+    }
+
+    public void recordWindowTermination() {
+        if (diagnostics != null) diagnostics.windowTermination(android.os.Process.myPid());
+    }
+
     private boolean engineStopped;
     private long backgroundPauses, backgroundResumes;
 
@@ -159,6 +177,7 @@ public final class GameSession implements AutoCloseable {
                 if (stopRequested) throw new InterruptedIOException("启动已取消");
                 JSONObject result =
                         RuntimeProbe.collectSession(context, windowTemp, this, progress);
+                if (diagnostics != null) diagnostics.sessionResult(result);
                 Path pending =
                         new File(context.getFilesDir(), "game-session-engine.json.pending")
                                 .toPath();

@@ -6,14 +6,12 @@ import android.content.Context;
 import android.os.Build;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /** Own-package OS exit records survive loss of the window process itself. */
 final class SessionExitDiagnostics {
-    static void collect(Context context) {
+    static synchronized void collect(Context context) {
         if (Build.VERSION.SDK_INT < 30) return;
         try {
             ActivityManager manager =
@@ -27,6 +25,7 @@ final class SessionExitDiagnostics {
                                 .put("process", exit.getProcessName())
                                 .put("timestamp", exit.getTimestamp())
                                 .put("reason", exit.getReason())
+                                .put("reasonName", reasonName(exit.getReason()))
                                 .put("status", exit.getStatus())
                                 .put("description", exit.getDescription())
                                 .put("pssKiB", exit.getPss())
@@ -39,17 +38,38 @@ final class SessionExitDiagnostics {
                             .put(
                                     "scope",
                                     "Own Android package only; OS records may omit GNU engine child exits");
-            File pending = new File(context.getFilesDir(), "last-process-exits.json.pending");
-            Files.write(pending.toPath(), report.toString(2).getBytes(StandardCharsets.UTF_8));
-            Files.move(
-                    pending.toPath(),
-                    new File(context.getFilesDir(), "last-process-exits.json").toPath(),
-                    StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.ATOMIC_MOVE);
+            SessionDiagnostics.atomicWrite(
+                    new File(context.getFilesDir(), "last-process-exits.json"),
+                    report.toString(2).getBytes(StandardCharsets.UTF_8));
         } catch (Exception unavailable) {
             android.util.Log.w(
                     "FactorioLauncher",
                     "Own exit history unavailable: " + unavailable.getClass().getSimpleName());
+        }
+    }
+
+    private static String reasonName(int reason) {
+        switch (reason) {
+            case ApplicationExitInfo.REASON_EXIT_SELF:
+                return "EXIT_SELF";
+            case ApplicationExitInfo.REASON_SIGNALED:
+                return "SIGNALED";
+            case ApplicationExitInfo.REASON_LOW_MEMORY:
+                return "LOW_MEMORY";
+            case ApplicationExitInfo.REASON_CRASH:
+                return "CRASH";
+            case ApplicationExitInfo.REASON_CRASH_NATIVE:
+                return "CRASH_NATIVE";
+            case ApplicationExitInfo.REASON_ANR:
+                return "ANR";
+            case ApplicationExitInfo.REASON_USER_REQUESTED:
+                return "USER_REQUESTED";
+            case ApplicationExitInfo.REASON_USER_STOPPED:
+                return "USER_STOPPED";
+            case ApplicationExitInfo.REASON_DEPENDENCY_DIED:
+                return "DEPENDENCY_DIED";
+            default:
+                return "OTHER_OR_UNKNOWN";
         }
     }
 }

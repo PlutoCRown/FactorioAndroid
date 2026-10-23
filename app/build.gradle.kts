@@ -86,6 +86,7 @@ dependencies {
     implementation("org.tukaani:xz:1.12")
     compileOnly(project(":compile-stubs"))
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
 
 val restoreRuntime by

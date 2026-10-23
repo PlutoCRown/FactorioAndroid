@@ -260,10 +260,11 @@ public final class GameDocumentsProvider extends DocumentsProvider {
                 if (signal != null) signal.throwIfCanceled();
                 if (!"r".equals(mode) || "logs".equals(document))
                     throw new IOException("Logs are read-only files");
+                SessionExitDiagnostics.collect(getContext());
                 return ParcelFileDescriptor.open(
-                        SessionLogs.resolve(getContext().getFilesDir(), document),
+                        SessionLogs.refresh(getContext().getFilesDir(), document),
                         ParcelFileDescriptor.MODE_READ_ONLY);
-            } catch (IOException error) {
+            } catch (Exception error) {
                 throw failure(error);
             }
         GameFiles.Lease lease = null;
