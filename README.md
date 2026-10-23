@@ -1,7 +1,13 @@
 # Factorio Android Launcher
 
+![Factorio Android Launcher](docs/images/factorio-cover.png)
+
+[![Build & tests](https://img.shields.io/github/actions/workflow/status/PlutoCRown/FactorioAndroid/release.yml?label=build%20%26%20tests&logo=github)](https://github.com/PlutoCRown/FactorioAndroid/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/PlutoCRown/FactorioAndroid?logo=github)](https://github.com/PlutoCRown/FactorioAndroid/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/PlutoCRown/FactorioAndroid/total?logo=github)](https://github.com/PlutoCRown/FactorioAndroid/releases)
+[![GitHub stars](https://img.shields.io/github/stars/PlutoCRown/FactorioAndroid?style=flat&logo=github)](https://github.com/PlutoCRown/FactorioAndroid/stargazers)
 [![GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
-![Android ARM64](https://img.shields.io/badge/platform-Android%20ARM64-3DDC84.svg)
+![Android ARM64](https://img.shields.io/badge/platform-Android%20ARM64-3DDC84.svg?logo=android&logoColor=white)
 
 **简体中文** | [English](README.en.md)
 
@@ -11,57 +17,62 @@
 
 ### 简介
 
-本启动器通过 GNU/Linux 运行环境、Mesa Zink 和设备的 Vulkan 驱动，将官方 Linux ARM64 图形客户端的画面呈现到 Android Surface。本项目不包含、也不分发 Factorio 的原版游戏文件。你需要在官网下载并持有游戏资源（建议通过官网账号购买和下载）。将游戏安装包导入后，即可通过启动器进行启动和游玩。
+本启动器通过 GNU/Linux 运行环境、Mesa Zink 和设备的 Vulkan 驱动，将官方 Linux ARM64 图形客户端的画面呈现到 Android Surface。
+
+> 本项目不包含、也不分发 Factorio 的原版游戏文件。你需要在官网下载并持有游戏资源（建议通过官网账号购买和下载）。将游戏安装包导入后，即可通过启动器进行启动和游玩。
 
 ### 实现功能
 
-- 导入用户自备的官方 Linux ARM64 图形完整客户端。
-- 导入 ZIP 存档，并通过系统文件管理器访问当前游戏档案的存档和模组目录。
-- 转发键盘、鼠标与触屏模拟鼠标输入；通过 SDL3 接口接入手柄和 Android 输入法。
-- 所有游戏版本及原版／Space Age 共用配置、存档与模组。
-
-这些功能依赖游戏接口和设备运行环境。启动器会报告缺失的原生接口或运行错误；支持导入某个安装包不代表该版本能在所有设备上正常运行。
+- 完整运行 Linux ARM64 图形完整客户端，兼容原版和太空时代 DLC。
+- 0 CPU 转译损耗，主流芯片轻松运行后期工厂。
+- 存档导入和图形设置选项，存档与 Mod 各端通用。
+- 转发键盘、鼠标与触屏模拟鼠标输入；屏幕虚拟手柄支持。
 
 ## 食用指南
 
 1. 打开 [Releases](https://github.com/PlutoCRown/FactorioAndroid/releases)，下载并安装本应用。选择所需版本的标准 APK。
-2. 登录 [Factorio 官网](https://factorio.com/)。游戏买在 Steam 时，按[官方 FAQ](https://factorio.com/support/faq) 把 Steam 关联到官网账号。
-3. 在[官方下载页](https://factorio.com/download)选择 **Linux ARM64 图形完整客户端 `.tar.xz`**。如果没有这个版本可以切换到旁边的实验版。太空时代只需下载太空时代包即可，无需再下载原版。
+2. 登录 [Factorio 官网](https://factorio.com/)。如果你的游戏购买于 Steam，按 [官方 FAQ](https://factorio.com/support/faq) 把 Steam 关联到官网账号。
+3. 在 [官方下载页](https://factorio.com/download) 选择 **Linux ARM64 版**（如果没有这个版本，可以切换到旁边的实验版）。想玩太空时代只需下载太空时代包即可，无需再下载原版。
 4. 把原始压缩包放到手机能用文件选择器打开的目录。在启动器主页点「选择游戏安装包」，不需要提前解压。
 5. 点「启动游戏」。
 
-导入本体会依次打开安装包、解压文件、检查安装包结构与 ARM64 引擎、切换本体并清理旧副本。解压阶段显示安装包读取百分比、已展开大小、文件数和耗时；文件提供者未返回总大小时显示已读取的数据量。读取进度不代表整体耗时，之后仍有核验与清理。耗时取决于安装包大小、文件提供者和设备存储性能，请保持应用打开。
-
-主页提供「打开存档文件夹」「导入存档」和「打开模组文件夹」。导入存档请选择原始 `.zip`，无需解压；同名文件自动另存，不覆盖原存档。更改存档或模组前，请保存并结束游戏会话。
-
-游戏内新建的存档在应用私有目录：
-
-```text
-files/profiles/default/userdata/saves/
-```
-
-模组保存在同一 `userdata` 下的 `mods/`，游戏设置保存在 `files/profiles/default/config.ini`。更换游戏版本或原版／Space Age 安装包后，继续使用这份数据。
-
-首次启动使用完整的游戏配置底稿，再应用路径、初始语言和启动设置；已有配置保留其他选项。配置缺失格式头时先备份再修复，详见[配置底稿与覆盖规则](docs/CONFIGURATION.md)。
-
-用同包名、同签名的新 APK 覆盖安装会保留导入的游戏、设置和存档。卸载或清除数据会删掉这些文件。
-
-
 ## 运行要求
 
-需要 64 位 ARM Android，系统版本至少为 8.0（API 26），并有能满足 Mesa Zink 需求的 Vulkan 驱动。系统版本和 CPU 架构只是基本条件，不能替代 GPU 驱动与运行库兼容性检查。
+- 需要 64 位 ARM Android，系统版本至少为 8.0（API 26）。
+- 内存：游玩原版建议使用 12 GB 内存设备（至少 8 GB），游玩太空时代 DLC 建议使用 16 GB 内存设备（至少 12 GB）。
+- 存储：原版建议预留 4 GB 存储空间，太空时代 DLC 建议预留 8 GB 存储空间。
+- CPU：建议使用骁龙 8 Gen 1 以上或同等性能处理器。
 
-已验证在 **Redmi K70（骁龙 8 Gen 2）** 上以**原生分辨率**运行，达到 **60 FPS / 60 UPS**。
+兼容性说明：本项目已在骁龙 8 Gen 2、玄戒 O3 芯片上测试运行包含 2.0 和 2.1 的多个版本。
 
-可在「启动设置」启用[虚拟手柄](docs/VIRTUAL-GAMEPAD.md)（默认关闭），使用双摇杆、完整手柄按键和扳机组合操作；也可连接安卓手柄或键盘鼠标。
+> 测试存档：太空时代 DLC 解锁四星球，除黑瓶外 1,000 SPM 的存档。
+>
+> - Redmi K70（骁龙 8 Gen 2），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 20–40 波动。
+> - Xiaomi Pad 9 Pro Max（玄戒 O3），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 20–40 波动。
+>
+> 作者可用设备不多，欢迎在 [Issues](https://github.com/PlutoCRown/FactorioAndroid/issues) 提交你的测试数据。
 
-为原始安装包、展开后的游戏文件、导入时的临时副本以及存档和模组保留足够存储空间。内存需求随原版／Space Age、地图、模组、贴图质量和加载并发变化；可在启动设置中调整贴图级别、渲染分辨率和加载线程上限，详见[加载速度与内存](docs/LOADING-MEMORY.md)。
+## 操作说明与配置指南
+
+1. 建议自备外接键鼠或手柄，当然该项目也提供虚拟屏幕手柄。
+2. 如在游玩中遇到闪退，多半是内存瓶颈。建议在启动前将画质预设为 4K 贴图，并限制贴图加载线程上限（建议设为最低，这会使游戏加载变得稍慢，但不影响游玩）。调短自动存档间隔以防不测，~~或者氪金购买 24 GB 以上内存的设备~~。常见闪退场景：
+
+   - 游戏启动过程中 50%–90% 的阶段。
+   - 点击创建地图。
+   - 在远程视图中切换星球／飞船表面。
+
+3. 游戏不支持同时使用键盘和手柄输入，如果接入多种设备，请在游戏内控制选项里面选择输入设备。
+
+   - 若启用虚拟手柄，进入游戏会默认选中手柄作为输入设备。
+   - 若使用键盘输入，并且启用了触屏鼠标模拟，你可以双指上下滑动来滚动容器。
+   - 你可以使用安卓侧滑返回来代替键盘输入 Esc，特别是遇到一些大窗口无法点击关闭的时候。
+   - 当聚焦到输入框时，设备会弹出输入法。关闭弹出的输入法后，才能继续使用触屏操作。
 
 ## 开发指南
 
-源码分层、目录职责、格式化命令和测试入口见 [工程结构与开发约定](docs/DEVELOPMENT.md)。
+> 项目是作者许愿式编程完成，远未达到最优运行效率，欢迎提交你的贡献。
 
-图形兼容运行库的源码、补丁、构建和复用步骤见 [Mesa 兼容构建](docs/MESA-COMPATIBILITY.md)。
+源码分层、目录职责、格式化命令和测试入口见 [工程结构与开发约定](docs/DEVELOPMENT.md)。图形兼容运行库的源码、补丁、构建和复用步骤见 [Mesa 兼容构建](docs/MESA-COMPATIBILITY.md)。
 
 `jniLibs` 中各个 `.so` 的来源、用途、下载位置、原包成员路径和获取步骤，见 [原生库来源与获取说明](docs/NATIVE-LIBRARIES.md)。文档也说明XKB数据、Compose新增AndroidX库及软键盘请求程序。安卓输入法的触发、文字回传和原生程序编译步骤见 [安卓软键盘接入](docs/ANDROID-KEYBOARD.md)。
 
