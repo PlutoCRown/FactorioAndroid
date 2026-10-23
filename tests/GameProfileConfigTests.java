@@ -94,6 +94,7 @@ public final class GameProfileConfigTests {
         try{GameProfileConfig.initializeLocale("; version=13\n[general]\n[general]\n","en");throw new AssertionError("duplicate section seeded");}catch(IOException expected){checks++;}
         genericConfigurations();
         gpuPolicy();
+        defaultTemplate();
         System.out.println(checks+" persistent profile configuration and locale checks passed");
     }
 
@@ -147,5 +148,42 @@ public final class GameProfileConfigTests {
         check(released.contains("; gpu-accelerated-compression=false\n")&&!released.contains("# old override")&&!released.contains("; old override"),"policy migration removes only active former graphics overrides");
         check(released.contains("future-option=keep\n")&&released.contains("[general]\nlocale=de\ngpu-accelerated-compression=false\n"),"policy migration preserves unrelated settings and other sections");
         check(GameProfileConfig.releaseLegacyGpuOverrides(explicit).contains("gpu-accelerated-compression=true # game capability result\n"),"policy migration retains a true capability result");
+    }
+
+    private static void defaultTemplate() throws Exception {
+        java.nio.file.Path asset=java.nio.file.Path.of("src/main/assets/config/default-config.ini");
+        if(!java.nio.file.Files.isRegularFile(asset))asset=java.nio.file.Path.of("app/src/main/assets/config/default-config.ini");
+        String template=new String(java.nio.file.Files.readAllBytes(asset),java.nio.charset.StandardCharsets.UTF_8);
+        check(template.equals(GameProfileConfig.ensureFormatHeader(template,template)),"bundled game-written format header is retained");
+        check(template.contains("[controls]\n")&&template.contains("[sound]\n")&&template.contains("[graphics]\n")
+            &&template.contains("; max-sprite-loading-threads=32\n"),"complete game sections and documented defaults are present");
+        for(String line:template.split("\n")) {
+            String text=line.trim();
+            if(!text.isEmpty()&&!text.startsWith(";")&&!text.startsWith("#")&&!text.startsWith("["))
+                throw new AssertionError("Bundled template contains a recorded user's preference: "+text);
+        }
+        check(!template.contains("/data/data/")&&!template.contains("/data/user/")&&!template.contains("default-2.1.22"),"template contains no recorded device paths");
+        String header=template.substring(0,template.indexOf('\n'));
+        for(String preset:new String[]{"game","compat","balanced","quality"}) {
+            String fresh=GameProfileConfig.mapPaths(template,"/import/data","/shared/userdata");
+            fresh=GameProfileConfig.initializeLocale(fresh,"en");
+            fresh=GameProfileConfig.applyGraphicsPreset(fresh,preset);
+            fresh=GameProfileConfig.applySpriteLoadingLimit(fresh,1);
+            check(fresh.startsWith(header+"\n")&&fresh.contains("; Semicolons")&&fresh.contains("[controls]\n"),"first launch retains native format and other sections: "+preset);
+            check(fresh.contains("read-data=/import/data\nwrite-data=/shared/userdata\n")&&"en".equals(GameProfileConfig.readLocale(fresh))
+                &&fresh.contains("\nmax-sprite-loading-threads=1\n"),"first-launch paths language and concurrency applied: "+preset);
+            check(!fresh.contains("\ngpu-accelerated-compression=false\n")&&!fresh.contains("\nshow-fps=both\n")
+                &&!fresh.contains("\ncustom-ui-scale=2\n"),"first launch does not inherit test preferences: "+preset);
+        }
+        String existing="[path]\nread-data=/old\n[general]\nlocale=de\n[controls]\ncustom=keep\n";
+        String repaired=GameProfileConfig.ensureFormatHeader(existing,template);
+        check(repaired.equals(header+"\n"+existing),"versionless profile gains only native metadata; all preferences remain");
+        check(repaired.equals(GameProfileConfig.ensureFormatHeader(repaired,template)),"metadata repair is idempotent");
+        check(GameProfileConfig.ensureFormatHeader(existing,"; version=77\n[path]\n").startsWith("; version=77\n"),"repair takes format metadata from template rather than a fixed version");
+        for(String valid:new String[]{"; version=14\r\n[graphics]\r\nfuture=keep\r\n","\ufeff; version=999\n[path]\n","; legacy\nconfig-version=12\n[path]\n"})
+            check(valid.equals(GameProfileConfig.ensureFormatHeader(valid,template)),"existing and legacy format versions are not replaced");
+        check(GameProfileConfig.ensureFormatHeader("\ufeff"+existing,template).equals("\ufeff"+header+"\n"+existing),"BOM remains at the start during repair");
+        String misplaced="; ordinary comment\n; version=13\n"+existing;
+        check(GameProfileConfig.ensureFormatHeader(misplaced,template).equals(header+"\n"+misplaced),"metadata must precede the first unrelated comment, as required by the engine");
     }
 }

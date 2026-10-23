@@ -91,8 +91,17 @@ public final class GameSession implements AutoCloseable {
         File config=new File(profile,"config.ini");
         if(config.length()>1024*1024)throw new IOException("配置文件过大，已保留原文件");
         File template=new File(gameDirectory,"config/config.ini");
+        String bundled;
+        try(InputStream input=context.getAssets().open("config/default-config.ini");ByteArrayOutputStream output=new ByteArrayOutputStream()) {
+            byte[] bytes=new byte[8192];for(int n;(n=input.read(bytes))!=-1;)output.write(bytes,0,n);
+            bundled=new String(output.toByteArray(),StandardCharsets.UTF_8);
+        }
         String original=config.isFile()?new String(Files.readAllBytes(config.toPath()),StandardCharsets.UTF_8):
-            template.isFile()&&template.length()<=1024*1024?new String(Files.readAllBytes(template.toPath()),StandardCharsets.UTF_8):"[path]\n";
+            template.isFile()&&template.length()<=1024*1024?new String(Files.readAllBytes(template.toPath()),StandardCharsets.UTF_8):bundled;
+        String repaired=GameProfileConfig.ensureFormatHeader(original,bundled);
+        File formatBackup=new File(profile,"config.before-format-repair.ini");
+        if(config.isFile()&&!repaired.equals(original)&&!formatBackup.exists())Files.copy(config.toPath(),formatBackup.toPath());
+        original=repaired;
         File descriptor=new File(profile,"profile.json");
         if(descriptor.isFile()) {
             JSONObject old=GameImporter.readJson(descriptor);
@@ -111,6 +120,7 @@ public final class GameSession implements AutoCloseable {
         Files.write(pending,updated.getBytes(StandardCharsets.UTF_8));
         Files.move(pending,config.toPath(),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
         JSONObject metadata=new JSONObject().put("schema",1).put("id",profile.getName()).put("graphicsPolicyVersion",2)
+            .put("formatBackup",formatBackup.isFile()?formatBackup.getAbsolutePath():JSONObject.NULL)
             .put("graphicsPreset",preset).put("spriteLoadingLimit",loadingLimit).put("graphicsBackup",graphicsBackup.isFile()?graphicsBackup.getAbsolutePath():JSONObject.NULL)
             .put("locale",GameProfileConfig.readLocale(updated)).put("initialLocaleFallback",AppLanguage.gameLocale(context))
             .put("readData",read).put("writeData",write).put("configuration",config.getAbsolutePath())

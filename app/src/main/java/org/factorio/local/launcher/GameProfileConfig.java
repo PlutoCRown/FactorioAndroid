@@ -7,6 +7,32 @@ import java.util.Map;
 
 /** Path mapping and explicitly selected graphics options; preserve other settings. */
 final class GameProfileConfig {
+    private static String formatHeader(String text) {
+        int start=text.startsWith("\ufeff")?1:0;
+        while(start<text.length()&&" \t\r\n".indexOf(text.charAt(start))>=0)start++;
+        if(start==text.length()||text.charAt(start)!=';')return null;
+        int end=text.indexOf('\n',start);if(end<0)end=text.length();
+        if(end>start&&text.charAt(end-1)=='\r')end--;
+        String line=text.substring(start,end);
+        return line.matches(";.*version=[0-9]+")?line:null;
+    }
+    /** The engine also accepts a legacy root config-version before any section. */
+    private static boolean hasRootFormatVersion(String text) {
+        for(String raw:text.split("\\r?\\n",-1)) {
+            String line=effective(raw);
+            if(line.startsWith("["))return false;
+            if(line.matches("config-version\\s*=\\s*[0-9]+"))return true;
+        }
+        return false;
+    }
+    /** Repair missing metadata from the bundled game-written template, without a version whitelist. */
+    static String ensureFormatHeader(String original,String template) throws IOException {
+        validateConfig(original);
+        if(formatHeader(original)!=null||hasRootFormatVersion(original))return original;
+        validateConfig(template);String header=formatHeader(template);
+        if(header==null)throw new IOException("默认配置模板缺少格式信息");
+        return original.startsWith("\ufeff")?"\ufeff"+header+"\n"+original.substring(1):header+"\n"+original;
+    }
     private static void validateConfig(String original) throws IOException {
         if(original==null||original.length()>1024*1024||original.indexOf('\0')>=0)
             throw new IOException("游戏配置内容无效或过大，已保留原文件");

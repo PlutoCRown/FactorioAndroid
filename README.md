@@ -42,6 +42,8 @@ files/profiles/default/userdata/saves/
 
 模组保存在同一 `userdata` 下的 `mods/`，游戏设置保存在 `files/profiles/default/config.ini`。更换游戏版本或原版／Space Age 安装包后，继续使用这份数据。
 
+首次启动使用完整的游戏配置底稿，再应用路径、初始语言和启动设置；已有配置保留其他选项。配置缺失格式头时先备份再修复，详见[配置底稿与覆盖规则](docs/CONFIGURATION.md)。
+
 用同包名、同签名的新 APK 覆盖安装会保留导入的游戏、设置和存档。卸载或清除数据会删掉这些文件。
 
 

@@ -42,6 +42,8 @@ files/profiles/default/userdata/saves/
 
 Mods are stored in `mods/` under the same `userdata` directory, and game settings in `files/profiles/default/config.ini`. Switching game versions or between base game and Space Age packages continues to use this shared data.
 
+The first launch uses a complete game configuration template, then applies paths, the initial language and launch settings. Other options in an existing configuration are retained. Missing format metadata is repaired after making a backup; see [Configuration template and override rules (Chinese)](docs/CONFIGURATION.md).
+
 Installing a newer APK with the same package name and signature keeps the imported game, settings and saves. Uninstalling the app or clearing its data deletes those files.
 
 ## Requirements
