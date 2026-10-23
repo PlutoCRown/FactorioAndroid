@@ -3,167 +3,256 @@ package org.factorio.local.launcher;
 import android.content.Context;
 import android.net.Uri;
 import android.os.StatFs;
-import org.json.*;
-import org.tukaani.xz.XZInputStream;
 import java.io.*;
 import java.nio.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.UUID;
+import org.json.*;
+import org.tukaani.xz.XZInputStream;
 
 final class GameImporter {
-    interface Progress { void update(ImportProgress progress); }
-    private static final long RESERVE=256L*1024*1024;
-    static JSONObject readJson(File file) throws Exception {
-        if(file.length()>1024*1024) throw new IOException("元数据文件过大");
-        return new JSONObject(new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));
+    interface Progress {
+        void update(ImportProgress progress);
     }
+
+    private static final long RESERVE = 256L * 1024 * 1024;
+
+    static JSONObject readJson(File file) throws Exception {
+        if (file.length() > 1024 * 1024) throw new IOException("元数据文件过大");
+        return new JSONObject(
+                new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
+    }
+
     static JSONObject current(Context context) {
         try {
-            JSONObject game=readJson(new File(context.getFilesDir(),"active-game.json"));
-            String version=game.optString("version","");
-            if(version==null||!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9._-]+)?"))return null;
+            JSONObject game = readJson(new File(context.getFilesDir(), "active-game.json"));
+            String version = game.optString("version", "");
+            if (version == null
+                    || !version.matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9._-]+)?"))
+                return null;
             return game;
+        } catch (Exception e) {
+            return null;
         }
-        catch(Exception e) { return null; }
     }
+
     private static JSONObject elf(File file) throws Exception {
-        try(RandomAccessFile in=new RandomAccessFile(file,"r")) {
-            byte[] bytes=new byte[64]; in.readFully(bytes);
-            if(bytes[0]!=127 || bytes[1]!='E' || bytes[2]!='L' || bytes[3]!='F'
-                    || bytes[4]!=2 || bytes[5]!=1) throw new IOException("引擎不是小端 ELF64");
-            ByteBuffer header=ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
-            int type=header.getShort(16)&65535, machine=header.getShort(18)&65535;
-            if(machine!=183 || (type!=2 && type!=3)) throw new IOException("请选择 Linux ARM64 引擎");
-            long offset=header.getLong(32); int stride=header.getShort(54)&65535, count=header.getShort(56)&65535;
-            if(stride!=56 || count==0 || count>128 || offset<64 || offset>in.length()-(long)count*stride)
+        try (RandomAccessFile in = new RandomAccessFile(file, "r")) {
+            byte[] bytes = new byte[64];
+            in.readFully(bytes);
+            if (bytes[0] != 127
+                    || bytes[1] != 'E'
+                    || bytes[2] != 'L'
+                    || bytes[3] != 'F'
+                    || bytes[4] != 2
+                    || bytes[5] != 1) throw new IOException("引擎不是小端 ELF64");
+            ByteBuffer header = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+            int type = header.getShort(16) & 65535, machine = header.getShort(18) & 65535;
+            if (machine != 183 || (type != 2 && type != 3))
+                throw new IOException("请选择 Linux ARM64 引擎");
+            long offset = header.getLong(32);
+            int stride = header.getShort(54) & 65535, count = header.getShort(56) & 65535;
+            if (stride != 56
+                    || count == 0
+                    || count > 128
+                    || offset < 64
+                    || offset > in.length() - (long) count * stride)
                 throw new IOException("ELF 程序头无效");
-            JSONObject result=new JSONObject().put("machine","AArch64").put("type",type);
-            String interpreter=null;
-            for(int i=0;i<count;i++) {
-                in.seek(offset+(long)i*stride); byte[] ph=new byte[56]; in.readFully(ph);
-                ByteBuffer p=ByteBuffer.wrap(ph).order(ByteOrder.LITTLE_ENDIAN);
-                if(p.getInt(0)==3) {
-                    long at=p.getLong(8), length=p.getLong(32);
-                    if(length<2 || length>1024 || at<0 || at>in.length()-length)
+            JSONObject result = new JSONObject().put("machine", "AArch64").put("type", type);
+            String interpreter = null;
+            for (int i = 0; i < count; i++) {
+                in.seek(offset + (long) i * stride);
+                byte[] ph = new byte[56];
+                in.readFully(ph);
+                ByteBuffer p = ByteBuffer.wrap(ph).order(ByteOrder.LITTLE_ENDIAN);
+                if (p.getInt(0) == 3) {
+                    long at = p.getLong(8), length = p.getLong(32);
+                    if (length < 2 || length > 1024 || at < 0 || at > in.length() - length)
                         throw new IOException("ELF 加载器字段无效");
-                    byte[] value=new byte[(int)length]; in.seek(at); in.readFully(value);
-                    if(value[value.length-1]!=0) throw new IOException("ELF 加载器字段未终止");
-                    interpreter=new String(value,0,value.length-1,StandardCharsets.US_ASCII);
+                    byte[] value = new byte[(int) length];
+                    in.seek(at);
+                    in.readFully(value);
+                    if (value[value.length - 1] != 0) throw new IOException("ELF 加载器字段未终止");
+                    interpreter = new String(value, 0, value.length - 1, StandardCharsets.US_ASCII);
                 }
             }
-            return result.put("interpreter",interpreter);
+            return result.put("interpreter", interpreter);
         }
     }
+
     private static void remove(File file) {
         // Only our fresh staging / imported instance trees; tar links are rejected.
-        File[] children=file.listFiles();
-        if(children!=null) for(File child:children) remove(child);
+        File[] children = file.listFiles();
+        if (children != null) for (File child : children) remove(child);
         file.delete();
     }
+
     static final class GameInUseException extends IOException {
-        GameInUseException(){super("请先结束游戏会话，再更换安装包。");}
+        GameInUseException() {
+            super("请先结束游戏会话，再更换安装包。");
+        }
     }
+
     static JSONObject importGame(Context context, Uri uri, Progress progress) throws Exception {
         // The game runs in :window. Use its existing cross-process session
         // lease while replacing imported files, including the old tree cleanup.
-        File path=new File(GameSession.profileDirectory(context),"session.lock");
-        try(RandomAccessFile guard=new RandomAccessFile(path,"rw");java.nio.channels.FileChannel channel=guard.getChannel()) {
+        File path = new File(GameSession.profileDirectory(context), "session.lock");
+        try (RandomAccessFile guard = new RandomAccessFile(path, "rw");
+                java.nio.channels.FileChannel channel = guard.getChannel()) {
             java.nio.channels.FileLock lease;
-            try {lease=channel.tryLock();}catch(java.nio.channels.OverlappingFileLockException e){lease=null;}
-            if(lease==null)throw new GameInUseException();
-            try {return importPackage(context,uri,progress);}finally{lease.release();}
+            try {
+                lease = channel.tryLock();
+            } catch (java.nio.channels.OverlappingFileLockException e) {
+                lease = null;
+            }
+            if (lease == null) throw new GameInUseException();
+            try {
+                return importPackage(context, uri, progress);
+            } finally {
+                lease.release();
+            }
         }
     }
-    private static JSONObject importPackage(Context context, Uri uri, Progress progress) throws Exception {
-        File root=new File(context.getFilesDir(),"games");
-        if(!root.isDirectory() && !root.mkdirs()) throw new IOException("无法创建游戏目录");
-        String id=UUID.randomUUID().toString();
-        File staging=new File(root,"staging-"+id), destination=new File(root,"game-"+id);
-        if(!staging.mkdir()) throw new IOException("无法创建临时目录");
-        String stagingPrefix=staging.getCanonicalPath()+File.separator;
-        boolean committed=false; long extracted=0; int files=0, graphics=0;
-        JSONObject previous=current(context);
-        ImportProgress.Reporter status=new ImportProgress.Reporter(progress);
-        status.update(ImportProgress.Stage.OPEN,0,-1,0,0,true);
+
+    private static JSONObject importPackage(Context context, Uri uri, Progress progress)
+            throws Exception {
+        File root = new File(context.getFilesDir(), "games");
+        if (!root.isDirectory() && !root.mkdirs()) throw new IOException("无法创建游戏目录");
+        String id = UUID.randomUUID().toString();
+        File staging = new File(root, "staging-" + id), destination = new File(root, "game-" + id);
+        if (!staging.mkdir()) throw new IOException("无法创建临时目录");
+        String stagingPrefix = staging.getCanonicalPath() + File.separator;
+        boolean committed = false;
+        long extracted = 0;
+        int files = 0, graphics = 0;
+        JSONObject previous = current(context);
+        ImportProgress.Reporter status = new ImportProgress.Reporter(progress);
+        status.update(ImportProgress.Stage.OPEN, 0, -1, 0, 0, true);
         try {
-            InputStream selected=context.getContentResolver().openInputStream(uri);
-            if(selected==null) throw new IOException("无法打开选中的文件");
-            long total=-1;
-            try(android.database.Cursor cursor=context.getContentResolver().query(uri,
-                    new String[]{android.provider.OpenableColumns.SIZE},null,null,null)) {
-                if(cursor!=null&&cursor.moveToFirst()&&!cursor.isNull(0))total=cursor.getLong(0);
-            }catch(Exception ignored) { /* Providers may omit size; keep measured bytes. */ }
-            ImportProgress.Input counted=new ImportProgress.Input(selected);
-            status.update(ImportProgress.Stage.EXTRACT,0,total,0,0,true);
-            try(InputStream compressed=new BufferedInputStream(counted,256*1024);
-                XZInputStream xz=new XZInputStream(compressed,65536);
-                SafeTarReader tar=new SafeTarReader(xz)) {
-                byte[] buffer=new byte[65536];
-                for(SafeTarReader.Entry entry;(entry=tar.next())!=null;) {
-                    File target=new File(staging,entry.name);
-                    if(!target.getCanonicalPath().startsWith(stagingPrefix))
+            InputStream selected = context.getContentResolver().openInputStream(uri);
+            if (selected == null) throw new IOException("无法打开选中的文件");
+            long total = -1;
+            try (android.database.Cursor cursor =
+                    context.getContentResolver()
+                            .query(
+                                    uri,
+                                    new String[] {android.provider.OpenableColumns.SIZE},
+                                    null,
+                                    null,
+                                    null)) {
+                if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0))
+                    total = cursor.getLong(0);
+            } catch (Exception ignored) {
+                /* Providers may omit size; keep measured bytes. */
+            }
+            ImportProgress.Input counted = new ImportProgress.Input(selected);
+            status.update(ImportProgress.Stage.EXTRACT, 0, total, 0, 0, true);
+            try (InputStream compressed = new BufferedInputStream(counted, 256 * 1024);
+                    XZInputStream xz = new XZInputStream(compressed, 65536);
+                    SafeTarReader tar = new SafeTarReader(xz)) {
+                byte[] buffer = new byte[65536];
+                for (SafeTarReader.Entry entry; (entry = tar.next()) != null; ) {
+                    File target = new File(staging, entry.name);
+                    if (!target.getCanonicalPath().startsWith(stagingPrefix))
                         throw new IOException("归档路径越界");
-                    if(entry.directory) {
-                        if(!target.isDirectory() && !target.mkdirs()) throw new IOException("无法建立游戏目录");
+                    if (entry.directory) {
+                        if (!target.isDirectory() && !target.mkdirs())
+                            throw new IOException("无法建立游戏目录");
                         continue;
                     }
-                    if(new StatFs(staging.getAbsolutePath()).getAvailableBytes()<entry.size+RESERVE)
+                    if (new StatFs(staging.getAbsolutePath()).getAvailableBytes()
+                            < entry.size + RESERVE)
                         throw new IOException("可用空间不足；需要展开游戏并保留 256 MiB");
-                    File parent=target.getParentFile();
-                    if(!parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法建立资源目录");
-                    if(!target.createNewFile()) throw new IOException("安装包重复文件");
-                    try(OutputStream out=new BufferedOutputStream(new FileOutputStream(target))) {
-                        for(int n;(n=tar.read(buffer,0,buffer.length))!=-1;) {
-                            out.write(buffer,0,n);extracted+=n;
-                            status.update(ImportProgress.Stage.EXTRACT,counted.bytes,total,extracted,files,false);
+                    File parent = target.getParentFile();
+                    if (!parent.isDirectory() && !parent.mkdirs())
+                        throw new IOException("无法建立资源目录");
+                    if (!target.createNewFile()) throw new IOException("安装包重复文件");
+                    try (OutputStream out =
+                            new BufferedOutputStream(new FileOutputStream(target))) {
+                        for (int n; (n = tar.read(buffer, 0, buffer.length)) != -1; ) {
+                            out.write(buffer, 0, n);
+                            extracted += n;
+                            status.update(
+                                    ImportProgress.Stage.EXTRACT,
+                                    counted.bytes,
+                                    total,
+                                    extracted,
+                                    files,
+                                    false);
                         }
                     }
                     // Imported content stays non-executable; the runtime loader owns execution.
-                    target.setExecutable(false,false);
+                    target.setExecutable(false, false);
                     files++;
-                    if(entry.name.startsWith("factorio/data/base/graphics/")) graphics++;
-                    status.update(ImportProgress.Stage.EXTRACT,counted.bytes,total,extracted,files,false);
+                    if (entry.name.startsWith("factorio/data/base/graphics/")) graphics++;
+                    status.update(
+                            ImportProgress.Stage.EXTRACT,
+                            counted.bytes,
+                            total,
+                            extracted,
+                            files,
+                            false);
                 }
             }
-            File game=new File(staging,"factorio"), engine=new File(game,"bin/arm64/factorio");
-            if(!engine.isFile() || !new File(game,"data/core/info.json").isFile()
-                    || !new File(game,"data/core/graphics/factorio.png").isFile() || graphics==0)
+            File game = new File(staging, "factorio"),
+                    engine = new File(game, "bin/arm64/factorio");
+            if (!engine.isFile()
+                    || !new File(game, "data/core/info.json").isFile()
+                    || !new File(game, "data/core/graphics/factorio.png").isFile()
+                    || graphics == 0)
                 throw new IOException("缺少图形客户端必需内容；请检查是否误选 headless、差分包或其他架构");
-            JSONObject base=readJson(new File(game,"data/base/info.json"));
-            if(!"base".equals(base.optString("name"))) throw new IOException("基础资源元数据无效");
-            String version=base.getString("version");
-            if(!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9._-]+)?")) throw new IOException("版本字段无效");
-            File expansion=new File(game,"data/space-age/info.json");
-            if(expansion.isFile() && !version.equals(readJson(expansion).optString("version")))
+            JSONObject base = readJson(new File(game, "data/base/info.json"));
+            if (!"base".equals(base.optString("name"))) throw new IOException("基础资源元数据无效");
+            String version = base.getString("version");
+            if (!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9._-]+)?"))
+                throw new IOException("版本字段无效");
+            File expansion = new File(game, "data/space-age/info.json");
+            if (expansion.isFile() && !version.equals(readJson(expansion).optString("version")))
                 throw new IOException("Space Age 与基础版版本不一致");
-            status.update(ImportProgress.Stage.VERIFY,counted.bytes,total,extracted,files,true);
-            JSONObject report=new JSONObject().put("schema",1).put("version",version)
-                .put("spaceAge",expansion.isFile())
-                .put("elf",elf(engine))
-                .put("fileCount",files).put("unpackedBytes",extracted)
-                .put("relativeDirectory","games/"+destination.getName()+"/factorio")
-                .put("gameLaunched",false).put("runtimeReady",false);
-            status.update(ImportProgress.Stage.FINISH,counted.bytes,total,extracted,files,true);
-            if(!staging.renameTo(destination)) throw new IOException("无法提交游戏目录");
-            File descriptor=new File(context.getFilesDir(),"active-game.json");
-            File pending=new File(context.getFilesDir(),"active-game.json.pending");
-            try(FileOutputStream out=new FileOutputStream(pending)) {
+            status.update(
+                    ImportProgress.Stage.VERIFY, counted.bytes, total, extracted, files, true);
+            JSONObject report =
+                    new JSONObject()
+                            .put("schema", 1)
+                            .put("version", version)
+                            .put("spaceAge", expansion.isFile())
+                            .put("elf", elf(engine))
+                            .put("fileCount", files)
+                            .put("unpackedBytes", extracted)
+                            .put(
+                                    "relativeDirectory",
+                                    "games/" + destination.getName() + "/factorio")
+                            .put("gameLaunched", false)
+                            .put("runtimeReady", false);
+            status.update(
+                    ImportProgress.Stage.FINISH, counted.bytes, total, extracted, files, true);
+            if (!staging.renameTo(destination)) throw new IOException("无法提交游戏目录");
+            File descriptor = new File(context.getFilesDir(), "active-game.json");
+            File pending = new File(context.getFilesDir(), "active-game.json.pending");
+            try (FileOutputStream out = new FileOutputStream(pending)) {
                 out.write(report.toString(2).getBytes(StandardCharsets.UTF_8));
                 out.getFD().sync();
             }
-            Files.move(pending.toPath(),descriptor.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
-            committed=true;
+            Files.move(
+                    pending.toPath(),
+                    descriptor.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING);
+            committed = true;
             // User data will live separately; this tree has only imported, never-run game files.
-            if(previous!=null) {
-                String old=previous.optString("relativeDirectory");
-                if(old.matches("games/game-[0-9a-f-]{36}/factorio")
+            if (previous != null) {
+                String old = previous.optString("relativeDirectory");
+                if (old.matches("games/game-[0-9a-f-]{36}/factorio")
                         && !old.equals(report.getString("relativeDirectory")))
-                    remove(new File(context.getFilesDir(),old).getParentFile());
+                    remove(new File(context.getFilesDir(), old).getParentFile());
             }
             return report;
         } finally {
-            if(!committed) { remove(staging); remove(destination); }
+            if (!committed) {
+                remove(staging);
+                remove(destination);
+            }
         }
     }
 }

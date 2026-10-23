@@ -5,8 +5,11 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.widget.ImageButton;
+import org.factorio.local.launcher.ui.components.FactoryButtonDrawable;
 
-/** Compact icon with the website button bevel; the Activity retains its original 64x48dp hit area. */
+/**
+ * Compact icon with the website button bevel; the Activity retains its original 64x48dp hit area.
+ */
 public final class SessionMenuButton extends ImageButton {
     public SessionMenuButton(Context context) {
         super(context);
@@ -19,14 +22,20 @@ public final class SessionMenuButton extends ImageButton {
         setTooltipText(context.getString(R.string.session_menu));
         updateAppearance();
     }
-    @Override protected void drawableStateChanged() {
+
+    @Override
+    protected void drawableStateChanged() {
         super.drawableStateChanged();
         updateAppearance();
     }
+
     private void updateAppearance() {
-        int padding=dp(12), shift=isPressed()?dp(2):0;
-        setPadding(padding,padding+shift,padding,padding-shift);
-        setAlpha(isPressed()||isHovered()||isFocused()?0.80f:0.45f);
+        int padding = dp(12), shift = isPressed() ? dp(2) : 0;
+        setPadding(padding, padding + shift, padding, padding - shift);
+        setAlpha(isPressed() || isHovered() || isFocused() ? 0.80f : 0.45f);
     }
-    private int dp(int value) {return Math.round(value*getResources().getDisplayMetrics().density);}
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
 }

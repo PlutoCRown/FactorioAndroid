@@ -1,5 +1,42 @@
-plugins {
-    id("com.android.application") version "9.0.1" apply false
-    // AGP 9 supplies Kotlin 2.2.10. The Compose compiler must use the same version.
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10" apply false
+plugins { id("com.diffplug.spotless") version "8.0.0" }
+
+tasks.register("formatCheck") {
+    group = "verification"
+    description = "Check Java, Kotlin and Gradle source formatting."
+    dependsOn("spotlessCheck")
+}
+
+tasks.register("formatApply") {
+    group = "formatting"
+    description = "Format Java, Kotlin and Gradle sources."
+    dependsOn("spotlessApply")
+}
+
+// Keep formatting targets explicit: generated files, native dependencies and assets are excluded.
+val sourceRoot = rootProject.projectDir
+
+spotless {
+    java {
+        target(
+            fileTree(sourceRoot.resolve("app/src")) { include("**/*.java") },
+            fileTree(sourceRoot.resolve("compile-stubs/src")) { include("**/*.java") },
+            fileTree(sourceRoot.resolve("scripts")) { include("*.java") },
+            fileTree(sourceRoot.resolve("tests/device")) { include("*.java") },
+        )
+        googleJavaFormat("1.24.0").aosp()
+        endWithNewline()
+    }
+    kotlin {
+        target(fileTree(sourceRoot.resolve("app/src")) { include("**/*.kt") })
+        ktfmt("0.53").kotlinlangStyle()
+    }
+    kotlinGradle {
+        target(
+            sourceRoot.resolve("build.gradle.kts"),
+            sourceRoot.resolve("settings.gradle.kts"),
+            sourceRoot.resolve("app/build.gradle.kts"),
+            sourceRoot.resolve("compile-stubs/build.gradle.kts"),
+        )
+        ktfmt("0.53").kotlinlangStyle()
+    }
 }

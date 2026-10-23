@@ -1,9 +1,22 @@
 pluginManagement {
-    repositories { google(); mavenCentral(); gradlePluginPortal() }
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { google(); mavenCentral() }
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
+
 rootProject.name = "FactorioAndroid"
-include(":app", ":compile-stubs")
+
+// Formatting loads only JDK tooling, so it also works without an Android SDK.
+if (!providers.gradleProperty("formatOnly").map(String::toBoolean).getOrElse(false)) {
+    include(":app", ":compile-stubs")
+}

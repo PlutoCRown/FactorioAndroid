@@ -50,11 +50,15 @@ Installing a newer APK with the same package name and signature keeps the import
 
 A 64-bit ARM Android device running at least Android 8.0 (API 26), with a Vulkan driver suitable for Mesa Zink, is required. The OS version and CPU architecture are basic conditions; GPU drivers and runtime components must also be compatible.
 
+Verified on **Redmi K70 (Snapdragon 8 Gen 2)** at **native resolution**, achieving **60 FPS / 60 UPS**.
+
 This project does not yet provide virtual sticks or buttons. Use an Android-compatible gamepad or keyboard and mouse.
 
 Leave room for the original archive, extracted game, temporary import copy, saves and mods. Memory requirements depend on base game / Space Age content, maps, mods, texture quality and loading concurrency. Launch settings expose texture levels, render resolution and a loading thread limit. See [Loading speed and memory (Chinese)](docs/LOADING-MEMORY.md).
 
 ## Development
+
+See [Project structure and development conventions (Chinese)](docs/DEVELOPMENT.md) for source layout, formatting commands, and test entry points.
 
 See [Mesa compatibility builds](docs/MESA-COMPATIBILITY.md) for provider source, patches and build inputs.
 

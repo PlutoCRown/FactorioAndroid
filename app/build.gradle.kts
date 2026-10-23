@@ -1,8 +1,8 @@
 import org.gradle.api.tasks.Exec
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
+    id("com.android.application") version "9.0.1"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
 }
 
 android {
@@ -20,10 +20,17 @@ android {
     signingConfigs {
         create("localRelease") {
             storeFile = rootProject.file(".local/release.keystore")
-            storePassword = System.getenv("FACTORIO_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
-                ?: rootProject.file(".local/release-keystore.pass").takeIf { it.isFile }?.readText()?.trim()
-            keyAlias = System.getenv("FACTORIO_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "factoriorelease"
-            keyPassword = System.getenv("FACTORIO_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: storePassword
+            storePassword =
+                System.getenv("FACTORIO_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+                    ?: rootProject
+                        .file(".local/release-keystore.pass")
+                        .takeIf { it.isFile }
+                        ?.readText()
+                        ?.trim()
+            keyAlias =
+                System.getenv("FACTORIO_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "factoriorelease"
+            keyPassword =
+                System.getenv("FACTORIO_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: storePassword
         }
     }
     flavorDimensions += "distribution"
@@ -58,13 +65,12 @@ android {
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1")
     }
     sourceSets.getByName("main") {
-        jniLibs.setSrcDirs(listOf(layout.buildDirectory.dir("generated/game-runtime/jni").get().asFile))
+        jniLibs.setSrcDirs(
+            listOf(layout.buildDirectory.dir("generated/game-runtime/jni").get().asFile)
+        )
         jniLibs.srcDir(layout.buildDirectory.dir("generated/ime/jni").get().asFile)
         assets.srcDir(layout.buildDirectory.dir("generated/ime/assets").get().asFile)
         assets.srcDir(layout.buildDirectory.dir("generated/mesa/assets").get().asFile)
-    }
-    sourceSets.getByName("test") {
-        java.setSrcDirs(listOf(layout.buildDirectory.dir("generated/host-tests").get().asFile))
     }
     testOptions.unitTests.isReturnDefaultValues = true
 }
@@ -82,41 +88,76 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 }
 
-val restoreRuntime by tasks.registering(Exec::class) {
-    workingDir(rootProject.projectDir)
-    val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
-    commandLine(javaBin.absolutePath, rootProject.file("scripts/RestoreRuntime.java").absolutePath)
-}
-val buildImeNative by tasks.registering(Exec::class) {
-    workingDir(rootProject.projectDir)
-    val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
-    commandLine(javaBin.absolutePath, rootProject.file("scripts/BuildImeNative.java").absolutePath)
-    inputs.files(rootProject.fileTree("native-input/direct-wsi"), rootProject.file("native-input/ime/keyboard-opener.c"), rootProject.file("native-input/ime/sdl-hint-guard.c"), rootProject.file("native-input/sdl-symbols.h"), rootProject.file("native-input/gamepad-bridge.c"), rootProject.file("scripts/BuildImeNative.java"), rootProject.file("scripts/BuildAndroidReceiver.java"), rootProject.file("native-input/android-link-stubs.c"), rootProject.file("scripts/ime-compiler.properties"))
-    inputs.dir(rootProject.file("native-input/gnu-tls"))
-    inputs.dir(rootProject.file("native-input/direct-present-include"))
-    inputs.file(rootProject.file("native-input/direct-present-server.c"))
-    outputs.dir(layout.buildDirectory.dir("generated/ime"))
-}
-val buildMesaNative by tasks.registering(Exec::class) {
-    dependsOn(restoreRuntime,buildImeNative)
-    workingDir(rootProject.projectDir)
-    val javaBin = File(System.getProperty("java.home"), "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "")
-    commandLine(javaBin.absolutePath,rootProject.file("scripts/BuildMesaNative.java").absolutePath)
-}
-val stageGameRuntime by tasks.registering(Sync::class) {
-    dependsOn(buildMesaNative)
-    from(rootProject.file("app/src/main/jniLibs")) { exclude("arm64-v8a/librea_direct_icd.so","arm64-v8a/librea_gamepad_bridge.so","arm64-v8a/librea_gnu_tls.so","arm64-v8a/librea_direct_present.so") }
-    from(layout.buildDirectory.dir("generated/mesa/jni")) { include("arm64-v8a/librea_compat_*.so") }
-    into(layout.buildDirectory.dir("generated/game-runtime/jni"))
-}
-tasks.named("preBuild") { dependsOn(stageGameRuntime, buildImeNative) }
+val restoreRuntime by
+    tasks.registering(Exec::class) {
+        workingDir(rootProject.projectDir)
+        val javaBin =
+            File(
+                System.getProperty("java.home"),
+                "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "",
+            )
+        commandLine(
+            javaBin.absolutePath,
+            rootProject.file("scripts/RestoreRuntime.java").absolutePath,
+        )
+    }
+val buildImeNative by
+    tasks.registering(Exec::class) {
+        workingDir(rootProject.projectDir)
+        val javaBin =
+            File(
+                System.getProperty("java.home"),
+                "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "",
+            )
+        commandLine(
+            javaBin.absolutePath,
+            rootProject.file("scripts/BuildImeNative.java").absolutePath,
+        )
+        inputs.files(
+            rootProject.fileTree("native-input/direct-wsi"),
+            rootProject.file("native-input/ime/keyboard-opener.c"),
+            rootProject.file("native-input/ime/sdl-hint-guard.c"),
+            rootProject.file("native-input/sdl-symbols.h"),
+            rootProject.file("native-input/gamepad-bridge.c"),
+            rootProject.file("scripts/BuildImeNative.java"),
+            rootProject.file("scripts/BuildAndroidReceiver.java"),
+            rootProject.file("native-input/android-link-stubs.c"),
+            rootProject.file("scripts/ime-compiler.properties"),
+        )
+        inputs.dir(rootProject.file("native-input/gnu-tls"))
+        inputs.dir(rootProject.file("native-input/direct-present-include"))
+        inputs.file(rootProject.file("native-input/direct-present-server.c"))
+        outputs.dir(layout.buildDirectory.dir("generated/ime"))
+    }
+val buildMesaNative by
+    tasks.registering(Exec::class) {
+        dependsOn(restoreRuntime, buildImeNative)
+        workingDir(rootProject.projectDir)
+        val javaBin =
+            File(
+                System.getProperty("java.home"),
+                "bin/java" + if (System.getProperty("os.name").startsWith("Windows")) ".exe" else "",
+            )
+        commandLine(
+            javaBin.absolutePath,
+            rootProject.file("scripts/BuildMesaNative.java").absolutePath,
+        )
+    }
+val stageGameRuntime by
+    tasks.registering(Sync::class) {
+        dependsOn(buildMesaNative)
+        from(rootProject.file("app/src/main/jniLibs")) {
+            exclude(
+                "arm64-v8a/librea_direct_icd.so",
+                "arm64-v8a/librea_gamepad_bridge.so",
+                "arm64-v8a/librea_gnu_tls.so",
+                "arm64-v8a/librea_direct_present.so",
+            )
+        }
+        from(layout.buildDirectory.dir("generated/mesa/jni")) {
+            include("arm64-v8a/librea_compat_*.so")
+        }
+        into(layout.buildDirectory.dir("generated/game-runtime/jni"))
+    }
 
-// Stage only host tests: device injectors and inventory utilities are not tests.
-val stageHostTests by tasks.registering(Sync::class) {
-    from(rootProject.file("tests")) { include("*.java"); exclude("ArchiveInventory.java") }
-    from(rootProject.file("tests/host-stubs"))
-    into(layout.buildDirectory.dir("generated/host-tests"))
-}
-tasks.configureEach {
-    if (name.endsWith("UnitTestJavaWithJavac") || name.endsWith("UnitTestKotlin")) dependsOn(stageHostTests)
-}
+tasks.named("preBuild") { dependsOn(stageGameRuntime, buildImeNative) }
