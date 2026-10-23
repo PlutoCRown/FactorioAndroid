@@ -2,7 +2,8 @@ package com.termux.x11;
 
 /** Touch mouse gestures independent of Android; every owned button has one release. */
 public final class TouchMouseState {
-    public static final float DEFAULT_SCROLL_DISTANCE = 192;
+    public static final float DEFAULT_SCROLL_DISTANCE = 24;
+    private static final float MAX_SCROLL_NOTCHES = 8;
 
     public interface Sink {
         void move(float x, float y);
@@ -232,7 +233,12 @@ public final class TouchMouseState {
         // Forward each sample immediately, without a minimum step or splitting.
         // Bound malformed jumps without accumulating a delayed remainder.
         float notches =
-                (float) Math.max(-1, Math.min(1, ((double) scrollY - center) / scrollDistance));
+                (float)
+                        Math.max(
+                                -MAX_SCROLL_NOTCHES,
+                                Math.min(
+                                        MAX_SCROLL_NOTCHES,
+                                        ((double) scrollY - center) / scrollDistance));
         scrollY = center;
         if (notches != 0) {
             sink.scroll(notches);

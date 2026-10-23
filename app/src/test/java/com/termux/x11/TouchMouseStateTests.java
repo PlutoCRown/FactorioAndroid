@@ -325,13 +325,13 @@ public final class TouchMouseStateTests {
                     c.scroll();
                     c.state.scrollMove(1, 200, 130, 2, 300, 130);
                     require(
-                            close(c.events.wheel, 20.0 / 192) && c.state.scrollEvents() == 1,
+                            close(c.events.wheel, 20.0 / 24) && c.state.scrollEvents() == 1,
                             "sub-notch movement delivered immediately");
                     c.state.scrollMove(1, 200, 102, 2, 300, 102);
-                    require(close(c.events.wheel, 0.25), "48 screen units emit a quarter notch");
+                    require(close(c.events.wheel, 2), "48 screen units emit two notches");
                     c.state.scrollMove(1, 200, 198, 2, 300, 198);
                     require(
-                            close(c.events.wheel, -0.25) && close(c.state.scrollNotches(), 0.75),
+                            close(c.events.wheel, -2) && close(c.state.scrollNotches(), 6),
                             "opposite movement reverses immediately");
                 });
         check(
@@ -345,7 +345,7 @@ public final class TouchMouseStateTests {
                     for (int y = 147; y >= 54; y -= 3)
                         sampled.state.scrollMove(1, 200, y, 2, 300, y);
                     require(
-                            close(batch.events.wheel, 0.5)
+                            close(batch.events.wheel, 4)
                                     && close(sampled.events.wheel, batch.events.wheel),
                             "sample cadence cannot accelerate scrolling");
                     require(
@@ -359,7 +359,7 @@ public final class TouchMouseStateTests {
                     c.scroll();
                     c.state.scrollMove(1, 200, 149.75f, 2, 300, 149.75f);
                     require(
-                            close(c.events.wheel, 0.25 / 192) && c.state.scrollEvents() == 1,
+                            close(c.events.wheel, 0.25 / 24) && c.state.scrollEvents() == 1,
                             "first tiny sample forwarded immediately");
                     c.state.scrollMove(1, 200, 150, 2, 300, 150);
                     require(close(c.events.wheel, 0), "tiny reversal has no delayed remainder");
@@ -386,7 +386,7 @@ public final class TouchMouseStateTests {
                     require(
                             !c.events.held
                                     && c.state.presses() == c.state.releases()
-                                    && c.events.wheel == 0.25f,
+                                    && c.events.wheel == 2f,
                             "left up precedes scroll");
                 });
         check(
@@ -400,7 +400,7 @@ public final class TouchMouseStateTests {
                     require(
                             !c.events.right
                                     && c.state.rightPresses() == c.state.rightReleases()
-                                    && c.events.wheel == -0.25f,
+                                    && c.events.wheel == -2f,
                             "right up precedes scroll");
                 });
         check(
@@ -449,9 +449,7 @@ public final class TouchMouseStateTests {
                     c.scroll();
                     c.state.scrollMove(1, 200, 198, 2, 300, 198);
                     require(
-                            c.events.wheel == -0.25f
-                                    && c.state.lastX() == 75
-                                    && c.state.lastY() == 50,
+                            c.events.wheel == -2f && c.state.lastX() == 75 && c.state.lastY() == 50,
                             "scaled anchor with unscaled wheel distance");
                 });
         check(
@@ -465,7 +463,7 @@ public final class TouchMouseStateTests {
                     c.scroll();
                     c.state.scrollMove(1, 200, 170, 2, 300, 170);
                     require(
-                            close(c.events.wheel, -50.0 / 192),
+                            close(c.events.wheel, -50.0 / 24),
                             "fresh gesture has no delayed movement");
                 });
         check(
@@ -475,10 +473,10 @@ public final class TouchMouseStateTests {
                     c.scroll();
                     c.state.scrollMove(1, 200, Float.MAX_VALUE, 2, 300, Float.MAX_VALUE);
                     require(
-                            c.events.wheel == -1 && c.state.scrollEvents() == 1,
+                            c.events.wheel == -8 && c.state.scrollEvents() == 1,
                             "malformed sample emits one bounded event");
                     c.state.scrollMove(1, 200, Float.MAX_VALUE, 2, 300, Float.MAX_VALUE);
-                    require(c.events.wheel == -1, "no overflow remainder");
+                    require(c.events.wheel == -8, "no overflow remainder");
                 });
         check(
                 "native tablet geometry preserves full screen",
