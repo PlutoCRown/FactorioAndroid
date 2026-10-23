@@ -1,15 +1,28 @@
-# Factorio Android Launcher
-
 ![Factorio Android Launcher](docs/images/factorio-cover.png)
 
-[![Build & tests](https://img.shields.io/github/actions/workflow/status/PlutoCRown/FactorioAndroid/release.yml?label=build%20%26%20tests&logo=github)](https://github.com/PlutoCRown/FactorioAndroid/actions/workflows/release.yml)
-[![Latest release](https://img.shields.io/github/v/release/PlutoCRown/FactorioAndroid?logo=github)](https://github.com/PlutoCRown/FactorioAndroid/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/PlutoCRown/FactorioAndroid/total?logo=github)](https://github.com/PlutoCRown/FactorioAndroid/releases)
-[![GitHub stars](https://img.shields.io/github/stars/PlutoCRown/FactorioAndroid?style=flat&logo=github)](https://github.com/PlutoCRown/FactorioAndroid/stargazers)
-[![GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
-![Android ARM64](https://img.shields.io/badge/platform-Android%20ARM64-3DDC84.svg?logo=android&logoColor=white)
+# Factorio Android Launcher
 
-**简体中文** | [English](README.en.md)
+<p align="center">
+  <a href="https://github.com/PlutoCRown/FactorioAndroid/actions/workflows/release.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/PlutoCRown/FactorioAndroid/release.yml?label=build%20%26%20tests&logo=github" alt="Build &amp; tests"/>
+  </a>
+  <a href="https://github.com/PlutoCRown/FactorioAndroid/releases/latest">
+    <img src="https://img.shields.io/github/v/release/PlutoCRown/FactorioAndroid?logo=github" alt="Latest release"/>
+  </a>
+  <a href="https://github.com/PlutoCRown/FactorioAndroid/releases">
+    <img src="https://img.shields.io/github/downloads/PlutoCRown/FactorioAndroid/total?logo=github" alt="Downloads"/>
+  </a>
+  <a href="https://github.com/PlutoCRown/FactorioAndroid/stargazers">
+    <img src="https://img.shields.io/github/stars/PlutoCRown/FactorioAndroid?style=flat&logo=github" alt="GitHub stars"/>
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg" alt="GPL-3.0-or-later"/>
+  </a>
+</p>
+
+<p align="center">
+  <strong>简体中文</strong> | <a href="README.en.md">English</a>
+</p>
 
 在 Android 上运行你自己的官方 Linux ARM64 Factorio。这是非官方启动器，与 Wube Software 无关。
 
@@ -48,7 +61,7 @@
 > 测试存档：太空时代 DLC 解锁四星球，除黑瓶外 1,000 SPM 的存档。
 >
 > - Redmi K70（骁龙 8 Gen 2），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 20–40 波动。
-> - Xiaomi Pad 9 Pro Max（玄戒 O3），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 20–40 波动。
+> - Xiaomi Pad 9 Pro Max（玄戒 O3），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 40–60 波动。
 >
 > 作者可用设备不多，欢迎在 [Issues](https://github.com/PlutoCRown/FactorioAndroid/issues) 提交你的测试数据。
 
