@@ -155,4 +155,6 @@
     <string name="logs_exporting">Exporting logs…</string>
     <string name="logs_exported">Logs exported</string>
     <string name="logs_export_failed">Could not export logs</string>
+    <string name="game_ended_title">Game ended</string>
+    <string name="game_exit_unknown">The game has ended, but its exit reason could not be confirmed. Export the logs to investigate.</string>
 </resources>

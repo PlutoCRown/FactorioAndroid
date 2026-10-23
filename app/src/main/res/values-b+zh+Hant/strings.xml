@@ -155,4 +155,6 @@
     <string name="logs_exporting">正在匯出日誌…</string>
     <string name="logs_exported">日誌已匯出</string>
     <string name="logs_export_failed">日誌匯出失敗</string>
+    <string name="game_ended_title">遊戲已結束</string>
+    <string name="game_exit_unknown">遊戲已結束，但未能確認退出原因。可以匯出日誌查看詳情。</string>
 </resources>

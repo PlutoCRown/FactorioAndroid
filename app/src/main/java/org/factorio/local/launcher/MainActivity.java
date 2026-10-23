@@ -153,14 +153,17 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         }catch(Exception error){fail(getString(R.string.folder_open_failed),error);}
     }
     private void sessionFinished(boolean failed,String reason) {
+        sessionFinished(failed,false,reason);
+    }
+    private void sessionFinished(boolean failed,boolean unknown,String reason) {
         worker.execute(()-> {
             File archive=null;
             try{SessionExitDiagnostics.collect(getApplicationContext());archive=SessionLogs.capture(getFilesDir());
                 GameDocumentsProvider.changed(this,"logs");}
             catch(Exception error){android.util.Log.w("FactorioLauncher","Session log snapshot unavailable",error);}
             final File ready=archive;
-            runOnUiThread(()-> {if(isFinishing()||isDestroyed()||!failed)return;
-                AlertDialog.Builder dialog=new AlertDialog.Builder(this).setTitle(R.string.game_error_title)
+            runOnUiThread(()-> {if(isFinishing()||isDestroyed()||(!failed&&!unknown))return;
+                AlertDialog.Builder dialog=new AlertDialog.Builder(this).setTitle(failed?R.string.game_error_title:R.string.game_ended_title)
                     .setMessage(getString(ready==null?R.string.game_error_no_log:R.string.game_error_export_message,reason))
                     .setNegativeButton(R.string.close,null);
                 if(ready!=null)dialog.setPositiveButton(R.string.export_logs,(d,w)->chooseLogDestination(ready));
@@ -277,9 +280,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     private void showGameExitMessage() {
         String text=getIntent().getStringExtra("gameExitMessage");getIntent().removeExtra("gameExitMessage");
         boolean failed=getIntent().getBooleanExtra("gameExitFailed",false);getIntent().removeExtra("gameExitFailed");
+        boolean unknown=getIntent().getBooleanExtra("gameExitUnknown",false);getIntent().removeExtra("gameExitUnknown");
         if(text!=null&&!text.isEmpty()){android.util.Log.i("FactorioLauncher","Game exit: "+text);
-            if(!failed)Toast.makeText(this,text.length()>240?text.substring(0,240):text,Toast.LENGTH_LONG).show();
-            sessionFinished(failed,text);
+            if(!failed&&!unknown)Toast.makeText(this,text.length()>240?text.substring(0,240):text,Toast.LENGTH_LONG).show();
+            sessionFinished(failed,unknown,text);
         }
     }
     @Override protected void onNewIntent(Intent intent) {

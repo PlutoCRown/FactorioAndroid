@@ -156,4 +156,6 @@
     <string name="logs_exporting">正在导出日志…</string>
     <string name="logs_exported">日志已导出</string>
     <string name="logs_export_failed">日志导出失败</string>
+    <string name="game_ended_title">游戏已结束</string>
+    <string name="game_exit_unknown">游戏已结束，但未能确认退出原因。可以导出日志查看详情。</string>
 </resources>

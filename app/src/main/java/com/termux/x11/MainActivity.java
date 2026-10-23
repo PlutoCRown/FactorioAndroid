@@ -196,13 +196,12 @@ public final class MainActivity extends Activity {
                         .put("softwareRendererObserved",log.contains("llvmpipe")).put("engineInitializationLogged",log.contains("Factorio initialised"));
                     record("engineWindowProbeFinished");
                     if(manualSession) {
-                        report.put("sessionComplete",true);
+                        report.put("sessionComplete",true).put("exitStatus",result.optString("exitStatus"));
                         if(result.has("error"))report.put("error",result.optString("error"));
                         record("sessionEnded");
                         status.setText(result.has("error")?getString(R.string.game_failed_settings):getString(R.string.session_ended_data_kept));
                         JSONObject execution=result.optJSONObject("graphicsInitialization");
-                        int code=execution==null?-1:execution.optInt("exitCode",-1);
-                        returnToLauncher(result.has("error")?(execution!=null&&execution.has("fatalSignal")?getString(R.string.game_fatal_signal,execution.getString("fatalSignal")):execution!=null&&execution.has("startupError")?execution.getString("startupError"):code>=0?getString(R.string.game_exit_code,code):getString(R.string.game_start_failed)):getString(R.string.game_exited));
+                        returnToLauncher("unknown".equals(result.optString("exitStatus"))?getString(R.string.game_exit_unknown):result.has("error")?(execution!=null&&execution.has("fatalSignal")?getString(R.string.game_fatal_signal,execution.getString("fatalSignal")):execution!=null&&execution.has("startupError")?execution.getString("startupError"):getString(R.string.game_start_failed)):getString(R.string.game_exited));
                         return;
                     }
                     captureSurface("final");
@@ -253,6 +252,7 @@ public final class MainActivity extends Activity {
         } catch(Throwable e) {fail(e);}
     }
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if(view!=null&&view.forwardMouseBack(event))return true;
         if(controllerRelay!=null&&controllerRelay.key(event))return true;
         if(view!=null&&view.forwardKeyboardEvent(event))return true;
         return super.dispatchKeyEvent(event);
@@ -289,7 +289,7 @@ public final class MainActivity extends Activity {
         catch(Exception error){try{if(report!=null)report.put("backgroundPauseError",error.toString());}catch(Exception ignored){}}
     }
     @Override protected void onResume() {super.onResume();resumed=true;applyImmersiveMode();if(view!=null)view.setImeResumed(true);updateBackgroundPause();}
-    @Override protected void onPause() {if(view!=null){view.cancelTouch();view.setImeResumed(false);}resumed=false;updateBackgroundPause();super.onPause();}
+    @Override protected void onPause() {if(view!=null){view.cancelTouch();view.cancelMouse();view.setImeResumed(false);}resumed=false;updateBackgroundPause();super.onPause();}
 
     private void sampleController() {
         if(closed||controllerRelay==null||report==null)return;
@@ -334,6 +334,7 @@ public final class MainActivity extends Activity {
         android.content.Intent launcher=new android.content.Intent(this,org.factorio.local.launcher.MainActivity.class)
             .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP|android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
             .putExtra("gameExitMessage",reason)
+            .putExtra("gameExitUnknown",report!=null&&"unknown".equals(report.optString("exitStatus")))
             .putExtra("gameExitFailed",report!=null&&report.has("error"));
         startActivity(launcher);finish();
     }

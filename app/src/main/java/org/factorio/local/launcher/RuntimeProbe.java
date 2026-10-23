@@ -82,6 +82,7 @@ public final class RuntimeProbe {
                     outputTail.set(new String(tail.toByteArray(),StandardCharsets.UTF_8));
                 }
             }
+            if(liveGraphics!=null)liveGraphics.finish();
             return new String(out.toByteArray(),StandardCharsets.UTF_8)+(truncated?"\n[output truncated]":"");
         });
         Thread thread=new Thread(reader,"factorio-probe-output"); thread.setDaemon(true); thread.start();
@@ -353,18 +354,27 @@ public final class RuntimeProbe {
                 if(progress!=null)progress.update("audioRelayReady",result);
             }
             File log=new File(user,"factorio-current.log");
-            long logStartBytes=log.isFile()?log.length():0;
+            SessionEngineLog.begin(log);
+            long logStartBytes=0;
             JSONObject initialized=command(graphics,session,graphicsTemp,windowEnvironment,0,control,progress,audioBridge,log,logStartBytes);
             result.put("graphicsInitialization",initialized).put("passed",false)
                 .put("assessment","Window/renderer evidence must be reviewed; an exit code alone is not graphics success");
             if(manual) {
                 result.put("graphicalGameLaunched",initialized.optBoolean("started"))
                     .put("assessment","User-started persistent session; renderer and gameplay evidence are separate from process exit");
-                if(initialized.has("startupError"))result.put("error",initialized.getString("startupError"));
-                else if(initialized.has("fatalSignal")&&!initialized.optBoolean("userStopRequested")&&!initialized.optBoolean("normalExitCompleted"))result.put("error","Engine fatal signal: "+initialized.getString("fatalSignal"));
-                else if(!initialized.optBoolean("started"))result.put("error",initialized.optString("error","引擎进程未能启动"));
-                else if(!initialized.optBoolean("userStopRequested")&&!initialized.optBoolean("normalExitCompleted")&&initialized.optInt("exitCode",-1)!=0)
-                    result.put("error","引擎异常结束，退出码 "+initialized.optInt("exitCode",-1)+"；请导出诊断报告。");
+                try {
+                    Map<String,String> disk=SessionEngineLog.evidence(log);
+                    initialized.put("engineLogEvidence",new JSONObject(disk));
+                    if(disk.containsKey("normalExitCompleted"))initialized.put("normalExitCompleted",true).put("normalExitEvidenceSource","engineLog");
+                    if(!initialized.has("fatalSignal")&&disk.containsKey("fatalSignal"))initialized.put("fatalSignal",disk.get("fatalSignal")).put("fatalLine",disk.get("fatalLine")).put("passed",false);
+                }catch(IOException unavailable){initialized.put("engineLogEvidenceError",unavailable.getClass().getSimpleName());}
+                String outcome=SessionExit.classify(initialized.optBoolean("userStopRequested"),initialized.optBoolean("normalExitCompleted"),initialized.has("startupError"),initialized.optBoolean("started"),initialized.optString("fatalSignal"),initialized.optInt("exitCode",-1));
+                result.put("exitStatus",outcome).put("diagnosticSuggested",outcome.equals("failed")||outcome.equals("unknown"));
+                if(outcome.equals("failed")) {
+                    if(initialized.has("startupError"))result.put("error",initialized.getString("startupError"));
+                    else if(initialized.has("fatalSignal"))result.put("error","Engine fatal signal: "+initialized.getString("fatalSignal"));
+                    else result.put("error",initialized.optString("error","引擎进程未能启动"));
+                }
             }
             if(log.isFile()) {
                 try(RandomAccessFile input=new RandomAccessFile(log,"r")) {

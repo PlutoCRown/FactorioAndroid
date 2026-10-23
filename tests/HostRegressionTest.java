@@ -15,7 +15,7 @@ public final class HostRegressionTest {
         run("org.factorio.local.launcher.GameProfilesTests");run("org.factorio.local.launcher.GameDocumentIdsTests");
     }
     @Test public void graphics() throws Exception {run("org.factorio.local.launcher.LiveGraphicsTests");}
-    @Test public void touch() throws Exception {run("com.termux.x11.TouchMouseStateTests");}
+    @Test public void touch() throws Exception {run("com.termux.x11.TouchMouseStateTests");run("com.termux.x11.PhysicalMouseStateTests");}
     @Test public void gameFiles() throws Exception {run("org.factorio.local.launcher.GameFilesTests");}
     @Test public void languages() throws Exception {run("org.factorio.local.launcher.LanguagePolicyTests");}
     @Test public void keyboard() throws Exception {run("org.factorio.local.launcher.KeyboardTests");}

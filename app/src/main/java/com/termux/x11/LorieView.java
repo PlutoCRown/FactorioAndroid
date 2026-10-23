@@ -17,6 +17,8 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     private final int renderScalePercent;
     private int renderWidth,renderHeight;
     private final TouchMouseState touch;
+    private final PhysicalMouseState mouse;
+    private boolean mouseSecondaryMotionSeen;
     private final boolean touchMouseSimulation;
     private final Runnable longPressCheck;
     private int keyEvents,escapeEvents;
@@ -26,6 +28,11 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     private final java.util.Map<Integer,Integer> pressedKeys=new java.util.HashMap<>();
     public LorieView(MainActivity activity,int renderScalePercent,boolean touchMouseSimulation) {
         super(activity);this.activity=activity;this.renderScalePercent=renderScalePercent;this.touchMouseSimulation=touchMouseSimulation;
+        mouse=new PhysicalMouseState(new PhysicalMouseState.Sink() {
+            public void move(float x,float y){if(pointer!=0&&isConnected())sendMouseEvent(pointer,x,y,0,false,false);}
+            public void button(int button,boolean down){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,0,button,down,false);}
+            public void scroll(float x,float y){if(pointer!=0&&isConnected())sendMouseEvent(pointer,x*120f,y*120f,4,false,true);}
+        });
         touch=new TouchMouseState(new TouchMouseState.Sink() {
             public void move(float x,float y){if(pointer!=0&&isConnected())sendMouseEvent(pointer,x,y,0,false,false);}
             public void leftButton(boolean down){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,0,1,down,false);}
@@ -47,11 +54,13 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     public int renderHeight(){return renderHeight;}
     public boolean isConnected() {return connected(pointer);}
     public void cancelTouch(){removeCallbacks(longPressCheck);touch.cancel();}
-    public void dispose() {setGameKeyboard(null);cancelTouch();releaseKeys();if(pointer!=0) {long old=pointer;pointer=0;nativeDestroy(old);}}
+    public void cancelMouse(){mouse.cancel();}
+    public void dispose() {setGameKeyboard(null);cancelTouch();cancelMouse();releaseKeys();if(pointer!=0) {long old=pointer;pointer=0;nativeDestroy(old);}}
     @Override public void surfaceCreated(SurfaceHolder holder) {surfaceChanged(pointer,holder.getSurface());activity.surfaceReady();}
     @Override public void surfaceChanged(SurfaceHolder holder,int format,int width,int height) {surfaceChanged(pointer,holder.getSurface());updateViewport(width,height);}
-    @Override public void surfaceDestroyed(SurfaceHolder holder) {cancelTouch();releaseKeys();activity.surfaceLost();if(pointer!=0)surfaceChanged(pointer,null);}
+    @Override public void surfaceDestroyed(SurfaceHolder holder) {cancelTouch();cancelMouse();releaseKeys();activity.surfaceLost();if(pointer!=0)surfaceChanged(pointer,null);}
     @Override public boolean onTouchEvent(MotionEvent event) {
+        if(isMouse(event))return handleMouse(event);
         if(pointer==0||!isConnected()) {cancelTouch();return super.onTouchEvent(event);}
         int action=event.getActionMasked();
         if(action==MotionEvent.ACTION_CANCEL){cancelTouch();return true;}
@@ -85,6 +94,29 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         if(action==MotionEvent.ACTION_UP) {
             removeCallbacks(longPressCheck);touch.up(event.getPointerId(index),event.getX(index),event.getY(index),event.getEventTime());return true;
         }
+        return true;
+    }
+    private boolean isMouse(MotionEvent event){return event.isFromSource(InputDevice.SOURCE_MOUSE)||(event.getPointerCount()>0&&event.getToolType(0)==MotionEvent.TOOL_TYPE_MOUSE);}
+    private boolean handleMouse(MotionEvent event) {
+        if(pointer==0||!isConnected()){cancelMouse();return false;}
+        int action=event.getActionMasked();
+        if(action==MotionEvent.ACTION_CANCEL){cancelMouse();return true;}
+        if(action!=MotionEvent.ACTION_DOWN&&action!=MotionEvent.ACTION_UP&&action!=MotionEvent.ACTION_MOVE&&action!=MotionEvent.ACTION_HOVER_ENTER&&action!=MotionEvent.ACTION_HOVER_MOVE&&action!=MotionEvent.ACTION_HOVER_EXIT&&action!=MotionEvent.ACTION_BUTTON_PRESS&&action!=MotionEvent.ACTION_BUTTON_RELEASE&&action!=MotionEvent.ACTION_SCROLL)return false;
+        int buttons=event.getButtonState();
+        if((buttons&MotionEvent.BUTTON_SECONDARY)!=0||event.getActionButton()==MotionEvent.BUTTON_SECONDARY)mouseSecondaryMotionSeen=true;
+        if(action==MotionEvent.ACTION_DOWN||action==MotionEvent.ACTION_BUTTON_PRESS)requestFocus();
+        if(action==MotionEvent.ACTION_DOWN&&buttons==0)buttons=MotionEvent.BUTTON_PRIMARY;
+        int mask=((buttons&MotionEvent.BUTTON_PRIMARY)!=0?1:0)|((buttons&MotionEvent.BUTTON_TERTIARY)!=0?2:0)|((buttons&MotionEvent.BUTTON_SECONDARY)!=0?4:0);
+        if(!mouse.pointer(event.getX()-viewportX,event.getY()-viewportY,mask))return false;
+        if(action==MotionEvent.ACTION_SCROLL)mouse.scroll(-event.getAxisValue(MotionEvent.AXIS_HSCROLL),-event.getAxisValue(MotionEvent.AXIS_VSCROLL));
+        return true;
+    }
+    @Override public boolean onHoverEvent(MotionEvent event){return isMouse(event)?handleMouse(event):super.onHoverEvent(event);}
+    @Override public boolean onGenericMotionEvent(MotionEvent event){return isMouse(event)?handleMouse(event):super.onGenericMotionEvent(event);}
+    public boolean forwardMouseBack(KeyEvent event) {
+        if(event.getKeyCode()!=KeyEvent.KEYCODE_BACK||!event.isFromSource(InputDevice.SOURCE_MOUSE)||pointer==0||!isConnected())return false;
+        // Android may send BACK in addition to secondary-button MotionEvents.
+        if(!mouseSecondaryMotionSeen&&(event.getAction()==KeyEvent.ACTION_DOWN||event.getAction()==KeyEvent.ACTION_UP))mouse.rightButton(event.getAction()==KeyEvent.ACTION_DOWN);
         return true;
     }
     @Override public boolean performClick() {super.performClick();return true;}
@@ -124,6 +156,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
             .put("touchMouseSimulationEnabled",touchMouseSimulation).put("touchRightHeld",touch.rightHeld())
             .put("touchRightPresses",touch.rightPresses()).put("touchRightReleases",touch.rightReleases())
             .put("touchScrollEvents",touch.scrollEvents()).put("touchScrollNotches",touch.scrollNotches()).put("touchScrolling",touch.scrolling())
+            .put("mouseMoves",mouse.moves()).put("mouseButtonPresses",mouse.presses()).put("mouseButtonReleases",mouse.releases()).put("mouseScrollEvents",mouse.scrolls()).put("mouseButtonsHeld",mouse.held())
             .put("touchActivePointer",touch.activePointer()).put("lastTouchX",touch.lastX()).put("lastTouchY",touch.lastY())
             .put("keyboardEventsForwarded",keyEvents).put("androidBackEscapeEvents",escapeEvents).put("pressedKeys",pressedKeys.size()).put("nativeGamepadBridgeReady",false)
             .put("viewportX",viewportX).put("viewportY",viewportY).put("viewportWidth",viewportWidth).put("viewportHeight",viewportHeight)
@@ -179,7 +212,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         else if(keyboardRequested&&!keyboardSuppressed)post(this::showGameKeyboard);
     }
     @Override public void onWindowFocusChanged(boolean focused) {
-        super.onWindowFocusChanged(focused);if(!focused){cancelTouch();releaseKeys();}
+        super.onWindowFocusChanged(focused);if(!focused){cancelTouch();cancelMouse();releaseKeys();}
         else if(keyboardRequested&&windowResumed&&!keyboardSuppressed&&!imeVisible)post(this::showGameKeyboard);
     }
     @Override public boolean onCheckIsTextEditor(){return keyboardRequested;}
@@ -240,6 +273,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         renderWidth=size.width;renderHeight=size.height;
         viewportX=0;viewportY=0;viewportWidth=width;viewportHeight=height;
         touch.sourceSize(renderWidth,renderHeight);touch.viewport(0,0,width,height);
+        mouse.viewport(width,height,renderWidth,renderHeight);
         setViewport(pointer,0,0,width,height,renderWidth,renderHeight,0);
         activity.windowSizeReady(renderWidth,renderHeight,width,height,renderScalePercent);
         if(changed&&isConnected())sendWindowChange(pointer,renderWidth,renderHeight,60,"Factorio");

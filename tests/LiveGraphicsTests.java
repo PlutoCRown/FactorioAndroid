@@ -34,6 +34,26 @@ public final class LiveGraphicsTests {
         check(!interrupted.snapshot().containsKey("normalExitCompleted"),"fault before goodbye remains an abnormal exit");
         LiveGraphics reversed=new LiveGraphics();reversed.accept(" 1.000 Goodbye\n 1.100 Quitting: user-quit.\n");
         check(!reversed.snapshot().containsKey("normalExitCompleted"),"completion requires ordered exit markers");
+        LiveGraphics prefixed=new LiveGraphics();
+        prefixed.accept(" 40.100 Info MainLoop.cpp:10: Quitting: user-quit.\r\n 40.200 Info MainLoop.cpp:11: Goodbye");prefixed.finish();
+        check("true".equals(prefixed.snapshot().get("normalExitCompleted")),"log prefixes and missing final newline preserve completion");
+        check("normal".equals(SessionExit.classify(false,true,false,true,"SIGSEGV",137)),"normal completion takes precedence over teardown termination");
+        check("unknown".equals(SessionExit.classify(false,false,false,true,"",137)),"137 alone does not prove failure or normal exit");
+        check("failed".equals(SessionExit.classify(false,false,false,true,"SIGSEGV",137)),"explicit runtime fault still reports failure");
+        check("failed".equals(SessionExit.classify(false,true,true,true,"",137)),"startup failure is never hidden by completion evidence");
+        check("stopped".equals(SessionExit.classify(true,false,false,true,"",137)),"launcher stop is not diagnosed from cleanup code");
+        java.nio.file.Path session=java.nio.file.Files.createTempDirectory("factorio-session-log-");
+        java.io.File current=session.resolve("factorio-current.log").toFile();
+        try {
+            java.nio.file.Files.write(current.toPath(),"1.000 Quitting: user-quit.\n1.100 Goodbye\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            SessionEngineLog.begin(current);
+            check(!current.exists()&&java.nio.file.Files.exists(session.resolve("factorio-previous.log")),"old log retained outside current launch");
+            check(SessionEngineLog.evidence(current).isEmpty(),"old quit evidence cannot classify a new launch");
+            java.nio.file.Files.write(current.toPath(),"5.000 Quitting: user-quit.\n5.100 Goodbye".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            check("true".equals(SessionEngineLog.evidence(current).get("normalExitCompleted")),"file-only normal exit is detected independently of stdout");
+        }finally {
+            java.nio.file.Files.deleteIfExists(current.toPath());java.nio.file.Files.deleteIfExists(session.resolve("factorio-previous.log"));java.nio.file.Files.delete(session);
+        }
         java.nio.file.Path log=java.nio.file.Files.createTempFile("factorio-startup-",".log");
         try {
             String failure=" 0.362 Error SDLWindow.cpp:342: Failed to create an application window. SDL_Error: Could not initialize EGL\n";

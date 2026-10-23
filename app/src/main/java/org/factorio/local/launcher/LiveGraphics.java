@@ -6,8 +6,9 @@ import java.util.Map;
 /** Bounded evidence from this engine process only; never infer FPS from refresh rate. */
 final class LiveGraphics {
     private static final java.util.regex.Pattern FATAL=java.util.regex.Pattern.compile(".*Error CrashHandler\\.cpp:[0-9]+: Received (SIG[A-Z0-9]+).*");
-    private static final java.util.regex.Pattern USER_QUIT=java.util.regex.Pattern.compile("\\s*[0-9]+\\.[0-9]+ Quitting: user-quit\\.\\s*");
-    private static final java.util.regex.Pattern GOODBYE=java.util.regex.Pattern.compile("\\s*[0-9]+\\.[0-9]+ Goodbye\\s*");
+    private static final String LOG_PREFIX="\\s*(?:[0-9]+(?:\\.[0-9]+)?\\s+)?(?:Info [^\\r\\n]+?:[0-9]+:\\s+)?";
+    private static final java.util.regex.Pattern USER_QUIT=java.util.regex.Pattern.compile(LOG_PREFIX+"Quitting: user-quit\\.?\\s*");
+    private static final java.util.regex.Pattern GOODBYE=java.util.regex.Pattern.compile(LOG_PREFIX+"Goodbye\\s*");
     private final StringBuilder pending=new StringBuilder();
     private final Map<String,String> values=new LinkedHashMap<>();
     private boolean oversizedLine;
@@ -23,6 +24,7 @@ final class LiveGraphics {
             }
         }
     }
+    synchronized void finish(){if(!oversizedLine&&pending.length()>0)line(pending.toString());pending.setLength(0);oversizedLine=false;}
     private void line(String line) {
         // Only the ordered completion of a user-requested quit qualifies. A crash
         // followed by shutdown output must still be reported as a gameplay failure.
