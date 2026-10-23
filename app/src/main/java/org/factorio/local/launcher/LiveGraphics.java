@@ -26,16 +26,19 @@ final class LiveGraphics {
     }
     synchronized void finish(){if(!oversizedLine&&pending.length()>0)line(pending.toString());pending.setLength(0);oversizedLine=false;}
     private void line(String line) {
-        // Only the ordered completion of a user-requested quit qualifies. A crash
-        // followed by shutdown output must still be reported as a gameplay failure.
+        // Goodbye is logged inside GlobalContext destruction, before all native
+        // cleanup completes. Confirm the user's exit, not a clean process teardown.
         if(!values.containsKey("fatalSignal")) {
             if(USER_QUIT.matcher(line).matches())values.put("userQuitRequested","true");
-            if(GOODBYE.matcher(line).matches()&&values.containsKey("userQuitRequested"))values.put("normalExitCompleted","true");
+            if(GOODBYE.matcher(line).matches()&&values.containsKey("userQuitRequested")) {
+                values.put("normalExitCompleted","true");values.put("userExitConfirmed","true");
+            }
         }
         java.util.regex.Matcher fatal=FATAL.matcher(line);
         if(fatal.matches()&&!values.containsKey("fatalSignal")) {
             values.put("fatalLine",line.substring(0,Math.min(line.length(),1024)).trim());
             values.put("fatalSignal",fatal.group(1));
+            values.put("faultPhase",values.containsKey("userExitConfirmed")?"shutdown":"runtime");
         }
         String[] markers={"Initialised OpenGL:","Graphics options:","Texture processor created","Factorio initialised"};
         String[] keys={"rendererLine","graphicsOptions","textureProcessor","initialized"};

@@ -96,6 +96,7 @@ public final class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         try {
             report=new JSONObject().put("schema",1).put("uid",android.os.Process.myUid()).put("pid",android.os.Process.myPid())
+                .put("application",RuntimeProbe.applicationIdentity(this))
                 .put("factorioLaunched",false).put("linuxX11ClientConnected",false).put("hardwareOpenGLPassed",false)
                 .put("collectedAtEpochMillis",System.currentTimeMillis()).put("userStarted",manualSession).put("unlimitedSession",manualSession)
                 .put("spriteLoadingLimit",getIntent().getIntExtra("spriteLoadingLimit",1))
@@ -201,7 +202,7 @@ public final class MainActivity extends Activity {
                         record("sessionEnded");
                         status.setText(result.has("error")?getString(R.string.game_failed_settings):getString(R.string.session_ended_data_kept));
                         JSONObject execution=result.optJSONObject("graphicsInitialization");
-                        returnToLauncher("unknown".equals(result.optString("exitStatus"))?getString(R.string.game_exit_unknown):result.has("error")?(execution!=null&&execution.has("fatalSignal")?getString(R.string.game_fatal_signal,execution.getString("fatalSignal")):execution!=null&&execution.has("startupError")?execution.getString("startupError"):getString(R.string.game_start_failed)):getString(R.string.game_exited));
+                        returnToLauncher("unknown".equals(result.optString("exitStatus"))?getString(R.string.game_exit_unknown):"interrupted".equals(result.optString("exitStatus"))?getString(R.string.game_exit_interrupted,execution==null?-1:execution.optInt("exitCode",-1)):result.has("error")?(execution!=null&&execution.has("fatalSignal")?getString(R.string.game_fatal_signal,execution.getString("fatalSignal")):execution!=null&&execution.has("startupError")?execution.getString("startupError"):getString(R.string.game_start_failed)):getString(R.string.game_exited));
                         return;
                     }
                     captureSurface("final");

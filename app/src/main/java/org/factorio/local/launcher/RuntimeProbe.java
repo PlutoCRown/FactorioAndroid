@@ -12,6 +12,11 @@ import java.util.concurrent.*;
 /** Engine execution with an APK-installed GNU loader and explicit session ownership. */
 public final class RuntimeProbe {
     public interface Progress {void update(String phase,JSONObject detail) throws Exception;}
+    public static JSONObject applicationIdentity(Context context) throws Exception {
+        android.content.pm.PackageInfo info=context.getPackageManager().getPackageInfo(context.getPackageName(),0);
+        return new JSONObject().put("packageName",context.getPackageName()).put("versionName",info.versionName)
+            .put("versionCode",info.versionCode).put("exitPolicyVersion",SessionExit.POLICY_VERSION);
+    }
     static void signalOwnChild(java.lang.Process child,int signal) throws Exception {
         if(!child.isAlive())return;
         java.util.regex.Matcher match=java.util.regex.Pattern.compile("pid=(\\d+)").matcher(child.toString());
@@ -109,6 +114,7 @@ public final class RuntimeProbe {
                     Map<String,String> live=liveGraphics.snapshot();
                     if(live.containsKey("fatalSignal")) {
                         result.put("fatalSignal",live.get("fatalSignal")).put("fatalLine",live.get("fatalLine"));
+                        result.put("terminationRequestedBy","launcher").put("terminationReason","fatalSignalCleanup");
                         if(progress!=null)progress.update("engineFatal",result);
                         process.destroy();
                         exited=process.waitFor(1,TimeUnit.SECONDS);
@@ -119,6 +125,7 @@ public final class RuntimeProbe {
                         String failure=StartupFailure.read(startupLog,logStart);
                         if(failure!=null) {
                             result.put("startupError",failure);
+                            result.put("terminationRequestedBy","launcher").put("terminationReason","startupFailureCleanup");
                             process.destroy();
                             exited=process.waitFor(5,TimeUnit.SECONDS);
                             if(!exited) {result.put("startupTermination",killOwnChild(process));exited=!process.isAlive();}
@@ -142,12 +149,13 @@ public final class RuntimeProbe {
                 }
                 if(!exited&&session.stopping()) {
                     result.put("userStopRequested",true);
+                    result.put("terminationRequestedBy","launcher").put("terminationReason","userStop");
                     process.destroy();
                     exited=process.waitFor(5,TimeUnit.SECONDS);
                     if(!exited)result.put("stopTermination",killOwnChild(process));
                 }
             }
-            if(!exited&&session==null)result.put("timeoutTermination",killOwnChild(process));
+            if(!exited&&session==null)result.put("terminationRequestedBy","launcher").put("terminationReason","timeout").put("timeoutTermination",killOwnChild(process));
             result.put("started",true).put("timedOut",session==null&&!exited).put("processDescription",process.toString());
             if(!process.isAlive()) result.put("exitCode",process.exitValue());
             try { result.put("output",reader.get(3,TimeUnit.SECONDS)); }
@@ -156,15 +164,22 @@ public final class RuntimeProbe {
             if(liveGraphics!=null) {
                 Map<String,String> live=liveGraphics.snapshot();result.put("liveGraphics",new JSONObject(live));
                 if(live.containsKey("fatalSignal"))result.put("fatalSignal",live.get("fatalSignal")).put("fatalLine",live.get("fatalLine"));
-                if(live.containsKey("normalExitCompleted"))result.put("normalExitCompleted",true);
+                if(live.containsKey("userQuitRequested"))result.put("userQuitRequested",true);
+                if(live.containsKey("normalExitCompleted"))result.put("normalExitCompleted",true).put("userExitConfirmed",true).put("normalExitEvidenceSource","stdout");
+                if(live.containsKey("faultPhase"))result.put("faultPhase",live.get("faultPhase"));
             }
             return result.put("passed",exited && process.exitValue()==0 && !result.has("outputError") && !result.has("fatalSignal"));
         } finally {
             if(session!=null)session.detachEngine(process);
             if(process.isAlive()) {
-                try {result.put("finalTermination",killOwnChild(process));}
+                try {
+                    if(!result.has("terminationReason"))result.put("terminationRequestedBy","launcher").put("terminationReason","finalCleanup");
+                    result.put("finalTermination",killOwnChild(process));
+                }
                 catch(Exception e) {result.put("terminationError",e.toString());process.destroyForcibly();}
             }
+            if(!process.isAlive())result.put("exitCode",process.exitValue()).put("processDescription",process.toString());
+            if(!result.has("terminationRequestedBy"))result.put("terminationRequestedBy","unconfirmed");
             try {process.getInputStream().close();} catch(IOException ignored) {}
             reader.cancel(true);
         }
@@ -180,6 +195,7 @@ public final class RuntimeProbe {
         if(!mode.equals("version")&&!mode.equals("help")&&!(manual&&mode.equals("window-gl-directzink-egl-session")))throw new IOException("Unsupported runtime mode");
         boolean withDisplay=manual,graphical=manual,controller=manual;
         JSONObject result=new JSONObject().put("schema",1).put("probeVersion","0.2.0-runtime-probe")
+            .put("application",applicationIdentity(context))
             .put("scope",graphical?"Ordinary app; bounded graphics initialization in isolated user directory":
                 "Ordinary Android application ProcessBuilder; bounded engine diagnostics, no graphics")
             .put("mode",mode)
@@ -365,16 +381,26 @@ public final class RuntimeProbe {
                 try {
                     Map<String,String> disk=SessionEngineLog.evidence(log);
                     initialized.put("engineLogEvidence",new JSONObject(disk));
-                    if(disk.containsKey("normalExitCompleted"))initialized.put("normalExitCompleted",true).put("normalExitEvidenceSource","engineLog");
+                    if(disk.containsKey("userQuitRequested"))initialized.put("userQuitRequested",true);
+                    if(disk.containsKey("normalExitCompleted"))initialized.put("normalExitCompleted",true).put("userExitConfirmed",true)
+                        .put("normalExitEvidenceSource",initialized.has("normalExitEvidenceSource")?"stdout,engineLog":"engineLog");
                     if(!initialized.has("fatalSignal")&&disk.containsKey("fatalSignal"))initialized.put("fatalSignal",disk.get("fatalSignal")).put("fatalLine",disk.get("fatalLine")).put("passed",false);
                 }catch(IOException unavailable){initialized.put("engineLogEvidenceError",unavailable.getClass().getSimpleName());}
+                initialized.put("userQuitRequested",initialized.optBoolean("userQuitRequested"))
+                    .put("userStopRequested",initialized.optBoolean("userStopRequested"))
+                    .put("userExitConfirmed",initialized.optBoolean("userExitConfirmed"))
+                    .put("normalExitCompleted",initialized.optBoolean("normalExitCompleted"))
+                    .put("normalExitEvidenceSource",initialized.optString("normalExitEvidenceSource","none"))
+                    .put("shutdownFault",initialized.optBoolean("userExitConfirmed")&&initialized.has("fatalSignal"));
+                if(initialized.has("fatalSignal"))initialized.put("faultPhase",initialized.optBoolean("shutdownFault")?"shutdown":"runtime");
                 String outcome=SessionExit.classify(initialized.optBoolean("userStopRequested"),initialized.optBoolean("normalExitCompleted"),initialized.has("startupError"),initialized.optBoolean("started"),initialized.optString("fatalSignal"),initialized.optInt("exitCode",-1));
-                result.put("exitStatus",outcome).put("diagnosticSuggested",outcome.equals("failed")||outcome.equals("unknown"));
+                result.put("exitStatus",outcome).put("diagnosticSuggested",outcome.equals("failed")||outcome.equals("interrupted")||outcome.equals("unknown"));
                 if(outcome.equals("failed")) {
                     if(initialized.has("startupError"))result.put("error",initialized.getString("startupError"));
                     else if(initialized.has("fatalSignal"))result.put("error","Engine fatal signal: "+initialized.getString("fatalSignal"));
                     else result.put("error",initialized.optString("error","引擎进程未能启动"));
                 }
+                if(outcome.equals("interrupted"))result.put("error","Engine ended without a normal shutdown (exit code "+initialized.optInt("exitCode",-1)+"); cause unconfirmed");
             }
             if(log.isFile()) {
                 try(RandomAccessFile input=new RandomAccessFile(log,"r")) {

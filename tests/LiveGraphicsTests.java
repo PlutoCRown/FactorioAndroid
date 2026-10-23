@@ -19,8 +19,8 @@ public final class LiveGraphicsTests {
         check("SIGSEGV".equals(live.snapshot().get("fatalSignal")),"fatal cause is retained after graphics initialized");
         live.accept(" 0.000 Error CrashHandler.cpp:614: Received SIGTERM\n");
         check("SIGSEGV".equals(live.snapshot().get("fatalSignal")),"supervisor termination cannot replace the original fault");
-        live.accept("FPS 60 refresh rate 120\n");
-        check(live.snapshot().size()==6,"refresh rate is not stored as a frame rate");
+        java.util.Map<String,String> beforeRefresh=live.snapshot();live.accept("FPS 60 refresh rate 120\n");
+        check(live.snapshot().equals(beforeRefresh),"refresh rate is not stored as a frame rate");
         LiveGraphics ordinary=new LiveGraphics();ordinary.accept(" 1.000 Goodbye\n Warning: SIGSEGV example\n");
         check(!ordinary.snapshot().containsKey("fatalSignal"),"normal goodbye and ordinary signal mentions are not a crash");
         check(!ordinary.snapshot().containsKey("normalExitCompleted"),"goodbye without a user quit is insufficient");
@@ -38,10 +38,23 @@ public final class LiveGraphicsTests {
         prefixed.accept(" 40.100 Info MainLoop.cpp:10: Quitting: user-quit.\r\n 40.200 Info MainLoop.cpp:11: Goodbye");prefixed.finish();
         check("true".equals(prefixed.snapshot().get("normalExitCompleted")),"log prefixes and missing final newline preserve completion");
         check("normal".equals(SessionExit.classify(false,true,false,true,"SIGSEGV",137)),"normal completion takes precedence over teardown termination");
-        check("unknown".equals(SessionExit.classify(false,false,false,true,"",137)),"137 alone does not prove failure or normal exit");
+        check("interrupted".equals(SessionExit.classify(false,false,false,true,"",137)),"137 without an orderly exit is an interruption with unconfirmed cause");
         check("failed".equals(SessionExit.classify(false,false,false,true,"SIGSEGV",137)),"explicit runtime fault still reports failure");
         check("failed".equals(SessionExit.classify(false,true,true,true,"",137)),"startup failure is never hidden by completion evidence");
         check("stopped".equals(SessionExit.classify(true,false,false,true,"",137)),"launcher stop is not diagnosed from cleanup code");
+        String observed="131.854 Quitting: user-quit.\n132.306 Goodbye\n"
+            +"  0.000 Error CrashHandler.cpp:614: Received SIGSEGV\n"
+            +"  0.000 Error Util.cpp:95: Unexpected error occurred.\n";
+        LiveGraphics exact=new LiveGraphics();for(int i=0;i<observed.length();i++)exact.accept(observed.substring(i,i+1));exact.finish();
+        check("true".equals(exact.snapshot().get("userQuitRequested"))&&"true".equals(exact.snapshot().get("userExitConfirmed")),"reported menu quit is recognized even across every possible single-character chunk boundary");
+        check("true".equals(exact.snapshot().get("normalExitCompleted"))&&"shutdown".equals(exact.snapshot().get("faultPhase")),"reported SIGSEGV is retained as a shutdown fault after the user exit");
+        check("normal".equals(SessionExit.classify(false,true,false,true,exact.snapshot().get("fatalSignal"),137)),"reported supervisor SIGKILL does not turn a confirmed user exit into a gameplay crash");
+        LiveGraphics killed=new LiveGraphics();killed.accept(" 120.000 Factorio initialised\n 121.000 Verbose renderer: drawing frames\n");killed.finish();
+        check(!killed.snapshot().containsKey("userQuitRequested")&&!killed.snapshot().containsKey("normalExitCompleted")&&!killed.snapshot().containsKey("fatalSignal"),"reported external SIGKILL has no invented shutdown or crash markers");
+        check("interrupted".equals(SessionExit.classify(false,false,false,true,"",137)),"external SIGKILL is not considered a normal user exit");
+        check("unknown".equals(SessionExit.classify(false,false,false,true,"",-1)),"missing exit evidence stays unknown");
+        check("normal".equals(SessionExit.classify(false,false,false,true,"",0)),"an ordinary zero process exit stays normal");
+        check("runtime".equals(interrupted.snapshot().get("faultPhase")),"a fault before Goodbye remains a runtime fault");
         java.nio.file.Path session=java.nio.file.Files.createTempDirectory("factorio-session-log-");
         java.io.File current=session.resolve("factorio-current.log").toFile();
         try {

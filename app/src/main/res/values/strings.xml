@@ -158,4 +158,5 @@
     <string name="logs_export_failed">Could not export logs</string>
     <string name="game_ended_title">Game ended</string>
     <string name="game_exit_unknown">The game has ended, but its exit reason could not be confirmed. Export the logs to investigate.</string>
+    <string name="game_exit_interrupted">The game ended without completing a normal exit (exit code %1$d). Export the logs for details; the cause has not been confirmed.</string>
 </resources>

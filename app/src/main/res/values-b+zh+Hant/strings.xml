@@ -157,4 +157,5 @@
     <string name="logs_export_failed">日誌匯出失敗</string>
     <string name="game_ended_title">遊戲已結束</string>
     <string name="game_exit_unknown">遊戲已結束，但未能確認退出原因。可以匯出日誌查看詳情。</string>
+    <string name="game_exit_interrupted">遊戲未正常退出（退出碼 %1$d），原因尚未確認。可以匯出日誌查看詳情。</string>
 </resources>
