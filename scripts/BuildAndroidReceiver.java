@@ -29,7 +29,10 @@ class BuildAndroidReceiver {
         Path receipt=extracted.resolve(".source.sha256");
         if(!Files.isRegularFile(receipt)||!Files.readString(receipt).trim().equals(HEADERS_SHA)) {
             Files.createDirectories(extracted);Path tar=cache.resolve("data.tar.xz");
-            Process process=new ProcessBuilder("tar","-xOf",archive.toString(),"data.tar.xz").directory(root.toFile())
+            List<String> unpack=System.getProperty("os.name").startsWith("Windows")
+                ?List.of("tar","-xOf",archive.toString(),"data.tar.xz")
+                :List.of("ar","p",archive.toString(),"data.tar.xz");
+            Process process=new ProcessBuilder(unpack).directory(root.toFile())
                 .redirectOutput(tar.toFile()).redirectError(ProcessBuilder.Redirect.INHERIT).start();
             if(process.waitFor()!=0)throw new IOException("Cannot unpack Android header archive");
             run(root,List.of("tar","-xf",tar.toString(),"-C",extracted.toString()));

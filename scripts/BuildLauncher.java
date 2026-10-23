@@ -31,6 +31,7 @@ class BuildLauncher {
             Files.write(store,Base64.getDecoder().decode(secret));return;
         }
         if(Files.exists(store))return;
+        if(env("GITHUB_ACTIONS").equals("true"))throw new IOException("Configure persistent FACTORIO_KEYSTORE_BASE64, FACTORIO_KEY_ALIAS and FACTORIO_KEYSTORE_PASSWORD secrets before building release APKs on GitHub Actions");
         Path passFile=local.resolve("release-keystore.pass");
         if(!Files.exists(passFile)) {
             byte[] random=new byte[24];new SecureRandom().nextBytes(random);
