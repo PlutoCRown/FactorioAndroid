@@ -40,7 +40,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
             // Xlorie accepts fractional wheel units; 120 units represent one notch.
             public void scroll(float notches){if(pointer!=0&&isConnected())sendMouseEvent(pointer,0,notches*120f,4,false,true);}
             public void tap(float x,float y){performClick();}
-        },ViewConfiguration.get(activity).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),96*getResources().getDisplayMetrics().density);
+        },ViewConfiguration.get(activity).getScaledTouchSlop(),ViewConfiguration.getLongPressTimeout(),TouchMouseState.DEFAULT_SCROLL_DISTANCE*getResources().getDisplayMetrics().density);
         longPressCheck=()->{if(touchMouseSimulation&&pointer!=0&&isConnected())touch.longPress(touch.activePointer(),android.os.SystemClock.uptimeMillis());};
         setClickable(true);setFocusable(true);setFocusableInTouchMode(true);requestFocus();
         pointer=nativeInit();getHolder().addCallback(this);
@@ -77,7 +77,14 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
         if(action==MotionEvent.ACTION_POINTER_UP){cancelTouch();return true;}
         if(touch.scrolling()&&action==MotionEvent.ACTION_MOVE&&event.getPointerCount()==2) {
             int a=event.findPointerIndex(touch.activePointer()),b=event.findPointerIndex(touch.scrollPointer());
-            if(a<0||b<0)cancelTouch();else touch.scrollMove(event.getPointerId(a),event.getX(a),event.getY(a),event.getPointerId(b),event.getX(b),event.getY(b));
+            if(a<0||b<0)cancelTouch();else {
+                // Android batches touch samples. Forward them in order instead
+                // of collapsing a whole batch into its final, larger wheel delta.
+                int first=event.getPointerId(a),second=event.getPointerId(b);
+                for(int h=0;h<event.getHistorySize()&&touch.scrolling();h++)
+                    touch.scrollMove(first,event.getHistoricalX(a,h),event.getHistoricalY(a,h),second,event.getHistoricalX(b,h),event.getHistoricalY(b,h));
+                touch.scrollMove(first,event.getX(a),event.getY(a),second,event.getX(b),event.getY(b));
+            }
             return true;
         }
         if(event.getPointerCount()!=1){cancelTouch();return true;}

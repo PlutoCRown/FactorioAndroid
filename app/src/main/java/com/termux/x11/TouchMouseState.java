@@ -2,6 +2,7 @@ package com.termux.x11;
 
 /** Touch mouse gestures independent of Android; every owned button has one release. */
 public final class TouchMouseState {
+    public static final float DEFAULT_SCROLL_DISTANCE=192;
     public interface Sink {
         void move(float x,float y);void leftButton(boolean down);void rightButton(boolean down);
         void scroll(float notches);void tap(float x,float y);
@@ -15,7 +16,7 @@ public final class TouchMouseState {
     private long downTime,presses,moves,drags,clicks,cancels,releases,rightPresses,rightReleases,scrollEvents;
     private double scrollNotches;
     private boolean leftHeld,rightHeld,tapCandidate,dragging,scrolling;
-    public TouchMouseState(Sink sink,float slop,long timeout) {this(sink,slop,timeout,96);}
+    public TouchMouseState(Sink sink,float slop,long timeout) {this(sink,slop,timeout,DEFAULT_SCROLL_DISTANCE);}
     public TouchMouseState(Sink sink,float slop,long timeout,float scrollDistance) {
         if(slop<0||timeout<=0||scrollDistance<=0||!Float.isFinite(scrollDistance))throw new IllegalArgumentException("Invalid gesture thresholds");
         this.sink=sink;slopSquared=slop*slop;longPressTimeout=timeout;this.scrollDistance=scrollDistance;
@@ -91,8 +92,8 @@ public final class TouchMouseState {
         if(!scrolling)return;
         if(first!=activePointer||second!=scrollPointer||!finite(x,y)||!finite(x2,y2)){cancel();return;}
         float center=y/2+y2/2;
-        // Keep fractional wheel movement, reverse the former direction, and
-        // bound a malformed/coalesced jump without a delayed remainder burst.
+        // Forward each sample immediately, without a minimum step or splitting.
+        // Bound malformed jumps without accumulating a delayed remainder.
         float notches=(float)Math.max(-1,Math.min(1,((double)scrollY-center)/scrollDistance));
         scrollY=center;
         if(notches!=0){sink.scroll(notches);scrollEvents++;scrollNotches+=Math.abs(notches);}

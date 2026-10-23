@@ -13,7 +13,7 @@ public final class TouchMouseStateTests {
         public void tap(float x,float y){require(!held&&!right,"tap accounting follows release");taps++;calls.add("tap");}
     }
     private static final class Case {
-        final Events events=new Events();final TouchMouseState state=new TouchMouseState(events,8,500,96);
+        final Events events=new Events();final TouchMouseState state=new TouchMouseState(events,8,500);
         Case(){state.viewport(100,50,1280,720);}
         void scroll(){state.down(1,200,150,0);state.beginScroll(1,200,150,2,300,150);}
     }
@@ -105,9 +105,21 @@ public final class TouchMouseStateTests {
         });
         check("wheel sends fractional movement immediately with reversed direction",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,200,130,2,300,130);
-            require(close(c.events.wheel,20.0/96)&&c.state.scrollEvents()==1,"sub-notch movement delivered immediately");
-            c.state.scrollMove(1,200,102,2,300,102);require(close(c.events.wheel,0.5),"48 screen units emit half a notch");
-            c.state.scrollMove(1,200,198,2,300,198);require(close(c.events.wheel,-0.5)&&close(c.state.scrollNotches(),1.5),"opposite movement reverses immediately");
+            require(close(c.events.wheel,20.0/192)&&c.state.scrollEvents()==1,"sub-notch movement delivered immediately");
+            c.state.scrollMove(1,200,102,2,300,102);require(close(c.events.wheel,0.25),"48 screen units emit a quarter notch");
+            c.state.scrollMove(1,200,198,2,300,198);require(close(c.events.wheel,-0.25)&&close(c.state.scrollNotches(),0.75),"opposite movement reverses immediately");
+        });
+        check("each motion sample sends one immediate fractional event without changing the total distance",()->{
+            Case batch=new Case();batch.scroll();batch.state.scrollMove(1,200,54,2,300,54);
+            Case sampled=new Case();sampled.scroll();
+            for(int y=147;y>=54;y-=3)sampled.state.scrollMove(1,200,y,2,300,y);
+            require(close(batch.events.wheel,0.5)&&close(sampled.events.wheel,batch.events.wheel),"sample cadence cannot accelerate scrolling");
+            require(batch.state.scrollEvents()==1&&sampled.state.scrollEvents()==32,"one event per nonzero sample, with no synthetic subdivision");
+        });
+        check("subpixel slow movement reaches the wheel without waiting for a threshold",()->{
+            Case c=new Case();c.scroll();c.state.scrollMove(1,200,149.75f,2,300,149.75f);
+            require(close(c.events.wheel,0.25/192)&&c.state.scrollEvents()==1,"first tiny sample forwarded immediately");
+            c.state.scrollMove(1,200,150,2,300,150);require(close(c.events.wheel,0),"tiny reversal has no delayed remainder");
         });
         check("horizontal motion and centered pinch have no wheel effect",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,250,150,2,350,150);c.state.scrollMove(1,250,100,2,350,200);
@@ -115,11 +127,11 @@ public final class TouchMouseStateTests {
         });
         check("second finger releases left drag before wheel",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.move(1,250,150);c.state.beginScroll(1,250,150,2,350,150);
-            c.state.scrollMove(1,250,102,2,350,102);require(!c.events.held&&c.state.presses()==c.state.releases()&&c.events.wheel==0.5f,"left up precedes scroll");
+            c.state.scrollMove(1,250,102,2,350,102);require(!c.events.held&&c.state.presses()==c.state.releases()&&c.events.wheel==0.25f,"left up precedes scroll");
         });
         check("second finger releases right mining before wheel",()->{
             Case c=new Case();c.state.down(1,200,150,0);c.state.longPress(1,500);c.state.beginScroll(1,200,150,2,300,150);
-            c.state.scrollMove(1,200,198,2,300,198);require(!c.events.right&&c.state.rightPresses()==c.state.rightReleases()&&c.events.wheel==-0.5f,"right up precedes scroll");
+            c.state.scrollMove(1,200,198,2,300,198);require(!c.events.right&&c.state.rightPresses()==c.state.rightReleases()&&c.events.wheel==-0.25f,"right up precedes scroll");
         });
         check("lifting one scroll finger never clicks or resumes single drag",()->{
             Case c=new Case();c.scroll();c.state.cancel();c.state.move(1,300,200);c.state.up(1,300,200,900);
@@ -135,15 +147,15 @@ public final class TouchMouseStateTests {
         });
         check("scroll cadence uses screen distance independent of render scale",()->{
             Case c=new Case();c.state.sourceSize(640,360);c.scroll();c.state.scrollMove(1,200,198,2,300,198);
-            require(c.events.wheel==-0.5f&&c.state.lastX()==75&&c.state.lastY()==50,"scaled anchor with unscaled wheel distance");
+            require(c.events.wheel==-0.25f&&c.state.lastX()==75&&c.state.lastY()==50,"scaled anchor with unscaled wheel distance");
         });
         check("scroll resize cancels before a fresh gesture",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,200,180,2,300,180);c.state.sourceSize(3408,2272);
-            require(!c.state.scrolling()&&!c.state.held(),"resize ends scroll");c.scroll();c.state.scrollMove(1,200,170,2,300,170);require(close(c.events.lastWheel,-20.0/96),"fresh gesture has no delayed movement");
+            require(!c.state.scrolling()&&!c.state.held(),"resize ends scroll");c.scroll();c.state.scrollMove(1,200,170,2,300,170);require(close(c.events.wheel,-50.0/192),"fresh gesture has no delayed movement");
         });
         check("extreme finite scroll movement cannot flood native input",()->{
             Case c=new Case();c.scroll();c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);
-            require(c.events.wheel==-1,"one event bounded");c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);require(c.events.wheel==-1,"no overflow remainder");
+            require(c.events.wheel==-1&&c.state.scrollEvents()==1,"malformed sample emits one bounded event");c.state.scrollMove(1,200,Float.MAX_VALUE,2,300,Float.MAX_VALUE);require(c.events.wheel==-1,"no overflow remainder");
         });
         check("native tablet geometry preserves full screen",()->{
             RenderSize r=new RenderSize(3408,2272,100);require(r.width==3408&&r.height==2272,"native size");
