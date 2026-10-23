@@ -158,4 +158,11 @@
     <string name="game_ended_title">Game ended</string>
     <string name="game_exit_unknown">The game has ended, but its exit reason could not be confirmed. Export the logs to investigate.</string>
     <string name="game_exit_interrupted">The game ended without completing a normal exit (exit code %1$d). Export the logs for details; the cause has not been confirmed.</string>
+    <string name="virtual_gamepad" formatted="false">Virtual gamepad</string>
+    <string name="virtual_gamepad_hint" formatted="false">Dual sticks and a full controller layout. Off by default; temporarily switches the game to controller input.</string>
+    <string name="virtual_move" formatted="false">Move</string>
+    <string name="virtual_look" formatted="false">Look</string>
+    <string name="virtual_hide" formatted="false">Hide</string>
+    <string name="virtual_show" formatted="false">Show</string>
+    <string name="virtual_gamepad_help" formatted="false">Left stick: move. Right stick: cursor / aiming. A/B/X/Y, D-pad, LB/RB, LT/RT and L3/R3 follow the bindings in the game settings. Back opens the map; Start opens the menu. LB opens the quick panel. Tap LT ◇ or RT ◇ to lock a trigger for combinations; tap ● to release it. ＋ shows Guide, M1, P1–P4 and TP (P4 opens the blueprint library with default bindings). You can rebind these controls in the game. Hide releases held controls; the top bar remains available. Controls also release when the app loses focus or the keyboard opens.</string>
 </resources>

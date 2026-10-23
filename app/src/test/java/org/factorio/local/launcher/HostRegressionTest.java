@@ -25,6 +25,7 @@ public final class HostRegressionTest {
     @Test
     public void config() throws Exception {
         run("org.factorio.local.launcher.GameProfileConfigTests");
+        run("org.factorio.local.launcher.VirtualGamepadConfigTests");
         run("org.factorio.local.launcher.GameProfilesTests");
         run("org.factorio.local.launcher.GameDocumentIdsTests");
     }
@@ -37,6 +38,7 @@ public final class HostRegressionTest {
     @Test
     public void touch() throws Exception {
         run("com.termux.x11.TouchMouseStateTests");
+        run("org.factorio.local.launcher.VirtualGamepadTests");
         run("com.termux.x11.PhysicalMouseStateTests");
     }
 

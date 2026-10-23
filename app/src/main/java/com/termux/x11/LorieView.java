@@ -493,6 +493,7 @@ public final class LorieView extends SurfaceView implements SurfaceHolder.Callba
     }
 
     public void imeVisibilityChanged(boolean visible) {
+        activity.gameImeVisibilityChanged(visible);
         boolean wasVisible = imeVisible;
         imeVisible = visible;
         if (wasVisible && !visible && windowResumed) {

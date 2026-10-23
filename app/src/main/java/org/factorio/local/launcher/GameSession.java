@@ -104,11 +104,21 @@ public final class GameSession implements AutoCloseable {
 
     private final String graphicsPreset;
     private final int spriteLoadingLimit;
+    private final boolean virtualGamepad;
 
     public GameSession(String preset, int loadingLimit) {
+        this(preset, loadingLimit, false);
+    }
+
+    public GameSession(String preset, int loadingLimit, boolean virtualGamepad) {
+        this.virtualGamepad = virtualGamepad;
         graphicsPreset = preset == null ? "compat" : preset;
         spriteLoadingLimit =
                 GameProfileConfig.validSpriteLoadingLimit(loadingLimit) ? loadingLimit : 1;
+    }
+
+    boolean virtualGamepadEnabled() {
+        return virtualGamepad;
     }
 
     String graphicsPreset() {
@@ -160,7 +170,11 @@ public final class GameSession implements AutoCloseable {
                         StandardCopyOption.ATOMIC_MOVE);
                 return result;
             } finally {
-                lock.release();
+                try {
+                    VirtualGamepadConfig.restore(new File(profile, "config.ini").toPath());
+                } finally {
+                    lock.release();
+                }
             }
         }
     }
@@ -171,9 +185,20 @@ public final class GameSession implements AutoCloseable {
 
     static File prepareProfile(Context context, File gameDirectory, String preset, int loadingLimit)
             throws Exception {
+        return prepareProfile(context, gameDirectory, preset, loadingLimit, false);
+    }
+
+    static File prepareProfile(
+            Context context,
+            File gameDirectory,
+            String preset,
+            int loadingLimit,
+            boolean virtualGamepad)
+            throws Exception {
         File profile = profileDirectory(context), userdata = new File(profile, "userdata");
         if (!userdata.isDirectory() && !userdata.mkdirs()) throw new IOException("无法创建持久游戏数据目录");
         File config = new File(profile, "config.ini");
+        VirtualGamepadConfig.restore(config.toPath());
         if (config.length() > 1024 * 1024) throw new IOException("配置文件过大，已保留原文件");
         File template = new File(gameDirectory, "config/config.ini");
         String bundled;
@@ -221,11 +246,13 @@ public final class GameSession implements AutoCloseable {
                 config.toPath(),
                 StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE);
+        if (virtualGamepad) VirtualGamepadConfig.enable(config.toPath());
         JSONObject metadata =
                 new JSONObject()
                         .put("schema", 1)
                         .put("id", profile.getName())
                         .put("graphicsPolicyVersion", 2)
+                        .put("virtualGamepadEnabled", virtualGamepad)
                         .put(
                                 "formatBackup",
                                 formatBackup.isFile()

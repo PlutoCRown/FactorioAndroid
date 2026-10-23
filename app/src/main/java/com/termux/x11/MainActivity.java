@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 package com.termux.x11;
 
-import android.app.Activity;
 import android.content.res.Configuration;
 import android.os.*;
 import android.system.Os;
@@ -20,7 +19,7 @@ import org.factorio.local.launcher.WindowRuntime;
 import org.json.JSONObject;
 
 /** Separate-process game window, input bridge and explicitly requested diagnostics. */
-public final class MainActivity extends Activity {
+public final class MainActivity extends androidx.activity.ComponentActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private JSONObject report;
     private LorieView view;
@@ -39,6 +38,8 @@ public final class MainActivity extends Activity {
     private boolean manualSession;
     private GameSession gameSession;
     private ControllerRelay controllerRelay;
+    private org.factorio.local.launcher.ui.controls.VirtualGamepadOverlay virtualControls;
+    private boolean virtualGamepad, gameImeVisible;
     private org.factorio.local.launcher.KeyboardBridge keyboardBridge;
     private Thread sessionThread;
     private int renderScalePercent = 100;
@@ -49,6 +50,7 @@ public final class MainActivity extends Activity {
     public void onCreate(Bundle state) {
         super.onCreate(state);
         manualSession = getIntent().getBooleanExtra("playGame", false);
+        virtualGamepad = manualSession && getIntent().getBooleanExtra("virtualGamepad", false);
         int requestedScale = getIntent().getIntExtra("renderScalePercent", 100);
         if (requestedScale == 50 || requestedScale == 75 || requestedScale == 100)
             renderScalePercent = requestedScale;
@@ -197,7 +199,8 @@ public final class MainActivity extends Activity {
             gameSession =
                     new GameSession(
                             getIntent().getStringExtra("graphicsPreset"),
-                            getIntent().getIntExtra("spriteLoadingLimit", 1));
+                            getIntent().getIntExtra("spriteLoadingLimit", 1),
+                            virtualGamepad);
             updateBackgroundPause();
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -226,6 +229,10 @@ public final class MainActivity extends Activity {
                                             : "diagnostic");
             if (manualSession) {
                 controllerRelay = new ControllerRelay(this, false);
+                if (virtualGamepad)
+                    virtualControls =
+                            new org.factorio.local.launcher.ui.controls.VirtualGamepadOverlay(
+                                    this, layout, controllerRelay);
                 handler.postDelayed(this::sampleController, 10000);
             }
             record("preparing");
@@ -455,11 +462,13 @@ public final class MainActivity extends Activity {
 
     public void surfaceReady() {
         surfaceValid = true;
+        updateBackgroundPause();
         startGraphics();
     }
 
     public void surfaceLost() {
         surfaceValid = false;
+        if (virtualControls != null) virtualControls.setInputActive(false);
         if (controllerRelay != null) controllerRelay.focusChanged(false);
     }
 
@@ -792,6 +801,11 @@ public final class MainActivity extends Activity {
         return keyboardBridge != null && keyboardBridge.key(code);
     }
 
+    public void gameImeVisibilityChanged(boolean shown) {
+        gameImeVisible = shown;
+        updateBackgroundPause();
+    }
+
     boolean sendImeVisibility(boolean shown) {
         return keyboardBridge != null && keyboardBridge.visibility(shown);
     }
@@ -807,6 +821,7 @@ public final class MainActivity extends Activity {
         super.onWindowFocusChanged(focused);
         if (focused) applyImmersiveMode();
         if (controllerRelay != null) controllerRelay.focusChanged(focused);
+        if (!focused && virtualControls != null) virtualControls.release();
     }
 
     private int dp(int value) {
@@ -840,6 +855,10 @@ public final class MainActivity extends Activity {
     }
 
     private void updateBackgroundPause() {
+        if (virtualControls != null)
+            virtualControls.setInputActive(
+                    resumed && surfaceValid && directSurfaceReady && !gameImeVisible);
+
         if (gameSession == null) return;
         try {
             gameSession.setBackgroundPaused(!resumed || !directSurfaceReady);
@@ -1013,6 +1032,7 @@ public final class MainActivity extends Activity {
         closed = true;
         handler.removeCallbacksAndMessages(null);
         if (keyboardBridge != null) keyboardBridge.close();
+        if (virtualControls != null) virtualControls.close();
         if (controllerRelay != null) controllerRelay.close();
         if (gameSession != null) gameSession.close();
         if (view != null) view.dispose();

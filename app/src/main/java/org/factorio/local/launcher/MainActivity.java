@@ -155,6 +155,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         }
     }
 
+    public void setVirtualGamepadEnabled(boolean enabled) {
+        if (!busy) {
+            getPreferences(0).edit().putBoolean("virtualGamepad", enabled).apply();
+            renderPage();
+        }
+    }
+
     public void setTouchMouseEnabled(boolean enabled) {
         if (!busy) {
             getPreferences(0).edit().putBoolean("touchMouseSimulation", enabled).apply();
@@ -467,6 +474,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                 new Intent(this, com.termux.x11.MainActivity.class)
                         .putExtra("playGame", true)
                         .putExtra(
+                                "virtualGamepad",
+                                getPreferences(0).getBoolean("virtualGamepad", false))
+                        .putExtra(
                                 "touchMouseSimulation",
                                 getPreferences(0).getBoolean("touchMouseSimulation", true))
                         .putExtra(
@@ -659,6 +669,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         startActivity(
                 new Intent(this, com.termux.x11.MainActivity.class)
                         .putExtra("playGame", true)
+                        .putExtra(
+                                "virtualGamepad",
+                                getPreferences(0).getBoolean("virtualGamepad", false))
                         .addFlags(
                                 Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                                         | Intent.FLAG_ACTIVITY_SINGLE_TOP));

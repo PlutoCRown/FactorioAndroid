@@ -506,13 +506,15 @@ public final class RuntimeProbe {
                                     context,
                                     gameDirectory,
                                     control.graphicsPreset(),
-                                    control.spriteLoadingLimit())
+                                    control.spriteLoadingLimit(),
+                                    control.virtualGamepadEnabled())
                             : new File(
                                     context.getFilesDir(),
                                     "graphics-probe/session-" + UUID.randomUUID());
             if (manual)
                 result.put("graphicsPreset", control.graphicsPreset())
-                        .put("spriteLoadingLimit", control.spriteLoadingLimit());
+                        .put("spriteLoadingLimit", control.spriteLoadingLimit())
+                        .put("virtualGamepadEnabled", control.virtualGamepadEnabled());
             File user = new File(session, "userdata");
             if (!user.isDirectory() && !user.mkdirs()) throw new IOException("无法创建图形验证数据目录");
             File config = new File(session, "config.ini");

@@ -9,6 +9,8 @@
 | `app/src/main/kotlin/org/factorio/local/launcher/LauncherUi.kt` | Activity 与 Compose 之间的状态、动作适配 |
 | `app/src/main/kotlin/org/factorio/local/launcher/ui/` | 页面布局、主页、启动设置、设备信息，以及页面状态和动作回调 |
 | `app/src/main/kotlin/org/factorio/local/launcher/ui/components/` | 通用控件、按钮和 Panel 绘制、会话按钮共用的 Drawable |
+| `app/src/main/kotlin/org/factorio/local/launcher/ui/controls/` | 游戏中的 Compose 虚拟手柄控制区 |
+| `app/src/main/java/org/factorio/local/launcher/input/` | 与 Android 无关的虚拟手柄状态、输入合并与事件队列 |
 | `app/src/main/kotlin/org/factorio/local/launcher/ui/theme/` | Compose 配色和主题 |
 | `app/src/test/java/` | Gradle 本地单元测试，目录与 Java 包名对应 |
 | `compile-stubs/src/main/java/` | 仅编译期使用的 JNI 注解，不进入 APK |

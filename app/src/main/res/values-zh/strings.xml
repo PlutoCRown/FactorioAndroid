@@ -159,4 +159,11 @@
     <string name="game_ended_title">游戏已结束</string>
     <string name="game_exit_unknown">游戏已结束，但未能确认退出原因。可以导出日志查看详情。</string>
     <string name="game_exit_interrupted">游戏未正常退出（退出码 %1$d），原因尚未确认。可以导出日志查看详情。</string>
+    <string name="virtual_gamepad" formatted="false">虚拟手柄</string>
+    <string name="virtual_gamepad_hint" formatted="false">双摇杆与完整手柄按键，默认关闭；启用时临时切换为游戏手柄输入。</string>
+    <string name="virtual_move" formatted="false">移动</string>
+    <string name="virtual_look" formatted="false">视角 / 光标</string>
+    <string name="virtual_hide" formatted="false">隐藏</string>
+    <string name="virtual_show" formatted="false">显示</string>
+    <string name="virtual_gamepad_help" formatted="false">左摇杆移动，右摇杆控制光标或瞄准。ABXY、十字键、LB/RB、LT/RT、L3/R3 遵循游戏中的手柄绑定。默认 Back 打开地图，Start 打开菜单，LB 打开快捷面板。轻点 LT ◇ 或 RT ◇ 可锁定扳机，方便组合操作；再次轻点 ● 松开。＋ 展开 Guide、M1、P1–P4 和 TP；默认 P4 打开蓝图库。可以在游戏设置中重新绑定这些按键。隐藏会松开全部按键，顶部工具条仍可操作。离开应用、失去焦点或弹出输入法时也会松开按键。</string>
 </resources>

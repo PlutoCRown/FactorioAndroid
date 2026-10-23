@@ -7,6 +7,7 @@ internal data class LauncherState(
     val version: String? = null,
     val spaceAge: Boolean = false,
     val touchMouse: Boolean = true,
+    val virtualGamepad: Boolean = false,
     val scale: Int = 100,
     val preset: String = "compat",
     val spriteLoadingLimit: Int = 1,

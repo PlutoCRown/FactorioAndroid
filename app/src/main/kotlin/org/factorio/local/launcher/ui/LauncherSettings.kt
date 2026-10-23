@@ -39,6 +39,26 @@ internal fun LauncherSettings(s: LauncherState, actions: LauncherActions) {
         }
         Hint(R.string.touch_mouse_hint)
         HorizontalDivider()
+        Row(
+            Modifier.fillMaxWidth()
+                .toggleable(
+                    s.virtualGamepad,
+                    enabled = !s.busy,
+                    role = Role.Switch,
+                    onValueChange = actions.setVirtualGamepadEnabled,
+                )
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.virtual_gamepad),
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Switch(checked = s.virtualGamepad, onCheckedChange = null, enabled = !s.busy)
+        }
+        Hint(R.string.virtual_gamepad_hint)
+        HorizontalDivider()
         Field(R.string.render_resolution, R.string.render_resolution_hint)
         val scales = listOf(100, 75, 50)
         Choice(

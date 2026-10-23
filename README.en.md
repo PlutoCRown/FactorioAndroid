@@ -52,7 +52,7 @@ A 64-bit ARM Android device running at least Android 8.0 (API 26), with a Vulkan
 
 Verified on **Redmi K70 (Snapdragon 8 Gen 2)** at **native resolution**, achieving **60 FPS / 60 UPS**.
 
-This project does not yet provide virtual sticks or buttons. Use an Android-compatible gamepad or keyboard and mouse.
+Enable the [virtual gamepad](docs/VIRTUAL-GAMEPAD.md) in Launch settings (off by default) for dual sticks, a full controller layout and trigger combinations. Android-compatible physical gamepads, keyboards and mice are also supported.
 
 Leave room for the original archive, extracted game, temporary import copy, saves and mods. Memory requirements depend on base game / Space Age content, maps, mods, texture quality and loading concurrency. Launch settings expose texture levels, render resolution and a loading thread limit. See [Loading speed and memory (Chinese)](docs/LOADING-MEMORY.md).
 

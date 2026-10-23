@@ -9,6 +9,8 @@ import android.view.*;
 import java.io.*;
 import java.nio.*;
 import java.util.*;
+import org.factorio.local.launcher.input.GamepadEventQueue;
+import org.factorio.local.launcher.input.VirtualGamepadState;
 import org.json.*;
 
 /** Android gamepad state -> same-UID private socket -> engine's native SDL gamepad. */
@@ -33,6 +35,64 @@ public final class ControllerRelay implements InputManager.InputDeviceListener, 
     private boolean recognized, everRecognized;
     private int recognizedPackets, lastRecognizedInstance;
     private long generation;
+    private final VirtualGamepadState virtual = new VirtualGamepadState();
+    private final GamepadEventQueue virtualEvents = new GamepadEventQueue();
+    private int virtualEventsPublished, virtualQueueOverflows;
+
+    public void setVirtualEnabled(boolean enabled) {
+        synchronized (lock) {
+            virtual.enabled(enabled);
+            virtualEvents.clear();
+            generation++;
+            lock.notifyAll();
+        }
+    }
+
+    private void publishVirtual(VirtualGamepadState.Snapshot before) {
+        VirtualGamepadState.Snapshot after = virtual.snapshot();
+        if (after.sameState(before)) return;
+        if (!virtualEvents.offer(after)) {
+            virtual.releaseAll();
+            virtualEvents.offer(virtual.snapshot());
+            virtualQueueOverflows++;
+        }
+        virtualEventsPublished++;
+        generation++;
+        lock.notifyAll();
+    }
+
+    public void virtualButton(String owner, int button, boolean down) {
+        synchronized (lock) {
+            VirtualGamepadState.Snapshot before = virtual.snapshot();
+            virtual.button(owner, button, down);
+            publishVirtual(before);
+        }
+    }
+
+    public void virtualTrigger(String owner, int trigger, boolean down) {
+        synchronized (lock) {
+            VirtualGamepadState.Snapshot before = virtual.snapshot();
+            virtual.trigger(owner, trigger, down);
+            publishVirtual(before);
+        }
+    }
+
+    public void virtualStick(int stick, float x, float y) {
+        synchronized (lock) {
+            VirtualGamepadState.Snapshot before = virtual.snapshot();
+            virtual.stick(stick, x, y);
+            publishVirtual(before);
+        }
+    }
+
+    public void releaseVirtual() {
+        synchronized (lock) {
+            virtual.releaseAll();
+            virtualEvents.clear();
+            generation++;
+            lock.notifyAll();
+        }
+    }
 
     private static short[] neutralAxes() {
         return new short[] {0, 0, 0, 0, Short.MIN_VALUE, Short.MIN_VALUE};
@@ -246,6 +306,8 @@ public final class ControllerRelay implements InputManager.InputDeviceListener, 
             synchronized (lock) {
                 keyButtons = hatButtons = 0;
                 axes = neutralAxes();
+                virtual.releaseAll();
+                virtualEvents.clear();
                 generation++;
                 lock.notifyAll();
             }
@@ -277,13 +339,17 @@ public final class ControllerRelay implements InputManager.InputDeviceListener, 
                 while (running) {
                     ByteBuffer buffer = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN);
                     synchronized (lock) {
-                        if (sentGeneration == generation) lock.wait(1000);
+                        if (sentGeneration == generation && virtualEvents.isEmpty())
+                            lock.wait(1000);
                         if (!running) break;
+                        VirtualGamepadState.Snapshot touch = virtualEvents.next(virtual.snapshot());
+                        VirtualGamepadState.Snapshot merged =
+                                VirtualGamepadState.merge(touch, keyButtons | hatButtons, axes);
                         buffer.put(new byte[] {'R', 'G', 'P', '1'})
                                 .putInt(1)
-                                .putInt(deviceId >= 0 || synthetic ? 1 : 0)
-                                .putInt(keyButtons | hatButtons);
-                        for (short axis : axes) buffer.putShort(axis);
+                                .putInt(deviceId >= 0 || synthetic || touch.enabled ? 1 : 0)
+                                .putInt(merged.buttons);
+                        for (short axis : merged.axes()) buffer.putShort(axis);
                         buffer.putInt(++sequence);
                         sentGeneration = generation;
                     }
@@ -329,6 +395,8 @@ public final class ControllerRelay implements InputManager.InputDeviceListener, 
                 synchronized (lock) {
                     recognized = false;
                     instance = 0;
+                    virtual.releaseAll();
+                    virtualEvents.clear();
                 }
             }
             if (running)
@@ -344,6 +412,10 @@ public final class ControllerRelay implements InputManager.InputDeviceListener, 
         synchronized (lock) {
             return new JSONObject()
                     .put("syntheticControllerProbe", synthetic)
+                    .put("virtualControllerEnabled", virtual.snapshot().enabled)
+                    .put("virtualButtonsHeld", virtual.snapshot().buttons)
+                    .put("virtualEventsPublished", virtualEventsPublished)
+                    .put("virtualQueueOverflows", virtualQueueOverflows)
                     .put("physicalControllerId", deviceId)
                     .put(
                             "physicalControllerName",

@@ -19,6 +19,7 @@ class LauncherUi(private val host: MainActivity) {
         LauncherActions(
             host::performUiAction,
             host::setTouchMouseEnabled,
+            host::setVirtualGamepadEnabled,
             host::setRenderScale,
             host::setGraphicsPreset,
             host::setSpriteLoadingLimit,
@@ -61,6 +62,7 @@ class LauncherUi(private val host: MainActivity) {
                 game?.optString("version"),
                 game?.optBoolean("spaceAge") ?: false,
                 preferences.getBoolean("touchMouseSimulation", true),
+                preferences.getBoolean("virtualGamepad", false),
                 preferences.getInt("renderScalePercent", 100),
                 preferences.getString("graphicsPreset", "compat") ?: "compat",
                 preferences.getInt("spriteLoadingLimit", 1),

@@ -50,6 +50,9 @@ _Static_assert(sizeof(struct ack) == 16, "Input acknowledgement ABI mismatch");
 static char socket_path[sizeof(((struct sockaddr_un *)0)->sun_path)];
 static uint32_t instance;
 static void *joystick;
+#define REA_PAD_BUTTONS 21
+#define REA_PAD_BUTTON_MASK ((1u << REA_PAD_BUTTONS) - 1u)
+static void (*update_joysticks)(void);
 static bool recognized;
 static uint32_t (*was_init)(uint32_t);
 static uint32_t (*attach_virtual)(const struct virtual_desc *);
@@ -73,13 +76,14 @@ static bool bind_interfaces(void) {
     BIND(detach_virtual,bool (*)(uint32_t),"SDL_DetachVirtualJoystick");
     BIND(close_joystick,void (*)(void *),"SDL_CloseJoystick");
     BIND(get_error,const char *(*)(void),"SDL_GetError");
+    BIND(update_joysticks,void (*)(void),"SDL_UpdateJoysticks");
 #undef BIND
     return true;
 }
 static void release_device(void) {
     if (joystick && (was_init(0x2000u)&0x2000u)) {
         for (int i=0; i<6; ++i) set_axis(joystick,i,i>=4 ? INT16_MIN : 0);
-        for (int i=0; i<15; ++i) set_button(joystick,i,false);
+        for (int i=0; i<REA_PAD_BUTTONS; ++i) set_button(joystick,i,false);
         close_joystick(joystick);
         if (instance) detach_virtual(instance);
     }
@@ -90,14 +94,14 @@ static bool create_device(void) {
     for (int i=0; i<300 && !(was_init(0x2000u)&0x2000u); ++i) usleep(100000);
     if (!(was_init(0x2000u)&0x2000u)) { fprintf(stderr,"REA_PAD SDL gamepad subsystem not initialized\n"); return false; }
     struct virtual_desc desc={0};
-    desc.version=sizeof(desc); desc.type=1; desc.naxes=6; desc.nbuttons=15;
-    desc.axis_mask=0x3fu; desc.button_mask=0x7fffu; desc.name="Factorio Android Controller Relay";
+    desc.version=sizeof(desc); desc.type=1; desc.naxes=6; desc.nbuttons=REA_PAD_BUTTONS;
+    desc.axis_mask=0x3fu; desc.button_mask=REA_PAD_BUTTON_MASK; desc.name="Factorio Android Controller Relay";
     instance=attach_virtual(&desc);
     if (!instance) { fprintf(stderr,"REA_PAD attach failed: %s\n",get_error()); return false; }
     joystick=open_joystick(instance);
     if (!joystick) { fprintf(stderr,"REA_PAD open failed: %s\n",get_error()); detach_virtual(instance); instance=0; return false; }
     recognized=is_gamepad(instance);
-    fprintf(stderr,"REA_PAD virtual device id=%u recognized_gamepad=%u axes=6 buttons=15\n",instance,(unsigned)recognized);
+    fprintf(stderr,"REA_PAD virtual device id=%u recognized_gamepad=%u axes=6 buttons=21\n",instance,(unsigned)recognized);
     return true;
 }
 static bool read_packet(int fd, struct packet *packet) {
@@ -108,7 +112,7 @@ static bool read_packet(int fd, struct packet *packet) {
         if (got<=0) return false;
         out+=got; remaining-=(size_t)got;
     }
-    return !memcmp(packet->magic,"RGP1",4) && packet->version==1 && packet->active<=1 && !(packet->buttons&~0x7fffu);
+    return !memcmp(packet->magic,"RGP1",4) && packet->version==1 && packet->active<=1 && !(packet->buttons&~REA_PAD_BUTTON_MASK);
 }
 static void serve_peer(int fd) {
     struct ucred peer; socklen_t len=sizeof(peer);
@@ -119,8 +123,10 @@ static void serve_peer(int fd) {
         else if (create_device()) {
             bool success=true;
             for (int i=0; i<6; ++i) success=set_axis(joystick,i,packet.axes[i]) && success;
-            for (int i=0; i<15; ++i) success=set_button(joystick,i,(packet.buttons&(1u<<i))!=0) && success;
+            for (int i=0; i<REA_PAD_BUTTONS; ++i) success=set_button(joystick,i,(packet.buttons&(1u<<i))!=0) && success;
             if (!success) { fprintf(stderr,"REA_PAD input update failed: %s\n",get_error()); break; }
+            /* Commit each packet so quick down/up transitions become SDL events. */
+            update_joysticks();
         }
         struct ack ack={{'R','G','A','1'},instance,(uint32_t)recognized,packet.sequence};
         if (send(fd,&ack,sizeof(ack),MSG_NOSIGNAL)!=(ssize_t)sizeof(ack)) break;
