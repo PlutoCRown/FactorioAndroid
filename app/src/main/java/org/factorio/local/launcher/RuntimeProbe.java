@@ -25,6 +25,10 @@ public final class RuntimeProbe {
                 .put("exitPolicyVersion", SessionExit.POLICY_VERSION);
     }
 
+    public static JSONObject deviceIdentity() throws Exception {
+        return DeviceProbe.identity();
+    }
+
     static void signalOwnChild(java.lang.Process child, int signal) throws Exception {
         if (!child.isAlive()) return;
         java.util.regex.Matcher match =
@@ -622,13 +626,18 @@ public final class RuntimeProbe {
                 windowEnvironment.put("SDL_VIDEO_DRIVER", "x11");
                 windowEnvironment.put("XDG_RUNTIME_DIR", serverTemp.getAbsolutePath());
             }
-            File mesaLog = new File(context.getFilesDir(), "mesa.log");
+            SessionDiagnostics graphicsDiagnostics = control == null ? null : control.diagnostics();
+            File mesaLog =
+                    graphicsDiagnostics == null
+                            ? new File(context.getFilesDir(), "mesa.log")
+                            : graphicsDiagnostics.graphicsLog("mesa.log");
             if (mesaLog.isFile() && !mesaLog.delete())
                 mesaLog =
                         new File(
                                 context.getFilesDir(),
                                 "mesa-" + System.currentTimeMillis() + ".log");
             windowEnvironment.put("MESA_LOG_FILE", mesaLog.getAbsolutePath());
+            windowEnvironment.put("VK_LOADER_DEBUG", "error,warn");
             windowEnvironment.put("__GLX_VENDOR_LIBRARY_NAME", "mesa");
             windowEnvironment.put(
                     "SDL_EGL_LIBRARY",

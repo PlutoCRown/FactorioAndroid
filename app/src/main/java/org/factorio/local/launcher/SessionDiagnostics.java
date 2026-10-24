@@ -12,12 +12,14 @@ final class SessionDiagnostics {
     static final int LIMIT = 1024 * 1024;
     private final File directory, proc;
     private final long epoch;
-    private final RollingLog stdout, memory;
+    private final RollingLog stdout, memory, events;
+    private String lastPhase;
     private int enginePid, ownerPid;
     private String startTicks;
     private volatile String lastError;
     private long peakRss, peakHwm, lowestAvailable = Long.MAX_VALUE;
     private int samples;
+    private JSONObject processState;
 
     SessionDiagnostics(File files, long epoch) throws IOException {
         this(files, epoch, new File("/proc"));
@@ -31,6 +33,7 @@ final class SessionDiagnostics {
             throw new IOException("Cannot create session diagnostics");
         stdout = new RollingLog(new File(directory, "engine-stdout.log"), LIMIT);
         memory = new RollingLog(new File(directory, "memory-samples.jsonl"), LIMIT);
+        events = new RollingLog(new File(directory, "session-events.jsonl"), LIMIT);
         prune(directory);
     }
 
@@ -41,6 +44,12 @@ final class SessionDiagnostics {
         if (Files.isSymbolicLink(parent.toPath()) || Files.isSymbolicLink(dir.toPath()))
             throw new IOException("Diagnostic directory is a link");
         return dir;
+    }
+
+    File graphicsLog(String name) {
+        if (!name.equals("mesa.log") && !name.equals("direct-present-report.txt"))
+            throw new IllegalArgumentException("Unknown graphics log");
+        return new File(directory, name);
     }
 
     private static void prune(File current) {
@@ -102,12 +111,30 @@ final class SessionDiagnostics {
                                     .put("state", "running");
                     if (startTicks != null) state.put("engineStartTicks", startTicks);
                     if (engineLog != null) state.put("engineLogPath", engineLog.getAbsolutePath());
+                    processState = state;
                     writeJson("engine-process.json", state);
                 });
     }
 
     void output(byte[] bytes, int length) {
         attempt(() -> stdout.append(bytes, length));
+    }
+
+    synchronized void phase(String phase) {
+        if (phase.equals(lastPhase)) return;
+        lastPhase = phase;
+        attempt(
+                () -> {
+                    byte[] row =
+                            (new JSONObject()
+                                                    .put("sessionEpoch", epoch)
+                                                    .put("timestamp", System.currentTimeMillis())
+                                                    .put("phase", phase)
+                                                    .toString()
+                                            + "\n")
+                                    .getBytes(StandardCharsets.UTF_8);
+                    events.append(row, row.length);
+                });
     }
 
     void sample() {
@@ -181,6 +208,17 @@ final class SessionDiagnostics {
 
     void finished(JSONObject result) {
         sample();
+        attempt(
+                () -> {
+                    if (processState != null) {
+                        processState
+                                .put("state", result.has("exitCode") ? "exited" : "unconfirmed")
+                                .put("endedAtEpochMillis", System.currentTimeMillis());
+                        if (result.has("exitCode"))
+                            processState.put("exitCode", result.getInt("exitCode"));
+                        writeJson("engine-process.json", processState);
+                    }
+                });
         attempt(
                 () ->
                         writeJson(

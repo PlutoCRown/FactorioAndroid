@@ -212,6 +212,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                             .put("uid", android.os.Process.myUid())
                             .put("pid", android.os.Process.myPid())
                             .put("application", RuntimeProbe.applicationIdentity(this))
+                            .put("deviceAtSessionStart", RuntimeProbe.deviceIdentity())
                             .put("factorioLaunched", false)
                             .put("linuxX11ClientConnected", false)
                             .put("hardwareOpenGLPassed", false)
@@ -351,7 +352,10 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                                                                                             getIntent()
                                                                                                     .getBooleanExtra(
                                                                                                             "maliMesaCompatibility",
-                                                                                                            false));
+                                                                                                            false),
+                                                                                            gameSession
+                                                                                                    .presentationLog(
+                                                                                                            getFilesDir()));
                                                                             directSurfaceReady =
                                                                                     true;
                                                                             updateBackgroundPause();
@@ -914,6 +918,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
     }
 
     private void record(String phase) throws Exception {
+        if (gameSession != null) gameSession.recordPhase(phase);
         JSONObject controller = controllerRelay == null ? null : controllerRelay.report();
         if (controller != null) report.put("controller", controller);
         if (keyboardBridge != null) report.put("keyboardBridge", keyboardBridge.report());

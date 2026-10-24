@@ -26,6 +26,16 @@ public final class GameSession implements AutoCloseable {
         return diagnostics;
     }
 
+    public File presentationLog(File files) {
+        return diagnostics == null
+                ? new File(files, "direct-present-report.txt")
+                : diagnostics.graphicsLog("direct-present-report.txt");
+    }
+
+    public void recordPhase(String phase) {
+        if (diagnostics != null) diagnostics.phase(phase);
+    }
+
     public void recordWindowTermination() {
         if (diagnostics != null) diagnostics.windowTermination(android.os.Process.myPid());
     }

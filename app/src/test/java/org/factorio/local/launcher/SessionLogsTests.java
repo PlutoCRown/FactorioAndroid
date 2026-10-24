@@ -23,6 +23,10 @@ public final class SessionLogsTests {
         Files.write(file.toPath(), text.getBytes(StandardCharsets.UTF_8));
     }
 
+    private static String read(Path path) throws Exception {
+        return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+    }
+
     private static String member(File archive, String name) throws Exception {
         try (ZipFile zip = new ZipFile(archive)) {
             ZipEntry entry = zip.getEntry(name);
@@ -56,14 +60,24 @@ public final class SessionLogsTests {
                     member(archive, "session-report.json").contains("running"),
                     "first running snapshot captured");
             check(
-                    "stdout fallback".equals(member(archive, "factorio-current.log")),
-                    "progress output retained without writeData or engineLog");
+                    member(archive, "factorio-current.log") == null
+                            && member(archive, "engine-progress.json").contains("stdout fallback"),
+                    "progress output preserved without mislabeling stdout as the game log");
+            check(
+                    new JSONObject(member(archive, "archive-info.json"))
+                            .getJSONObject("files")
+                            .getJSONObject("mesa.log")
+                            .getString("status")
+                            .equals("missing"),
+                    "missing graphics diagnostics are explicit");
             report(root, 1000, "finished");
             write(new File(root, "last-process-exits.json"), "{\"generation\":2}");
             SessionLogs.refresh(root, "logs:" + archive.getName());
             check(
                     member(archive, "session-report.json").contains("finished")
-                            && member(archive, "last-process-exits.json").contains(":2"),
+                            && new JSONObject(member(archive, "last-process-exits.json"))
+                                            .getInt("generation")
+                                    == 2,
                     "same session exports refresh report and OS exits");
             long captured =
                     new JSONObject(member(archive, "archive-info.json"))
@@ -88,6 +102,9 @@ public final class SessionLogsTests {
                     "MemTotal: 10000 kB\nMemAvailable: 8000 kB\nSwapFree: 4000 kB\n");
             SessionDiagnostics trace = new SessionDiagnostics(root, 2000, proc);
             trace.started("Process[pid=12345, hasExited=false]", 54321, null);
+            trace.phase("engineStarting");
+            trace.phase("engineStarting");
+            trace.phase("running");
             trace.sample();
             write(new File(proc, "12345/status"), "VmRSS: 900 kB\nVmHWM: 1000 kB\n");
             write(new File(proc, "meminfo"), "MemTotal: 10000 kB\nMemAvailable: 7000 kB\n");
@@ -102,6 +119,15 @@ public final class SessionLogsTests {
                             .put("terminationRequestedBy", "unconfirmed"));
             trace.windowTermination(54321);
             File fresh = SessionLogs.capture(root);
+            check(
+                    member(fresh, "session-events.jsonl").split("\n").length == 2
+                            && member(fresh, "session-events.jsonl").contains("engineStarting"),
+                    "bounded phase timeline retains transitions without consecutive duplicate phases");
+            check(
+                    new JSONObject(member(fresh, "engine-process.json"))
+                            .getString("state")
+                            .equals("exited"),
+                    "process record no longer says running after final exit");
             check(
                     new JSONObject(member(fresh, "engine-result.json")).getInt("exitCode") == 137,
                     "engine exit retained while UI report is unfinished");
@@ -125,6 +151,149 @@ public final class SessionLogsTests {
                     new JSONObject(member(fresh, "archive-info.json"))
                             .getBoolean("engineResultAvailable"),
                     "final evidence explicitly marked");
+            check(
+                    new JSONObject(member(fresh, "summary.json"))
+                                    .getJSONObject("engine")
+                                    .getInt("exitCode")
+                            == 137,
+                    "summary retains raw exit evidence");
+            File traceDir = SessionDiagnostics.directory(root, 2000);
+            write(new File(traceDir, "mesa.log"), "zink: missing Vulkan extension\n");
+            write(new File(traceDir, "direct-present-report.txt"), "ready=1\nframes=0\n");
+            JSONObject engineResult =
+                    new JSONObject()
+                            .put("sessionEpoch", 2000)
+                            .put("exitCode", 137)
+                            .put("output", "startup-only evidence outside the retained stdout tail")
+                            .put("outputTail", "last output before death")
+                            .put(
+                                    "extraEnvironment",
+                                    new JSONObject()
+                                            .put("REA_IME_TOKEN", "must-not-export")
+                                            .put(
+                                                    "MESA_LOG_FILE",
+                                                    new File(traceDir, "mesa.log")
+                                                            .getAbsolutePath()));
+            write(new File(traceDir, "engine-result.json"), engineResult.toString());
+            JSONObject engineSession =
+                    new JSONObject()
+                            .put("sessionEpoch", 2000)
+                            .put(
+                                    "graphicsInitialization",
+                                    new JSONObject(engineResult.toString())
+                                            .put("normalExitEvidenceSource", "engineLog"))
+                            .put("engineLog", "game log contents");
+            write(new File(traceDir, "session-engine-result.json"), engineSession.toString());
+            JSONObject uiReport =
+                    new JSONObject(read(new File(root, "game-session-report.json").toPath()))
+                            .put("engineWindowProbe", engineSession)
+                            .put("application", new JSONObject().put("packageName", "dev.example"))
+                            .put(
+                                    "nativeLibrary",
+                                    "/data/app/~~random/dev.example-random/lib/arm64/libXlorie.so")
+                            .put("cachePath", "/data/user/0/dev.example/cache/x11/test.sock");
+            write(new File(root, "game-session-report.json"), uiReport.toString());
+            write(
+                    new File(root, "last-process-exits.json"),
+                    new JSONObject()
+                            .put(
+                                    "records",
+                                    new org.json.JSONArray()
+                                            .put(
+                                                    new JSONObject()
+                                                            .put("pid", 12345)
+                                                            .put("timestamp", 2100)
+                                                            .put("status", 9))
+                                            .put(
+                                                    new JSONObject()
+                                                            .put("pid", 12345)
+                                                            .put("timestamp", 1500))
+                                            .put(
+                                                    new JSONObject()
+                                                            .put("pid", 99999)
+                                                            .put("timestamp", 2100)))
+                            .toString());
+            fresh = SessionLogs.capture(root);
+            check(
+                    member(fresh, "mesa.log").contains("missing Vulkan extension")
+                            && member(fresh, "direct-present-report.txt").contains("frames=0"),
+                    "same-session graphics logs exported");
+            JSONObject compact = new JSONObject(member(fresh, "session-report.json"));
+            check(
+                    !compact.has("engineWindowProbe")
+                            && !compact.has("engineProbeProgress")
+                            && compact.getString("engineReportFile")
+                                    .equals("session-engine-result.json"),
+                    "nested copies replaced by archive references");
+            JSONObject compactEngine = new JSONObject(member(fresh, "engine-result.json"));
+            check(
+                    !compactEngine.has("outputTail")
+                            && compactEngine
+                                    .getString("outputTailFile")
+                                    .equals("engine-stdout.log"),
+                    "exact duplicate stdout removed only when retained externally");
+            check(
+                    compactEngine.getString("output").startsWith("startup-only evidence"),
+                    "startup head not present in the retained tail is never discarded");
+            check(
+                    compactEngine.getString("normalExitEvidenceSource").equals("engineLog"),
+                    "later exit reconciliation survives canonicalization");
+            check(
+                    !member(fresh, "engine-result.json").contains("must-not-export")
+                            && !member(fresh, "session-report.json").contains("~~random")
+                            && compact.getString("nativeLibrary").equals("$NATIVE_LIB/libXlorie.so")
+                            && compact.getString("cachePath").equals("$APP_CACHE/x11/test.sock"),
+                    "installation roots normalized and private IME token omitted");
+            check(
+                    new JSONObject(member(fresh, "engine-result.json"))
+                            .getJSONObject("extraEnvironment")
+                            .getString("MESA_LOG_FILE")
+                            .startsWith("$APP_FILES/"),
+                    "runtime paths remain useful as relative paths");
+            check(
+                    new JSONObject(member(fresh, "last-process-exits.json"))
+                                    .getJSONArray("records")
+                                    .length()
+                            == 1,
+                    "unrelated historical OS exit records omitted");
+            check(
+                    new JSONObject(read(new File(root, "game-session-report.json").toPath()))
+                            .has("engineWindowProbe"),
+                    "export compaction never changes live reports");
+            byte[] large = new byte[SessionDiagnostics.LIMIT + 256];
+            Arrays.fill(large, (byte) 'x');
+            Files.write(new File(traceDir, "mesa.log").toPath(), large);
+            fresh = SessionLogs.capture(root);
+            check(
+                    member(fresh, "mesa.log").length() == SessionDiagnostics.LIMIT
+                            && new JSONObject(member(fresh, "archive-info.json"))
+                                    .getJSONObject("files")
+                                    .getJSONObject("mesa.log")
+                                    .getBoolean("truncated"),
+                    "graphics tail bounded and truncation documented");
+            write(new File(traceDir, "window-termination.json"), "broken JSON");
+            fresh = SessionLogs.capture(root);
+            check(
+                    new JSONObject(member(fresh, "archive-info.json"))
+                            .getJSONObject("files")
+                            .getJSONObject("window-termination.json")
+                            .getString("status")
+                            .equals("invalid-json"),
+                    "corrupt optional diagnostics do not abort the archive");
+            write(new File(root, "mesa.log"), "old global log");
+            new File(root, "mesa.log").setLastModified(2999);
+            report(root, 3000, "next-session");
+            File nextTrace = SessionDiagnostics.directory(root, 3000);
+            write(
+                    new File(nextTrace, "engine-result.json"),
+                    "{\"sessionEpoch\":2000,\"exitCode\":137}");
+            File next = SessionLogs.capture(root);
+            check(
+                    member(next, "mesa.log") == null
+                            && !new JSONObject(member(next, "archive-info.json"))
+                                    .getBoolean("engineResultAvailable"),
+                    "stale global logs and mismatched-session results never enter the new archive");
+            fresh = next;
             check(
                     SessionDiagnostics.pid("Process[pid=42, hasExited=false]") == 42,
                     "child PID parsed");

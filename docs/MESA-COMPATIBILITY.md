@@ -50,6 +50,8 @@ python3 scripts/check-adreno-blend.py --serial DEVICE_SERIAL
 
 ## 启动失败诊断
 
+诊断导出的文件结构、会话隔离、去重及证据边界见 [会话日志与诊断导出](SESSION-DIAGNOSTICS.md)。优先查看 `summary.json` 和 `archive-info.json`，再对照本次会话的 `mesa.log`、`engine-stdout.log` 与 `direct-present-report.txt`。
+
 `StartupFailure` 只读取本次启动追加的游戏日志。确认窗口或 OpenGL 上下文创建失败后，启动器结束自己的失败子进程、保留诊断并返回主页，避免错误对话框藏在 Surface 后而长期黑屏。历史日志不会终止新会话。修复了会话采样计数器被重复递增导致 `outputTail` 一直无法更新的问题。
 
 主机回归覆盖历史日志隔离、普通启动不误报、EGL 窗口失败、OpenGL 上下文失败。设备验证分别检查游戏初始化日志、`direct-present-report.txt` 中的真实 AHB 出帧，以及屏幕画面；单独的 EGL/进程成功不作为游戏画面成功证据。

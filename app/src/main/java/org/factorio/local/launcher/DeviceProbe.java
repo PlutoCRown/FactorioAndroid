@@ -9,9 +9,10 @@ import android.system.*;
 import org.json.*;
 
 final class DeviceProbe {
-    static JSONObject collect(Context context) throws Exception {
+    static JSONObject identity() throws Exception {
         JSONObject root = new JSONObject();
         root.put("schema", 1);
+        root.put("collectedAtEpochMillis", System.currentTimeMillis());
         root.put("model", Build.MODEL);
         root.put("manufacturer", Build.MANUFACTURER);
         root.put("device", Build.DEVICE);
@@ -19,8 +20,17 @@ final class DeviceProbe {
         root.put("sdkInt", Build.VERSION.SDK_INT);
         root.put("displayBuild", Build.DISPLAY);
         root.put("abis", new JSONArray(Build.SUPPORTED_ABIS));
-        root.put("pageSize", Os.sysconf(OsConstants._SC_PAGESIZE));
-        root.put("kernel", Os.uname().release);
+        try {
+            root.put("pageSize", Os.sysconf(OsConstants._SC_PAGESIZE));
+            root.put("kernel", Os.uname().release);
+        } catch (Exception unavailable) {
+            root.put("systemInfoError", unavailable.getClass().getSimpleName());
+        }
+        return root;
+    }
+
+    static JSONObject collect(Context context) throws Exception {
+        JSONObject root = identity();
         ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
         ((ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE))
                 .getMemoryInfo(memory);
