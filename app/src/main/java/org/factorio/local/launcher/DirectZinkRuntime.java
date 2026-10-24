@@ -8,7 +8,7 @@ import org.json.*;
 
 /** Separate GNU process only; none of these libraries is loaded into ART. */
 final class DirectZinkRuntime {
-    static JSONObject prepare(Context context) throws Exception {
+    static JSONObject prepare(Context context, boolean maliRequested) throws Exception {
         JSONObject manifest;
         try (InputStream in = context.getAssets().open("direct-zink.json");
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -22,7 +22,8 @@ final class DirectZinkRuntime {
         }
         if (manifest.optInt("schema", 1) != 1)
             throw new IOException("Unsupported direct runtime manifest schema");
-        boolean compatibleMesa = MesaRuntime.apply(context, manifest);
+        GraphicsDriver driver = GraphicsDriver.current();
+        boolean compatibleMesa = MesaRuntime.apply(manifest, driver, maliRequested);
         String mesaVersion = compatibleMesa ? MesaRuntime.VERSION : "26.3.0-devel";
         File directory =
                 new File(
@@ -96,7 +97,11 @@ final class DirectZinkRuntime {
                 .put("vendorFile", vendor.getAbsolutePath())
                 .put("desktopMesa", mesaVersion)
                 .put("mesaSource", compatibleMesa ? MesaRuntime.SOURCE : JSONObject.NULL)
-                .put("adrenoCompatibility", compatibleMesa)
+                .put("compatibleMesa", compatibleMesa)
+                .put("graphicsDriver", driver.name().toLowerCase(Locale.ROOT))
+                .put("adrenoCompatibility", driver == GraphicsDriver.ADRENO)
+                .put("maliCompatibility", compatibleMesa && driver == GraphicsDriver.MALI)
+                .put("maliCompatibilityRequested", maliRequested)
                 .put("directory", directory.getAbsolutePath())
                 .put("tlsPreload", new File(directory, "librea_gnu_tls.so").getAbsolutePath())
                 .put("linkerDirectory", linker.getAbsolutePath())
@@ -129,21 +134,8 @@ final class DirectZinkRuntime {
                 "HYBRIS_LD_LIBRARY_PATH",
                 "/system/lib64:/vendor/lib64:/apex/com.android.runtime/lib64:/apex/com.android.runtime/lib64/bionic");
         env.put("LIBVULKAN", "/system/lib64/libvulkan.so");
-        if (maliGlesPresent()) env.put("HYBRIS_MALI_MMUD_SKIP_LOADER_CHECK", "0");
+        if ("mali".equals(runtime.optString("graphicsDriver")))
+            env.put("HYBRIS_MALI_MMUD_SKIP_LOADER_CHECK", "0");
         if (runtime.optBoolean("adrenoCompatibility")) env.put("MESA_GL_VERSION_OVERRIDE", "3.3");
-    }
-
-    /** The property hook lives inside libGLES_mali.so. Other GPUs do not load it. */
-    private static boolean maliGlesPresent() {
-        String[] paths = {
-            "/vendor/lib64/egl/libGLES_mali.so",
-            "/vendor/lib/egl/libGLES_mali.so",
-            "/vendor/lib64/libGLES_mali.so",
-            "/vendor/lib/libGLES_mali.so",
-            "/system/vendor/lib64/egl/libGLES_mali.so",
-            "/odm/lib64/egl/libGLES_mali.so"
-        };
-        for (String path : paths) if (new File(path).isFile()) return true;
-        return false;
     }
 }

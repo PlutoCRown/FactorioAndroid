@@ -15,9 +15,9 @@ public final class DirectPresentActivity {
 
     private static native void present(Surface surface, String socket, String report);
 
-    public static void startGameSurface(Context context, Surface surface) {
+    public static void startGameSurface(Context context, Surface surface, boolean maliRequested) {
         System.loadLibrary(
-                MesaRuntime.compatibleDevice()
+                MesaRuntime.compatibleDevice(maliRequested)
                         ? "rea_compat_direct_present"
                         : "rea_direct_present");
         final String socket =

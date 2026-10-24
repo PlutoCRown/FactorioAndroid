@@ -11,6 +11,8 @@ internal data class LauncherState(
     val scale: Int = 100,
     val preset: String = "compat",
     val spriteLoadingLimit: Int = 1,
+    val maliDevice: Boolean = false,
+    val maliMesaCompatibility: Boolean = false,
     val gpu: String? = null,
     val api: String? = null,
     val graphicsPassed: Boolean? = null,

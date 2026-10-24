@@ -162,6 +162,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
         }
     }
 
+    public void setMaliMesaCompatibility(boolean enabled) {
+        if (!busy && GraphicsDriver.current() == GraphicsDriver.MALI) {
+            getPreferences(0).edit().putBoolean("maliMesaCompatibility", enabled).apply();
+            renderPage();
+        }
+    }
+
     public void setTouchMouseEnabled(boolean enabled) {
         if (!busy) {
             getPreferences(0).edit().putBoolean("touchMouseSimulation", enabled).apply();
@@ -488,6 +495,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                         .putExtra(
                                 "spriteLoadingLimit",
                                 getPreferences(0).getInt("spriteLoadingLimit", 1))
+                        .putExtra(
+                                "maliMesaCompatibility",
+                                getPreferences(0).getBoolean("maliMesaCompatibility", false))
                         .putExtra(
                                 "graphicsPreset",
                                 getPreferences(0).getString("graphicsPreset", "compat"));

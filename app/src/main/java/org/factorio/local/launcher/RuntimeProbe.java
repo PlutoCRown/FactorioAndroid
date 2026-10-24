@@ -470,7 +470,9 @@ public final class RuntimeProbe {
         JSONObject directRuntime = null, dependencies = null;
         if (withDisplay) {
             dependencies = RuntimeLibraries.prepare(context);
-            directRuntime = DirectZinkRuntime.prepare(context);
+            directRuntime =
+                    DirectZinkRuntime.prepare(
+                            context, control != null && control.maliMesaCompatibility());
             libraryPath =
                     directRuntime.getString("directory")
                             + ":"

@@ -200,7 +200,8 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     new GameSession(
                             getIntent().getStringExtra("graphicsPreset"),
                             getIntent().getIntExtra("spriteLoadingLimit", 1),
-                            virtualGamepad);
+                            virtualGamepad,
+                            getIntent().getBooleanExtra("maliMesaCompatibility", false));
             updateBackgroundPause();
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -220,6 +221,9 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                             .put(
                                     "spriteLoadingLimit",
                                     getIntent().getIntExtra("spriteLoadingLimit", 1))
+                            .put(
+                                    "maliMesaCompatibility",
+                                    getIntent().getBooleanExtra("maliMesaCompatibility", false))
                             .put(
                                     "graphicsPreset",
                                     manualSession
@@ -343,7 +347,11 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                                                                                     .startGameSurface(
                                                                                             getApplicationContext(),
                                                                                             h
-                                                                                                    .getSurface());
+                                                                                                    .getSurface(),
+                                                                                            getIntent()
+                                                                                                    .getBooleanExtra(
+                                                                                                            "maliMesaCompatibility",
+                                                                                                            false));
                                                                             directSurfaceReady =
                                                                                     true;
                                                                             updateBackgroundPause();

@@ -15,7 +15,9 @@
 3. **交换链与窗口透明度是否匹配。** 原 WSI 在设备同时支持 RGBA/BGRA AHB 格式时只公布 `INHERIT`，Kopper 请求 `OPAQUE` 会导致交换链被拒绝。自有 WSI 与配套 Surface 接收器一起提供 OPAQUE：RGBA 使用 RGBX 原生缓冲，BGRA 在 GPU 采样输出时固定 alpha 为 1，避免游戏输出的透明度让整个画面被 Android 合成器隐藏。同步、释放栅栏、AHB 和 GPU 采样路径保持不变。
 4. **透明混合是否保留正确的目标颜色。** 已复现 Zink 与 Qualcomm 专有 Vulkan 驱动配合使用 `VK_EXT_color_write_enable` 时丢失目标颜色的问题。RGBA8 离屏缓冲先清为红色，再用 `ZERO / ONE_MINUS_SRC_ALPHA` 混合 alpha=0.25 的片元，预期得到 `191,0,0,255`，故障路径实际为 `0,0,0,0`。补丁在 Qualcomm 专有驱动上关闭 Zink 的动态颜色写入能力，使用静态管线颜色掩码，回归结果恢复到预期值。现有证据定位了出错路径，尚不足以将责任完全归于驱动内部或 Zink，也未界定受影响的型号和驱动版本。
 
-检测到 `/vendor/lib64/hw/vulkan.adreno.so` 时选择兼容运行库。其他设备继续选择基线 Mesa 和原 ICD。这个文件检查是当前的运行库选择策略，不等于对驱动完整能力的检测。48 个第三方原版运行库继续保留；APK 另带六个当前源码生成的自有组件、六个兼容 Mesa provider 及两个自有适配组件的兼容文件名，加上 AndroidX 路径库，共 63 个原生文件。
+检测到 `/vendor/lib64/hw/vulkan.adreno.so` 时自动选择兼容运行库。检测到 Mali 的 `libGLES_mali.so` 时，启动设置显示“Mali 图形兼容模式”，默认关闭、保持基线 Mesa；用户手动开启后才选择兼容运行库，下次启动生效，关闭后恢复基线。Mali 的常见 vendor/system-vendor/odm 路径由 `GraphicsDriver` 统一检查，同一次会话的开关值通过启动参数同时传给游戏端和 Android Surface 接收器，避免跨进程重新读取偏好设置导致选择不一致。其他设备继续选择基线 Mesa 和原 ICD，不受 Mali 开关影响。这个文件检查是当前的运行库选择策略，不等于对驱动完整能力的检测，也不代表所有 Mali 驱动均已实机验证。48 个第三方原版运行库继续保留；APK 另带六个当前源码生成的自有组件、六个兼容 Mesa provider 及两个自有适配组件的兼容文件名，加上 AndroidX 路径库，共 63 个原生文件。
+
+运行库在启动游戏前通过文件存在性检查和用户设置直接选定，不增加 GPU 能力探针、试启动或失败后的自动重试，每次仍只启动一个游戏进程。兼容库已随 APK 打包，不需要在用户手机上下载或编译。运行库切换可能改变驱动初始化、着色器编译耗时和渲染表现，实际性能与兼容性仍需实机验证。`MESA_GL_VERSION_OVERRIDE=3.3` 继续只用于 Adreno；Qualcomm 动态颜色写入补丁也仍只按 Qualcomm 专有 Vulkan 驱动 ID 生效，不会因 Mali 选择兼容运行库而扩大补丁条件。Mali 原有的 hybris 环境设置独立于开关保留。诊断分别记录 `compatibleMesa`、`graphicsDriver`、`adrenoCompatibility`、`maliCompatibility` 和 `maliCompatibilityRequested`。
 
 兼容 provider 从固定的 `taowen/mesa` 源码构建，并应用工程内的 `native-input/mesa-compat/qualcomm-static-color-write.patch`。依赖版本、源码提交、构建工具和 Debian 头文件包的下载地址与 SHA-256 记录在 [构建输入清单](../native-input/mesa-compat/inputs.json)。这些版本标识用于复现和校验构建，不是游戏或设备兼容白名单。Debian 包只解包开发头文件，不运行安装脚本；链接使用工程已核验的 GNU 运行库。
 

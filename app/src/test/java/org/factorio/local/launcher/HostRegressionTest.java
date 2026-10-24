@@ -33,6 +33,7 @@ public final class HostRegressionTest {
     @Test
     public void graphics() throws Exception {
         run("org.factorio.local.launcher.LiveGraphicsTests");
+        run("org.factorio.local.launcher.GraphicsDriverTests");
         run("org.factorio.local.launcher.SessionLogsTests");
     }
 

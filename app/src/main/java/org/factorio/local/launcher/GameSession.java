@@ -123,16 +123,27 @@ public final class GameSession implements AutoCloseable {
     private final String graphicsPreset;
     private final int spriteLoadingLimit;
     private final boolean virtualGamepad;
+    private final boolean maliMesaCompatibility;
 
     public GameSession(String preset, int loadingLimit) {
         this(preset, loadingLimit, false);
     }
 
     public GameSession(String preset, int loadingLimit, boolean virtualGamepad) {
+        this(preset, loadingLimit, virtualGamepad, false);
+    }
+
+    public GameSession(
+            String preset, int loadingLimit, boolean virtualGamepad, boolean maliCompatibility) {
+        this.maliMesaCompatibility = maliCompatibility;
         this.virtualGamepad = virtualGamepad;
         graphicsPreset = preset == null ? "compat" : preset;
         spriteLoadingLimit =
                 GameProfileConfig.validSpriteLoadingLimit(loadingLimit) ? loadingLimit : 1;
+    }
+
+    boolean maliMesaCompatibility() {
+        return maliMesaCompatibility;
     }
 
     boolean virtualGamepadEnabled() {

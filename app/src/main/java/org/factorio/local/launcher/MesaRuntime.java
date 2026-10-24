@@ -1,6 +1,5 @@
 package org.factorio.local.launcher;
 
-import android.content.Context;
 import java.io.*;
 import java.util.*;
 import org.json.*;
@@ -10,14 +9,15 @@ final class MesaRuntime {
     static final String VERSION = "26.1.0-devel";
     static final String SOURCE = "ba042a8e79513c87006f4dd2dc15103724c26cfc";
 
-    static boolean compatibleDevice() {
-        return new File("/vendor/lib64/hw/vulkan.adreno.so").isFile();
+    static boolean compatibleDevice(boolean maliRequested) {
+        return GraphicsDriver.current().compatibleMesa(maliRequested);
     }
 
-    static boolean apply(Context context, JSONObject manifest) throws Exception {
-        if (!compatibleDevice()) return false;
+    static boolean apply(JSONObject manifest, GraphicsDriver driver, boolean maliRequested)
+            throws Exception {
+        if (!driver.compatibleMesa(maliRequested)) return false;
         // BuildMesaNative verifies the coherent provider set before packaging.
-        // Provider selection uses the loaded driver family, never a device model or game hash.
+        // Provider selection uses driver files, never a device model or game hash.
         Set<String> expected =
                 new HashSet<>(
                         Arrays.asList(
