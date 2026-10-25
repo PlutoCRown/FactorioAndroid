@@ -369,7 +369,7 @@ class BuildLauncher {
                         + quote(versionName)
                         + ",\"versionCode\":"
                         + version.getProperty("factorioVersionCode")
-                        + ",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":48,\"projectNativeLibrariesVerified\":6,\"compatibilityLibrariesVerified\":8,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"keyboardHintAdaptersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["
+                        + ",\"buildType\":\"release\",\"ui\":\"Kotlin / Jetpack Compose / Material 3\",\"nativeLibraries\":true,\"nativeLibrariesVerified\":48,\"projectNativeLibrariesVerified\":6,\"compatibilityLibrariesVerified\":8,\"traditionalMesaLibrariesVerified\":5,\"androidxNativeLibrariesVerified\":1,\"keyboardNativeHelpersVerified\":1,\"keyboardHintAdaptersVerified\":1,\"testGroupsPassed\":8,\"buildTools\":\"36.0.0\",\"packages\":["
                         + String.join(",", packages)
                         + "]}";
         Files.writeString(artifacts.resolve("build-result.json"), result + "\n");

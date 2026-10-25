@@ -13,6 +13,8 @@ The local build restores the following separately pinned runtime components. The
 - Project-owned `native-window-surface.c` replaces the upstream TAWC-DRI transport with a private AHardwareBuffer socket. `direct-present-server.c` samples that GPU image into the Android Surface. Release fences and consumer completion acknowledgement remain.
 - Selected [Khronos Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) at commit `952f776f6573aafbb62ea717d871cd1d6816c387` and Android Open Source Project ABI headers retain their source notices. These are build headers, not proprietary driver binaries.
 
+- Traditional-renderpass Zink providers are built from the official [Mesa 23.1.9 source archive](https://archive.mesa3d.org/mesa-23.1.9.tar.xz). Source inputs and the four local build, presentation, color-format and texel-buffer fixes are retained in `native-input/mesa-legacy/`. Mesa component licenses remain applicable; source-build and packaging commands are documented in that directory. These providers are selected from actual Vulkan features rather than a device-model list.
+
 ## GNU runtime, windows and Java dependency
 
 - GNU C Library 2.44, Android-adapted [Termux glibc-packages](https://github.com/termux/glibc-packages/tree/main/gpkg/glibc), four unchanged libraries renamed to private packaged filenames. Hashes: `runtime-glibc.json`. Retained notices: `GLIBC-COPYRIGHT.txt`. These GNU libraries are used in a separate engine child, never loaded into ART with `System.loadLibrary`.
