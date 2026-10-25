@@ -10,7 +10,7 @@ API(dlopen) API(dlsym) API(dlerror) API(dlclose)
 #else
 API(pthread_mutex_lock) API(pthread_mutex_unlock) API(pthread_create)
 API(pthread_detach) API(pthread_cond_broadcast) API(pthread_cond_wait)
-API(strlen) API(strcpy) API(memcpy) API(memset) API(memcmp)
+API(strlen) API(strcpy) API(strcmp) API(snprintf) API(memcpy) API(memset) API(memcmp)
 API(fopen) API(setbuf) API(fwrite) API(fprintf) API(fclose)
 API(socket) API(unlink) API(bind) API(listen) API(__errno)
 API(close) API(accept4) API(send) API(recv) API(recvmsg)

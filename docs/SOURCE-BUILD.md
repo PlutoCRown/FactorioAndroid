@@ -23,13 +23,14 @@ java scripts/RestoreRuntime.java
 | 产物 | 参与编译的实现及头文件 | 编译入口与目标 |
 | --- | --- | --- |
 | `librea_direct_icd.so` | `native-input/direct-wsi/upstream/icd.c`、`instance.c`、`device.c`、`swapchain.c`、`wsi.c`；`native-input/direct-wsi/native-window-surface.c`；同目录 `upstream/*.h`、`physical_commands.inc` 与 `include/` 声明 | `BuildImeNative.directIcd()`，`aarch64-linux-gnu.2.38`，共享库，链接已恢复的 hybris/hardware/gralloc/ui/XCB/Xlib-XCB 接口 |
-| `librea_direct_present.so` | `native-input/direct-present-server.c`；`native-input/direct-present-include/EGL/{egl.h,eglext.h,eglplatform.h}`、`KHR/khrplatform.h`；Android 公共头文件 | `scripts/BuildAndroidReceiver.java`，`aarch64-linux-android.26`，共享库 |
+| `librea_direct_present.so` | `native-input/direct-present-server.c`、`native-input/graphics-capabilities.c`；`native-input/direct-wsi/include/vulkan/`；`native-input/direct-present-include/EGL/{egl.h,eglext.h,eglplatform.h}`、`KHR/khrplatform.h`；Android 公共头文件 | `scripts/BuildAndroidReceiver.java`，`aarch64-linux-android.26`，共享库 |
 | `librea_gnu_tls.so` | `native-input/gnu-tls/bionic_tls.c`、`bionic_tls.h`、`logging.h`、`config.h` | `scripts/BuildImeNative.java`，GNU ARM64 共享库，initial-exec TLS 与 `nodelete` |
 | `librea_gamepad_bridge.so` | `native-input/gamepad-bridge.c`、`native-input/sdl-symbols.h` | `scripts/BuildImeNative.java`，GNU ARM64 共享库，链接 dl/pthread |
 | `librea_ime_opener.so` | `native-input/ime/keyboard-opener.c` | `scripts/BuildImeNative.java`，`aarch64-linux-musl` 静态可执行程序，以 `.so` 名打包 |
 | `librea_ime_hint.so` | `native-input/ime/sdl-hint-guard.c`、`native-input/sdl-symbols.h` | `scripts/BuildImeNative.java`，GNU ARM64 共享库，链接 dl/pthread |
 | `librea_compat_direct_icd.so` | 与 `librea_direct_icd.so` 相同的当前源码及编译产物 | `scripts/BuildMesaNative.java` 将本轮源码产物以兼容运行库名称暂存，不复用缓存中的旧 ICD |
 | `librea_compat_direct_present.so` | 与 `librea_direct_present.so` 相同的当前源码及编译产物 | `scripts/BuildMesaNative.java` 将本轮源码产物以兼容运行库名称暂存，不复用缓存中的旧接收器 |
+| `librea_legacy_mesa_{gallium,egl,glx,gbm,glapi}.so` | `native-input/mesa-legacy/inputs.json` 的 Mesa 23.1.9，加该目录四份补丁 | `scripts/build-legacy-mesa.py` 生成 GNU provider；`scripts/BuildLegacyMesaNative.java` 组装入 APK，见 [完整命令](../native-input/mesa-legacy/README.md) |
 | `librea_compat_mesa_{gallium,egl,glx,gbm,gbm_dri,dril}.so` | `native-input/mesa-compat/inputs.json` 指定的完整 Mesa 源码，加 `qualcomm-static-color-write.patch` | `scripts/build-mesa-runtime.py --providers-only`，GNU ARM64；下节列出完整命令和输出 |
 
 普通源码构建命令：
@@ -106,11 +107,11 @@ java scripts/BuildMesaNative.java
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1
 ```
 
-`BuildMesaNative` 核对六个 provider，再使用本轮源码生成的 ICD 和接收器组成完整的八文件兼容运行库，输出到 `app/build/generated/mesa/`。不要求从别人电脑或发布页取得既有兼容 ZIP。Windows 原生编译 Mesa 本体的路径尚未接入；可在 macOS/Linux 生成 GNU provider，Windows 完成其余源码与 APK 构建。
+`BuildMesaNative` 核对六个 provider，再使用本轮源码生成的 ICD 和接收器组成完整的八文件兼容运行库，输出到 `app/build/generated/mesa/`。不要求从别人电脑或发布页取得既有兼容 ZIP。`BuildMesaNative` 同时通过 `BuildLegacyMesaNative.java` 组装传统路径的五个 provider，Windows 需要另外准备源码构建的 `.cache/mesa-legacy-providers.zip` 或 `FACTORIO_LEGACY_MESA_ARCHIVE`；Linux/macOS 缺缓存时自动源码构建。完整来源、补丁和命令见 [传统路径说明](../native-input/mesa-legacy/README.md)。Windows 原生编译 Mesa 本体的路径尚未接入；可在 macOS/Linux 生成 GNU provider，Windows 完成其余源码与 APK 构建。
 
 ## APK 暂存及检查
 
-Gradle 的 `buildImeNative`、`buildMesaNative`、`stageGameRuntime` 是实际入口。`stageGameRuntime` 从恢复目录排除四个可能残留的自有文件名，避免旧 `jniLibs` 副本覆盖本轮产物。`scripts/BuildLauncher.java` 运行主机检查，再逐项核对基线、八个兼容组件、六个本轮自有组件、AndroidX 路径库和 XKB。
+Gradle 的 `buildImeNative`、`buildMesaNative`、`stageGameRuntime` 是实际入口。`stageGameRuntime` 从恢复目录排除四个可能残留的自有文件名，避免旧 `jniLibs` 副本覆盖本轮产物。`scripts/BuildLauncher.java` 运行主机检查，再逐项核对基线、八个兼容组件、五个传统 Mesa provider、六个本轮自有组件、AndroidX 路径库和 XKB。
 
 完整构建仍是：
 

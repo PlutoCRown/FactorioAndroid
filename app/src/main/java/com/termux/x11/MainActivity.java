@@ -200,8 +200,7 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                     new GameSession(
                             getIntent().getStringExtra("graphicsPreset"),
                             getIntent().getIntExtra("spriteLoadingLimit", 1),
-                            virtualGamepad,
-                            getIntent().getBooleanExtra("maliMesaCompatibility", false));
+                            virtualGamepad);
             updateBackgroundPause();
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -222,9 +221,6 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                             .put(
                                     "spriteLoadingLimit",
                                     getIntent().getIntExtra("spriteLoadingLimit", 1))
-                            .put(
-                                    "maliMesaCompatibility",
-                                    getIntent().getBooleanExtra("maliMesaCompatibility", false))
                             .put(
                                     "graphicsPreset",
                                     manualSession
@@ -331,6 +327,12 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                                                                                     }));
                                                     gameSession.setKeyboardEnvironment(
                                                             keyboardBridge.environment());
+                                                }
+                                                if (manualSession
+                                                        || getIntent()
+                                                                .getBooleanExtra(
+                                                                        "windowPresentationProbe",
+                                                                        false)) {
                                                     SurfaceView directSurface =
                                                             new SurfaceView(this);
                                                     directSurface.setZOrderMediaOverlay(true);
@@ -349,13 +351,13 @@ public final class MainActivity extends androidx.activity.ComponentActivity {
                                                                                             getApplicationContext(),
                                                                                             h
                                                                                                     .getSurface(),
-                                                                                            getIntent()
-                                                                                                    .getBooleanExtra(
-                                                                                                            "maliMesaCompatibility",
-                                                                                                            false),
-                                                                                            gameSession
-                                                                                                    .presentationLog(
-                                                                                                            getFilesDir()));
+                                                                                            manualSession
+                                                                                                    ? gameSession
+                                                                                                            .presentationLog(
+                                                                                                                    getFilesDir())
+                                                                                                    : new File(
+                                                                                                            getFilesDir(),
+                                                                                                            "window-presentation-report.txt"));
                                                                             directSurfaceReady =
                                                                                     true;
                                                                             updateBackgroundPause();

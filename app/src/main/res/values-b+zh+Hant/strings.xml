@@ -165,6 +165,4 @@
     <string name="virtual_hide" formatted="false">隱藏</string>
     <string name="virtual_show" formatted="false">顯示</string>
     <string name="virtual_gamepad_help" formatted="false">左搖桿移動，右搖桿控制游標或瞄準。ABXY、方向鍵、LB/RB、LT/RT、L3/R3 遵循遊戲中的手把綁定。預設 Back 開啟地圖，Start 開啟選單，LB 開啟快捷面板。輕點 LT ◇ 或 RT ◇ 可鎖定扳機，方便組合操作；再次輕點 ● 放開。＋ 展開 Guide、M1、P1–P4 和 TP；預設 P4 開啟藍圖庫。可以在遊戲設定中重新綁定這些按鍵。隱藏會放開全部按鍵，頂部工具列仍可操作。離開應用程式、失去焦點或彈出輸入法時也會放開按鍵。</string>
-    <string name="mali_mesa_compatibility" formatted="false">Mali 圖形相容模式</string>
-    <string name="mali_mesa_compatibility_hint" formatted="false">預設關閉。無法啟動或畫面異常時可嘗試開啟，下次啟動生效；若畫面或效能變差，可關閉恢復。</string>
 </resources>

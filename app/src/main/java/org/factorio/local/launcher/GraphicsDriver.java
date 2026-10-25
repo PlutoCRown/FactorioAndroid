@@ -27,7 +27,7 @@ enum GraphicsDriver {
         return OTHER;
     }
 
-    boolean compatibleMesa(boolean maliRequested) {
-        return this == ADRENO || (this == MALI && maliRequested);
+    boolean compatibleMesa() {
+        return this == ADRENO;
     }
 }

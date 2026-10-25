@@ -248,7 +248,7 @@ public final class SessionLogsTests {
                     new JSONObject(member(fresh, "engine-result.json"))
                             .getJSONObject("extraEnvironment")
                             .getString("MESA_LOG_FILE")
-                            .startsWith("$APP_FILES/"),
+                            .startsWith("$APP_FILES" + File.separator),
                     "runtime paths remain useful as relative paths");
             check(
                     new JSONObject(member(fresh, "last-process-exits.json"))

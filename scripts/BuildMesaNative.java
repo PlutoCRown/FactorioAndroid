@@ -56,6 +56,7 @@ class BuildMesaNative {
                         .getBytes(java.nio.charset.StandardCharsets.UTF_8));
         for (String name :
                 List.of(
+                        "native-input/graphics-capabilities.c",
                         "native-input/mesa-compat/inputs.json",
                         "native-input/mesa-compat/qualcomm-static-color-write.patch",
                         "scripts/build-mesa-runtime.py")) {
@@ -179,6 +180,20 @@ class BuildMesaNative {
             if (!Files.isRegularFile(target) || !Arrays.equals(Files.readAllBytes(target), data))
                 Files.write(target, data);
         }
+        Process legacy =
+                new ProcessBuilder(
+                                Path.of(
+                                                System.getProperty("java.home"),
+                                                "bin",
+                                                System.getProperty("os.name").startsWith("Windows")
+                                                        ? "java.exe"
+                                                        : "java")
+                                        .toString(),
+                                root.resolve("scripts/BuildLegacyMesaNative.java").toString())
+                        .directory(root.toFile())
+                        .inheritIO()
+                        .start();
+        if (legacy.waitFor() != 0) throw new IOException("Legacy Mesa assembly failed");
         System.out.println(
                 "Mesa compatibility providers verified: "
                         + NAMES.size()

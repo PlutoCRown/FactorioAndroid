@@ -11,12 +11,25 @@ public final class GraphicsDriverTests {
     }
 
     public static void main(String[] args) {
+        check(
+                !GraphicsCapabilities.needsLegacy(false, false, false),
+                "Unknown capabilities preserve existing selection");
+        check(
+                !GraphicsCapabilities.needsLegacy(true, true, true),
+                "Complete features keep current Mesa");
+        check(
+                GraphicsCapabilities.needsLegacy(true, false, true),
+                "Missing dynamic rendering selects traditional path");
+        check(
+                GraphicsCapabilities.needsLegacy(true, true, false),
+                "Missing null descriptors selects traditional path");
+        check(
+                GraphicsCapabilities.needsLegacy(true, false, false),
+                "Both missing select one coherent traditional path");
         GraphicsDriver adreno = GraphicsDriver.detect("/vendor/lib64/hw/vulkan.adreno.so"::equals);
         check(
-                adreno == GraphicsDriver.ADRENO
-                        && adreno.compatibleMesa(false)
-                        && adreno.compatibleMesa(true),
-                "Adreno keeps compatibility providers regardless of Mali preference");
+                adreno == GraphicsDriver.ADRENO && adreno.compatibleMesa(),
+                "Adreno keeps its existing compatibility providers");
         for (String path :
                 new String[] {
                     "/vendor/lib64/egl/libGLES_mali.so",
@@ -28,16 +41,14 @@ public final class GraphicsDriverTests {
                 }) {
             GraphicsDriver mali = GraphicsDriver.detect(path::equals);
             check(
-                    mali == GraphicsDriver.MALI && !mali.compatibleMesa(false),
-                    "Mali keeps baseline providers by default: " + path);
-            check(mali.compatibleMesa(true), "Mali can opt into compatibility providers: " + path);
+                    mali == GraphicsDriver.MALI && !mali.compatibleMesa(),
+                    "Mali detection does not select the ineffective compatibility providers: "
+                            + path);
         }
         GraphicsDriver other = GraphicsDriver.detect(path -> false);
         check(
-                other == GraphicsDriver.OTHER
-                        && !other.compatibleMesa(false)
-                        && !other.compatibleMesa(true),
-                "Other drivers ignore Mali preference and keep baseline providers");
+                other == GraphicsDriver.OTHER && !other.compatibleMesa(),
+                "Other drivers keep baseline providers");
         Set<String> both =
                 Set.of("/vendor/lib64/hw/vulkan.adreno.so", "/vendor/lib64/egl/libGLES_mali.so");
         check(

@@ -86,8 +86,7 @@ final class SessionLogExport {
                 "renderSize",
                 "desktopOpenGLInitialized",
                 "engineInitializationLogged",
-                "graphicsPreset",
-                "maliMesaCompatibility");
+                "graphicsPreset");
         if (device != null) {
             JSONObject info = new JSONObject();
             pick(

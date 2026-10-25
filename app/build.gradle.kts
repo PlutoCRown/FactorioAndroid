@@ -128,6 +128,7 @@ val buildImeNative by
         inputs.dir(rootProject.file("native-input/gnu-tls"))
         inputs.dir(rootProject.file("native-input/direct-present-include"))
         inputs.file(rootProject.file("native-input/direct-present-server.c"))
+        inputs.file(rootProject.file("native-input/graphics-capabilities.c"))
         outputs.dir(layout.buildDirectory.dir("generated/ime"))
     }
 val buildMesaNative by
@@ -156,7 +157,7 @@ val stageGameRuntime by
             )
         }
         from(layout.buildDirectory.dir("generated/mesa/jni")) {
-            include("arm64-v8a/librea_compat_*.so")
+            include("arm64-v8a/librea_compat_*.so", "arm64-v8a/librea_legacy_*.so")
         }
         into(layout.buildDirectory.dir("generated/game-runtime/jni"))
     }

@@ -8,7 +8,7 @@ import org.json.*;
 
 /** Separate GNU process only; none of these libraries is loaded into ART. */
 final class DirectZinkRuntime {
-    static JSONObject prepare(Context context, boolean maliRequested) throws Exception {
+    static JSONObject prepare(Context context) throws Exception {
         JSONObject manifest;
         try (InputStream in = context.getAssets().open("direct-zink.json");
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -23,12 +23,17 @@ final class DirectZinkRuntime {
         if (manifest.optInt("schema", 1) != 1)
             throw new IOException("Unsupported direct runtime manifest schema");
         GraphicsDriver driver = GraphicsDriver.current();
-        boolean compatibleMesa = MesaRuntime.apply(manifest, driver, maliRequested);
-        String mesaVersion = compatibleMesa ? MesaRuntime.VERSION : "26.3.0-devel";
+        JSONObject capabilities = GraphicsCapabilities.current();
+        boolean legacyMesa = GraphicsCapabilities.needsLegacy();
+        String legacyVersion = legacyMesa ? LegacyMesaRuntime.apply(context, manifest) : null;
+        boolean compatibleMesa = !legacyMesa && MesaRuntime.apply(manifest, driver);
+        String mesaVersion =
+                legacyMesa ? legacyVersion : compatibleMesa ? MesaRuntime.VERSION : "26.3.0-devel";
         File directory =
                 new File(
                         context.getFilesDir(),
-                        "runtime/direct-zink" + (compatibleMesa ? "-compat" : ""));
+                        "runtime/direct-zink"
+                                + (legacyMesa ? "-legacy" : compatibleMesa ? "-compat" : ""));
         File linker = new File(directory, "linker");
         if (!linker.isDirectory() && !linker.mkdirs())
             throw new IOException("Cannot create direct runtime");
@@ -91,23 +96,31 @@ final class DirectZinkRuntime {
         long until = android.os.SystemClock.uptimeMillis() + 15000;
         while (!socket.exists() && android.os.SystemClock.uptimeMillis() < until) Thread.sleep(50);
         if (!socket.exists()) throw new IOException("Android Surface receiver unavailable");
-        return new JSONObject()
-                .put("icdFile", icd.getAbsolutePath())
-                .put("surfaceSocket", socket.getAbsolutePath())
-                .put("vendorFile", vendor.getAbsolutePath())
-                .put("desktopMesa", mesaVersion)
-                .put("mesaSource", compatibleMesa ? MesaRuntime.SOURCE : JSONObject.NULL)
-                .put("compatibleMesa", compatibleMesa)
-                .put("graphicsDriver", driver.name().toLowerCase(Locale.ROOT))
-                .put("adrenoCompatibility", driver == GraphicsDriver.ADRENO)
-                .put("maliCompatibility", compatibleMesa && driver == GraphicsDriver.MALI)
-                .put("maliCompatibilityRequested", maliRequested)
-                .put("directory", directory.getAbsolutePath())
-                .put("tlsPreload", new File(directory, "librea_gnu_tls.so").getAbsolutePath())
-                .put("linkerDirectory", linker.getAbsolutePath())
-                .put("virglUsed", false)
-                .put("presentationCpuReadbackRequired", false)
-                .put("presentationPath", "gpu-ahb-android-surface");
+        JSONObject runtime =
+                new JSONObject()
+                        .put("icdFile", icd.getAbsolutePath())
+                        .put("surfaceSocket", socket.getAbsolutePath())
+                        .put("vendorFile", vendor.getAbsolutePath())
+                        .put("desktopMesa", mesaVersion)
+                        .put(
+                                "mesaSource",
+                                legacyMesa
+                                        ? "mesa-" + legacyVersion
+                                        : compatibleMesa ? MesaRuntime.SOURCE : JSONObject.NULL)
+                        .put("legacyMesa", legacyMesa)
+                        .put("vulkanCapabilities", capabilities)
+                        .put("compatibleMesa", compatibleMesa)
+                        .put("graphicsDriver", driver.name().toLowerCase(Locale.ROOT))
+                        .put("adrenoCompatibility", driver == GraphicsDriver.ADRENO)
+                        .put("directory", directory.getAbsolutePath())
+                        .put(
+                                "tlsPreload",
+                                new File(directory, "librea_gnu_tls.so").getAbsolutePath())
+                        .put("linkerDirectory", linker.getAbsolutePath())
+                        .put("virglUsed", false)
+                        .put("presentationCpuReadbackRequired", false)
+                        .put("presentationPath", "gpu-ahb-android-surface");
+        return GraphicsRuntimeEvaluation.apply(context, runtime);
     }
 
     static void environment(JSONObject runtime, Map<String, String> env) throws Exception {
@@ -136,6 +149,11 @@ final class DirectZinkRuntime {
         env.put("LIBVULKAN", "/system/lib64/libvulkan.so");
         if ("mali".equals(runtime.optString("graphicsDriver")))
             env.put("HYBRIS_MALI_MMUD_SKIP_LOADER_CHECK", "0");
-        if (runtime.optBoolean("adrenoCompatibility")) env.put("MESA_GL_VERSION_OVERRIDE", "3.3");
+        if (runtime.optBoolean("adrenoCompatibility") || runtime.optBoolean("legacyMesa"))
+            env.put("MESA_GL_VERSION_OVERRIDE", "3.3");
+        if (runtime.has("evaluationZinkDebug"))
+            env.put("ZINK_DEBUG", runtime.getString("evaluationZinkDebug"));
+        if (runtime.has("evaluationGlVersionOverride"))
+            env.put("MESA_GL_VERSION_OVERRIDE", runtime.getString("evaluationGlVersionOverride"));
     }
 }

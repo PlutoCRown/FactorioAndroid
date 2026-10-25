@@ -1,0 +1,17 @@
+{
+  "source": {
+    "version": "23.1.9",
+    "url": "https://archive.mesa3d.org/mesa-23.1.9.tar.xz",
+    "file": "mesa-legacy-23.1.9.tar.xz",
+    "sha256": "295ba27c28146ed09214e8ce79afa1659edf9d142decc3c91f804552d64f7510"
+  },
+  "tooling": "../mesa-compat/inputs.json",
+  "headers": [
+    {
+      "url": "https://deb.debian.org/debian/pool/main/libx/libxfixes/libxfixes-dev_6.0.0-2+b4_arm64.deb",
+      "file": "libxfixes-dev_6.0.0-2+b4_arm64.deb",
+      "sha256": "e74bfebdf2fda7e2d4ce82ea5e9f9affa0b32e3dff92432ab246d8424fe93371",
+      "bytes": 22864
+    }
+  ]
+}

@@ -111,28 +111,6 @@ internal fun LauncherSettings(s: LauncherState, actions: LauncherActions) {
         )
         Text("Zink · Android Surface", color = Copper)
         Hint(R.string.renderer_hint)
-        if (s.maliDevice) {
-            HorizontalDivider()
-            Row(
-                Modifier.fillMaxWidth()
-                    .toggleable(
-                        s.maliMesaCompatibility,
-                        enabled = !s.busy,
-                        role = Role.Switch,
-                        onValueChange = actions.setMaliMesaCompatibility,
-                    )
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.mali_mesa_compatibility),
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Switch(checked = s.maliMesaCompatibility, onCheckedChange = null, enabled = !s.busy)
-            }
-            Hint(R.string.mali_mesa_compatibility_hint)
-        }
     }
     FactoryButton(R.string.back_home, true, true) { actions.action("home") }
 }

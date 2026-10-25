@@ -474,9 +474,7 @@ public final class RuntimeProbe {
         JSONObject directRuntime = null, dependencies = null;
         if (withDisplay) {
             dependencies = RuntimeLibraries.prepare(context);
-            directRuntime =
-                    DirectZinkRuntime.prepare(
-                            context, control != null && control.maliMesaCompatibility());
+            directRuntime = DirectZinkRuntime.prepare(context);
             libraryPath =
                     directRuntime.getString("directory")
                             + ":"
@@ -561,6 +559,7 @@ public final class RuntimeProbe {
                 }
                 Files.write(config.toPath(), settings.getBytes(StandardCharsets.UTF_8));
             }
+            if (manual) config = GraphicsRuntimeEvaluation.config(context, config);
             int renderWidth = 1280, renderHeight = 720;
             if (withDisplay) {
                 File geometryFile = new File(serverTemp, "render-size.json");

@@ -1,0 +1,11 @@
+--- a/src/gallium/drivers/zink/zink_context.c
++++ b/src/gallium/drivers/zink/zink_context.c
+@@ -900,7 +900,7 @@
+       if (bvci.offset + bvci.range >= res->base.b.width0)
+          bvci.range = VK_WHOLE_SIZE;
+    }
+-   uint64_t clamp = blocksize * screen->info.props.limits.maxTexelBufferElements;
++   uint64_t clamp = (uint64_t)blocksize * screen->info.props.limits.maxTexelBufferElements;
+    if (bvci.range == VK_WHOLE_SIZE && res->base.b.width0 > clamp)
+       bvci.range = clamp;
+    bvci.flags = 0;

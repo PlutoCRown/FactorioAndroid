@@ -124,3 +124,5 @@ EXPORT void Java_org_factorio_local_launcher_DirectPresentActivity_present(JNIEn
 EXPORT void Java_org_factorio_local_launcher_DirectPresentActivity_detach(JNIEnv *env,jclass clazz) {
  (void)env;(void)clazz;pthread_mutex_lock(&surface_mutex);ANativeWindow *old=current_window;current_window=NULL;surface_generation++;pthread_cond_broadcast(&surface_changed);pthread_mutex_unlock(&surface_mutex);release_window_ref(old);
 }
+
+#include "graphics-capabilities.c"

@@ -29,11 +29,13 @@ extern struct Geometry *xcb_get_geometry_reply(xcb_connection_t*,struct Cookie,v
 extern int xcb_connection_has_error(xcb_connection_t*);
 struct Buffer { ANativeWindowBuffer native;atomic_int refs;int held; };
 struct Owner { struct hybris_icd_window base;xcb_connection_t *connection;uint32_t window;int socket;pthread_mutex_t mutex;struct Buffer *pool[8];unsigned count;uint64_t frames; };
+struct BufferDescription { uint32_t width,height,layers,format;uint64_t usage;uint32_t stride,reserved0;uint64_t reserved1; };
 static int (*send_buffer)(const struct AHardwareBuffer*,int);
+static void (*describe_buffer)(const struct AHardwareBuffer*,struct BufferDescription*);
 static pthread_once_t sender_once=PTHREAD_ONCE_INIT;
 static void setup_sender(void) {
  void *h=hybris_dlopen("/system/lib64/libnativewindow.so",RTLD_NOW|RTLD_LOCAL);
- if(h)send_buffer=(void*)hybris_dlsym(h,"AHardwareBuffer_sendHandleToUnixSocket");
+ if(h){send_buffer=(void*)hybris_dlsym(h,"AHardwareBuffer_sendHandleToUnixSocket");describe_buffer=(void*)hybris_dlsym(h,"AHardwareBuffer_describe");}
 }
 static void retain(android_native_base_t *b){atomic_fetch_add(&((struct Buffer*)b)->refs,1);}
 static void release(android_native_base_t *b){struct Buffer *p=(void*)b;if(atomic_fetch_sub(&p->refs,1)==1){hybris_gralloc_release(p->native.handle,1);free(p);}}
@@ -62,6 +64,7 @@ static int dequeue(struct hybris_icd_window *base,int64_t timeout,ANativeWindowB
 static int queue(struct hybris_icd_window *base,ANativeWindowBuffer *native,int fd){
  int result=fence_wait(fd);if(result)return result;struct Owner *o=(void*)base;struct Buffer *b=(void*)native;
  struct AHardwareBuffer *ahb=hybris_gralloc_get_hardware_buffer(native->handle);if(!ahb)return -ENOTSUP;
+ if(!o->frames&&describe_buffer){struct BufferDescription desc={0};describe_buffer(ahb,&desc);fprintf(stderr,"REA_SURFACE buffer native-format=%d ahb-format=%u stride=%u usage=0x%llx\n",native->format,desc.format,desc.stride,(unsigned long long)desc.usage);}
  pthread_mutex_lock(&o->mutex);
  if(o->socket<0){
   o->socket=socket(AF_UNIX,SOCK_SEQPACKET|SOCK_CLOEXEC,0);struct sockaddr_un addr={.sun_family=AF_UNIX};strcpy(addr.sun_path,getenv("REA_DIRECT_SOCKET"));

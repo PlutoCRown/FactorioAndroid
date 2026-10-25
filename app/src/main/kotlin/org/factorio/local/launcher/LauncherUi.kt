@@ -23,7 +23,6 @@ class LauncherUi(private val host: MainActivity) {
             host::setRenderScale,
             host::setGraphicsPreset,
             host::setSpriteLoadingLimit,
-            host::setMaliMesaCompatibility,
         )
     private val memory =
         ActivityManager.MemoryInfo()
@@ -67,8 +66,6 @@ class LauncherUi(private val host: MainActivity) {
                 preferences.getInt("renderScalePercent", 100),
                 preferences.getString("graphicsPreset", "compat") ?: "compat",
                 preferences.getInt("spriteLoadingLimit", 1),
-                GraphicsDriver.current() == GraphicsDriver.MALI,
-                preferences.getBoolean("maliMesaCompatibility", false),
                 gl?.optString("glRenderer"),
                 gl?.optString("glVersion")?.let {
                     Regex("OpenGL ES\\s+\\d+\\.\\d+").find(it)?.value

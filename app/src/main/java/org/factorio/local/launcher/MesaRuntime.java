@@ -9,13 +9,12 @@ final class MesaRuntime {
     static final String VERSION = "26.1.0-devel";
     static final String SOURCE = "ba042a8e79513c87006f4dd2dc15103724c26cfc";
 
-    static boolean compatibleDevice(boolean maliRequested) {
-        return GraphicsDriver.current().compatibleMesa(maliRequested);
+    static boolean compatibleDevice() {
+        return GraphicsDriver.current().compatibleMesa();
     }
 
-    static boolean apply(JSONObject manifest, GraphicsDriver driver, boolean maliRequested)
-            throws Exception {
-        if (!driver.compatibleMesa(maliRequested)) return false;
+    static boolean apply(JSONObject manifest, GraphicsDriver driver) throws Exception {
+        if (!driver.compatibleMesa()) return false;
         // BuildMesaNative verifies the coherent provider set before packaging.
         // Provider selection uses driver files, never a device model or game hash.
         Set<String> expected =

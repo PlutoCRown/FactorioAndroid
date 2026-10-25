@@ -218,6 +218,26 @@ class BuildLauncher {
                     throw new IOException("Source-built payload differs: " + kind);
                 count++;
             }
+            Properties legacy = new Properties();
+            try (InputStream input =
+                    Files.newInputStream(
+                            root.resolve(
+                                    "app/build/generated/mesa/assets/legacy-mesa.properties"))) {
+                legacy.load(input);
+            }
+            for (String part : List.of("gallium", "egl", "glx", "gbm", "glapi")) {
+                String name = "librea_legacy_mesa_" + part + ".so";
+                ZipEntry member = zip.getEntry("lib/arm64-v8a/" + name);
+                if (member == null)
+                    throw new IOException("APK missing traditional Mesa provider: " + name);
+                byte[] data = zip.getInputStream(member).readAllBytes();
+                if (data.length != Long.parseLong(legacy.getProperty(name + ".bytes"))
+                        || !sha(data).equals(legacy.getProperty(name + ".sha256")))
+                    throw new IOException("Traditional Mesa provider differs: " + name);
+                count++;
+            }
+            if (zip.getEntry("assets/legacy-mesa.properties") == null)
+                throw new IOException("APK missing traditional Mesa metadata");
             long actual =
                     zip.stream()
                             .filter(
@@ -229,8 +249,8 @@ class BuildLauncher {
                 throw new IOException("Unexpected native payload count: " + actual);
         }
         System.out.println(
-                "APK runtime payload verified: 48 third-party + 6 source-built project components + 8 compatibility libraries + "
-                        + (count - 62)
+                "APK runtime payload verified: 48 third-party + 6 source-built project components + 8 compatibility libraries + 5 traditional Mesa providers + "
+                        + (count - 67)
                         + " AndroidX native library + XKB");
     }
 

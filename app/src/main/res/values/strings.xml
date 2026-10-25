@@ -166,6 +166,4 @@
     <string name="virtual_hide" formatted="false">Hide</string>
     <string name="virtual_show" formatted="false">Show</string>
     <string name="virtual_gamepad_help" formatted="false">Left stick: move. Right stick: cursor / aiming. A/B/X/Y, D-pad, LB/RB, LT/RT and L3/R3 follow the bindings in the game settings. Back opens the map; Start opens the menu. LB opens the quick panel. Tap LT ◇ or RT ◇ to lock a trigger for combinations; tap ● to release it. ＋ shows Guide, M1, P1–P4 and TP (P4 opens the blueprint library with default bindings). You can rebind these controls in the game. Hide releases held controls; the top bar remains available. Controls also release when the app loses focus or the keyboard opens.</string>
-    <string name="mali_mesa_compatibility" formatted="false">Mali graphics compatibility</string>
-    <string name="mali_mesa_compatibility_hint" formatted="false">Off by default. Try this if the game fails to start or displays incorrectly. Applies at the next launch; turn it off if graphics or performance worsen.</string>
 </resources>

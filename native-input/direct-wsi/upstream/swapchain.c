@@ -212,8 +212,12 @@ static VkResult VKAPI_CALL create_swapchain(VkDevice device,
     if (info->flags || info->imageArrayLayers != 1 ||
         info->presentMode != VK_PRESENT_MODE_FIFO_KHR ||
         info->preTransform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ||
-        info->imageColorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        info->imageColorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        fprintf(stderr, "hybris WSI: unsupported swapchain parameters flags=0x%x layers=%u"
+            " mode=%d transform=0x%x colorspace=%d\n", info->flags, info->imageArrayLayers,
+            info->presentMode, info->preTransform, info->imageColorSpace);
         return VK_ERROR_INITIALIZATION_FAILED;
+    }
     VkSurfaceCapabilitiesKHR capabilities;
     VkResult checked = hybris_icd_wsi_capabilities(context.physical, info->surface, &capabilities);
     if (checked != VK_SUCCESS) return checked;
@@ -224,8 +228,15 @@ static VkResult VKAPI_CALL create_swapchain(VkDevice device,
     if (info->imageExtent.width > capabilities.maxImageExtent.width ||
         info->imageExtent.height > capabilities.maxImageExtent.height ||
         (info->imageUsage & ~capabilities.supportedUsageFlags) ||
-        !(info->compositeAlpha & capabilities.supportedCompositeAlpha))
+        !(info->compositeAlpha & capabilities.supportedCompositeAlpha)) {
+        fprintf(stderr, "hybris WSI: unsupported swapchain usage=0x%x supported=0x%x"
+            " alpha=0x%x supported-alpha=0x%x extent=%ux%u max=%ux%u\n",
+            info->imageUsage, capabilities.supportedUsageFlags, info->compositeAlpha,
+            capabilities.supportedCompositeAlpha, info->imageExtent.width,
+            info->imageExtent.height, capabilities.maxImageExtent.width,
+            capabilities.maxImageExtent.height);
         return VK_ERROR_INITIALIZATION_FAILED;
+    }
     for (const VkBaseInStructure *next = info->pNext; next; next = next->pNext) {
         if (next->sType == VK_STRUCTURE_TYPE_DEVICE_GROUP_SWAPCHAIN_CREATE_INFO_KHR &&
             ((const VkDeviceGroupSwapchainCreateInfoKHR *)next)->modes != VK_DEVICE_GROUP_PRESENT_MODE_LOCAL_BIT_KHR)

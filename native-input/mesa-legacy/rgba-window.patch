@@ -1,0 +1,23 @@
+--- a/src/gallium/frontends/dri/kopper.c
++++ b/src/gallium/frontends/dri/kopper.c
+@@ -839,5 +839,20 @@
+                                                   &drawable->info);
+    drawable->is_window = !isPixmap && drawable->info.bos.sType != 0;
+ 
++   /* Our AHB presenter consumes canonical RGBA/RGBX. X11 supplies input and
++    * geometry, not the final pixels, so its BGR visual must not dictate the
++    * shared Android window image format. Keep pbuffers and pixmaps unchanged.
++    */
++   if (drawable->is_window && getenv("REA_DIRECT_SOCKET")) {
++      switch (drawable->stvis.color_format) {
++      case PIPE_FORMAT_BGRA8888_UNORM:
++         drawable->stvis.color_format = PIPE_FORMAT_RGBA8888_UNORM;
++         break;
++      case PIPE_FORMAT_BGRX8888_UNORM:
++         drawable->stvis.color_format = PIPE_FORMAT_RGBX8888_UNORM;
++         break;
++      default: break;
++      }
++   }
+    return drawable;
+ }

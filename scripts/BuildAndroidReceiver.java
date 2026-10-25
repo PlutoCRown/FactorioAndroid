@@ -117,6 +117,8 @@ class BuildAndroidReceiver {
                         "-Werror",
                         "-I",
                         root.resolve("native-input/direct-present-include").toString(),
+                        "-I",
+                        root.resolve("native-input/direct-wsi/include").toString(),
                         "-isystem",
                         header.toString(),
                         "-isystem",

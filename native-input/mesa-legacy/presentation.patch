@@ -1,0 +1,14 @@
+--- a/src/gallium/drivers/zink/zink_kopper.c
++++ b/src/gallium/drivers/zink/zink_kopper.c
+@@ -42,8 +42,10 @@
+    if (interval == 0) {
+       if (cdt->present_modes & BITFIELD_BIT(VK_PRESENT_MODE_IMMEDIATE_KHR))
+          cdt->present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+-      else
++      else if (cdt->present_modes & BITFIELD_BIT(VK_PRESENT_MODE_MAILBOX_KHR))
+          cdt->present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
++      else
++         cdt->present_mode = VK_PRESENT_MODE_FIFO_KHR;
+    } else if (interval > 0) {
+       cdt->present_mode = VK_PRESENT_MODE_FIFO_KHR;
+    }

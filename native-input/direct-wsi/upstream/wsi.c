@@ -485,8 +485,9 @@ VkResult hybris_icd_wsi_capabilities(VkPhysicalDevice physical,
     if (!count) return VK_ERROR_FORMAT_NOT_SUPPORTED;
     VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     const VkImageUsageFlags optional[] = {VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_USAGE_SAMPLED_BIT};
-    for (uint32_t bit = 0; bit < 3; ++bit) {
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT};
+    for (uint32_t bit = 0; bit < sizeof(optional) / sizeof(optional[0]); ++bit) {
         int supported = 1;
         for (uint32_t i = 0; i < count; ++i) {
             VkImageFormatProperties properties;

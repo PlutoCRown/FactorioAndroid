@@ -7,5 +7,4 @@ internal data class LauncherActions(
     val setRenderScale: (Int) -> Unit,
     val setGraphicsPreset: (String) -> Unit,
     val setSpriteLoadingLimit: (Int) -> Unit,
-    val setMaliMesaCompatibility: (Boolean) -> Unit,
 )

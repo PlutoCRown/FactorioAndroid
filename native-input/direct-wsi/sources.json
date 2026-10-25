@@ -190,7 +190,7 @@
     },
     {
       "path": "native-window-surface.c",
-      "sha256": "59c505021c460fcb22822276e61ae247880166426b6db5a1fee235365e8ebb0f"
+      "sha256": "d100f9ad9df804e12cb5ba15a763855387281f5d450b428449571ba0ce86e574"
     },
     {
       "path": "upstream/device.c",
@@ -226,7 +226,7 @@
     },
     {
       "path": "upstream/swapchain.c",
-      "sha256": "47a61656699d9b64d72e58d94e9a10d1cde4bb3c991aac4a83b76dff640f0b9e"
+      "sha256": "c5e4a720ef8c145debdefd57322110c3429e106ed1b474c392eb2523874fa350"
     },
     {
       "path": "upstream/swapchain.h",
@@ -238,7 +238,7 @@
     },
     {
       "path": "upstream/wsi.c",
-      "sha256": "9d5e61875842ca4a3ed44cd7e533f6e8567f2cc08498b3548c8699b8f85c0b8e"
+      "sha256": "000aae090b774974df6326eb0c9ecd416495a71ec4b85ac79ace7aab76a46664"
     },
     {
       "path": "upstream/wsi.h",
@@ -253,6 +253,8 @@
     "GNU-to-Android ICD dispatch retains upstream instance/device handling; local HAL loading and extension filtering changes are described in patches.",
     "Private AHB delivery replaces upstream TAWC-DRI provider; release fences and consumer completion wait retained.",
     "Lazy socket connect on actual present; temporary format-query surfaces allocate no transport connection.",
-    "Compatibility ICD and receiver provide OPAQUE for both RGBA/RGBX and BGRA by forcing final Surface alpha to one. Baseline precompiled libraries are retained."
+    "Compatibility ICD and receiver provide OPAQUE for both RGBA/RGBX and BGRA by forcing final Surface alpha to one. Baseline precompiled libraries are retained.",
+    "Optional INPUT_ATTACHMENT surface usage is advertised only when external-image queries accept it for every exposed surface format; swapchain rejection logs include requested parameters.",
+    "First transport frame logs both native and AHardwareBuffer format to diagnose cross-API channel interpretation."
   ]
 }
