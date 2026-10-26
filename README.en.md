@@ -57,14 +57,16 @@ The launcher runs the official Linux ARM64 graphical client through a GNU/Linux 
 - Storage: leave at least 4 GB free for the base game, or 8 GB for Space Age.
 - CPU: Snapdragon 8 Gen 1 or a processor with comparable or better performance is recommended.
 
-Compatibility: multiple game versions, including 2.0 and 2.1, have been tested on Snapdragon 8 Gen 2 and XRING O3 chips.
-
+Measured results:
 > Test save: Space Age with four planets unlocked, producing 1,000 science packs per minute for all science types except military (black) science.
 >
 > - Redmi K70 (Snapdragon 8 Gen 2), rendering at 2400×1080: 60 UPS, with FPS varying between 20 and 40 depending on zoom level.
 > - Xiaomi Pad 9 Pro Max (XRING O3), rendering at 2400×1080: 60 UPS, with FPS varying between 40 and 60 depending on zoom level.
 >
-> The author has access to only a few devices. Please share your test results in [Issues](https://github.com/PlutoCRown/FactorioAndroid/issues).
+> Thanks to users who shared their results. The project is also known to run on these devices:
+> Redmi K50 (Dimensity 8100), Realme GT 7 Pro (Snapdragon 8 Elite)
+>
+> Please share your test results in [Issues](https://github.com/PlutoCRown/FactorioAndroid/issues).
 
 ## Controls and configuration
 

@@ -56,14 +56,16 @@
 - 存储：原版建议预留 4 GB 存储空间，太空时代 DLC 建议预留 8 GB 存储空间。
 - CPU：建议使用骁龙 8 Gen 1 以上或同等性能处理器。
 
-兼容性说明：本项目已在骁龙 8 Gen 2、玄戒 O3 芯片上测试运行包含 2.0 和 2.1 的多个版本。
-
+实际测试数据：
 > 测试存档：太空时代 DLC 解锁四星球，除黑瓶外 1,000 SPM 的存档。
 >
 > - Redmi K70（骁龙 8 Gen 2），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 20–40 波动。
 > - Xiaomi Pad 9 Pro Max（玄戒 O3），渲染分辨率 2400×1080：60 UPS，FPS 随视野缩放在 40–60 波动。
 >
-> 作者可用设备不多，欢迎在 [Issues](https://github.com/PlutoCRown/FactorioAndroid/issues) 提交你的测试数据。
+> 感谢用户提交的使用情况，项目已知在以下的设备上正常运行：
+> Redmi K50 （天玑 8100）、Realme GT 7 Pro （骁龙 8E）
+> 
+> 欢迎在 [Issues](https://github.com/PlutoCRown/FactorioAndroid/issues) 提交你的测试数据。
 
 ## 操作说明与配置指南
 
